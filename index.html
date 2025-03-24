@@ -13,19 +13,16 @@
         <h1 class="text-3xl font-semibold text-gray-800 mb-6 text-center">Sistema de Registro de Producción</h1>
 
         <ul class="nav-tabs">
-            <li class="nav-item">
-                <a class="nav-link active" href="#registro-produccion">Registro de Producción</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#reportes-produccion">Reportes de Producción</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#admin-maquinas">Administración de Máquinas</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#admin-catalogos">Administración de Catálogos</a>
-            </li>
-        </ul>
+    <li class="nav-item">
+        <a class="nav-link active" href="#registro-produccion">Registro de Producción</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#reportes-produccion">Reportes de Producción</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#admin-catalogos">Administración de Catálogos</a>
+    </li>
+</ul>
 
         <div id="registro-produccion" class="card">
             <h2 class="card-title">Registro de Producción</h2>
@@ -50,6 +47,23 @@
                         <option value="">Seleccione un operario</option>
                     </select>
                 </div>
+                <div id="admin-maquinas" class="card" style="display: none;">
+            <h2 class="card-title">Administración de Máquinas</h2>
+            <form id="form-agregar-maquina" class="form-horizontal">
+                <div class="form-group">
+                    <label for="nombre-maquina" class="form-label">Nombre de la Máquina:</label>
+                    <input type="text" id="nombre-maquina" name="nombre-maquina" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">Agregar Máquina</button>
+                </div>
+            </form>
+            <div id="mensaje-maquina" class="mt-4 alert" style="display: none;"></div>
+
+            <h3 class="text-lg font-semibold mt-6 mb-4">Lista de Máquinas</h3>
+            <ul id="lista-maquinas" class="list-group">
+                </ul>
+        </div>
                 <div class="form-group">
                     <label for="maquina" class="form-label">Máquina:</label>
                     <select id="maquina" name="maquina" class="form-select" required>
@@ -108,66 +122,40 @@
             </div>
         </div>
 
-        <div id="admin-maquinas" class="card" style="display: none;">
-            <h2 class="card-title">Administración de Máquinas</h2>
-            <form id="form-agregar-maquina" class="form-horizontal">
-                <div class="form-group">
-                    <label for="nombre-maquina" class="form-label">Nombre de la Máquina:</label>
-                    <input type="text" id="nombre-maquina" name="nombre-maquina" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">Agregar Máquina</button>
-                </div>
-            </form>
-            <div id="mensaje-maquina" class="mt-4 alert" style="display: none;"></div>
-
-            <h3 class="text-lg font-semibold mt-6 mb-4">Lista de Máquinas</h3>
-            <ul id="lista-maquinas" class="list-group">
-                </ul>
-        </div>
+        
 
         <div id="admin-catalogos" class="card" style="display: none;">
             <h2 class="card-title">Administración de Catálogos</h2>
 
-            <div class="mb-6">
+                <div class="mb-6">
                 <h3 class="text-lg font-semibold mb-4">Administración de Turnos</h3>
                 <form id="form-agregar-turno" class="form-horizontal">
-                    <div class="form-group">
-                        <label for="nombre-turno" class="form-label">Nombre del Turno:</label>
-                        <input type="text" id="nombre-turno" name="nombre-turno" class="form-control" required>
-                    </div>
-                     <div class="form-group">
-                        <label for="hora-inicio-turno" class="form-label">Hora de Inicio:</label>
-                        <input type="time" id="hora-inicio-turno" name="hora-inicio-turno" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="hora-fin-turno" class="form-label">Hora de Fin:</label>
-                        <input type="time" id="hora-fin-turno" name="hora-fin-turno" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary">Agregar Turno</button>
-                    </div>
-                </form>
-                <div id="mensaje-turno" class="mt-4 alert" style="display: none;"></div>
-                <ul id="lista-turnos" class="list-group mt-4">
-                    </ul>
+                <div class="form-group">
+                <label for="nombre-turno" class="form-label">Nombre del Turno:</label>
+                <input type="text" id="nombre-turno" name="nombre-turno" class="form-control" required placeholder="Mañana, Tarde o Noche">
+                </div>
+                <div class="form-group">
+            <button type="submit" class="btn btn-primary">Agregar Turno</button>
             </div>
+            </form>
+            <div id="mensaje-turno" class="mt-4 alert" style="display: none;"></div>
+            <ul id="lista-turnos" class="list-group mt-4">
+        </ul>
 
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-4">Administración de Operarios</h3>
-                <form id="form-agregar-operario" class="form-horizontal">
-                    <div class="form-group">
-                        <label for="nombre-operario" class="form-label">Nombre del Operario:</label>
-                        <input type="text" id="nombre-operario" name="nombre-operario" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary">Agregar Operario</button>
-                    </div>
-                </form>
-                <div id="mensaje-operario" class="mt-4 alert" style="display: none;"></div>
-                <ul id="lista-operarios" class="list-group mt-4">
-                    </ul>
-            </div>
+                    <div class="mt-6 pt-6 border-t border-gray-200">
+    <h3 class="text-lg font-semibold mb-4">Administración de Base de Datos</h3>
+    <div class="flex space-x-4">
+        <button id="exportar-bd" class="btn btn-secondary">Exportar Base de Datos</button>
+        <div class="form-group">
+            <label for="importar-bd" class="btn btn-secondary">Importar Base de Datos</label>
+            <input type="file" id="importar-bd" class="hidden" accept=".json,.csv">
+        </div>
+    </div>
+    <div id="mensaje-bd" class="mt-4 alert" style="display: none;"></div>
+</div>
+</div>
+
+            
 
             <div>
                 <h3 class="text-lg font-semibold mb-4">Administración de Campos de Máquina</h3>
