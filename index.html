@@ -27,100 +27,72 @@
         <div id="registro-produccion" class="card">
             <h2 class="card-title">Registro de Producción</h2>
             <form id="form-registro-produccion" class="form-horizontal">
-                <div class="form-group">
-    <label for="fecha" class="form-label">Fecha:</label>
-    <input type="date" id="fecha" name="fecha" class="form-control" readonly>
-</div>
-<div class="form-group">
-    <label for="hora" class="form-label">Hora:</label>
-    <input type="time" id="hora" name="hora" class="form-control" readonly>
-</div>
-                <div class="form-group">
-                    <label for="turno" class="form-label">Turno:</label>
-                    <select id="turno" name="turno" class="form-select" required>
-                        <option value="">Seleccione un turno</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="operario" class="form-label">Operario:</label>
-                    <select id="operario" name="operario" class="form-select" required>
-                        <option value="">Seleccione un operario</option>
-                    </select>
-                </div>
-                <div id="admin-maquinas" class="card" style="display: none;">
-            <h2 class="card-title">Administración de Máquinas</h2>
-            <form id="form-agregar-maquina" class="form-horizontal">
-                <div class="form-group">
-                    <label for="nombre-maquina" class="form-label">Nombre de la Máquina:</label>
-                    <input type="text" id="nombre-maquina" name="nombre-maquina" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">Agregar Máquina</button>
-                </div>
-            </form>
-            <div id="mensaje-maquina" class="mt-4 alert" style="display: none;"></div>
-
-            <h3 class="text-lg font-semibold mt-6 mb-4">Lista de Máquinas</h3>
-            <ul id="lista-maquinas" class="list-group">
-                </ul>
-        </div>
-                <div class="form-group">
-                    <label for="maquina" class="form-label">Máquina:</label>
-                    <select id="maquina" name="maquina" class="form-select" required>
-                        <option value="">Seleccione una máquina</option>
-                    </select>
-                </div>
-
-                <div id="campos-dinamicos" class="mt-4">
-                    </div>
-
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">Guardar Registro</button>
-                </div>
-            </form>
-            <div id="mensaje-registro" class="mt-4 alert" style="display: none;"></div>
-        </div>
-
-        <div id="reportes-produccion" class="card" style="display: none;">
-            <h2 class="card-title">Reportes de Producción</h2>
+    <div class="form-row">
+        <div class="form-col">
             <div class="form-group">
-                <label for="maquina-reporte" class="form-label">Máquina:</label>
-                <select id="maquina-reporte" name="maquina-reporte" class="form-select" required>
+                <label for="fecha" class="form-label">Fecha:</label>
+                <input type="date" id="fecha" name="fecha" class="form-control" readonly>
+            </div>
+        </div>
+        <div class="form-col">
+            <div class="form-group">
+                <label for="hora" class="form-label">Hora:</label>
+                <input type="time" id="hora" name="hora" class="form-control" readonly>
+            </div>
+        </div>
+        <div class="form-col">
+            <div class="form-group">
+                <label for="turno" class="form-label">Turno:</label>
+                <select id="turno" name="turno" class="form-select" required>
+                    <option value="">Seleccione un turno</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-col">
+            <div class="form-group">
+                <label for="operario" class="form-label">Operario:</label>
+                <select id="operario" name="operario" class="form-select" required>
+                    <option value="">Seleccione un operario</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-col">
+            <div class="form-group">
+                <label for="maquina" class="form-label">Máquina:</label>
+                <select id="maquina" name="maquina" class="form-select" required>
                     <option value="">Seleccione una máquina</option>
                 </select>
             </div>
-            <div class="form-group">
-                <label for="fecha-inicio-reporte" class="form-label">Fecha de Inicio:</label>
-                <input type="date" id="fecha-inicio-reporte" name="fecha-inicio-reporte" class="form-control" required>
-            </div>
-            <div class="form-group">
-                <label for="fecha-fin-reporte" class="form-label">Fecha de Fin:</label>
-                <input type="date" id="fecha-fin-reporte" name="fecha-fin-reporte" class="form-control" required>
-            </div>
-            <div class="form-group">
-                <button id="generar-reporte" type="button" class="btn btn-secondary">Generar Reporte</button>
-            </div>
-            <div id="reporte-grafico" class="mt-6" style="display: none;">
-                <h3 class="text-lg font-semibold mb-4">Gráfico de Producción</h3>
-                <canvas id="grafico-produccion"></canvas>
-            </div>
-            <div id="reporte-tabla" class="mt-6 table-responsive" style="display: none;">
-                <h3 class="text-lg font-semibold mb-4">Tabla de Datos de Producción</h3>
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Hora</th>
-                            <th>Turno</th>
-                            <th>Operario</th>
-                            <th>Máquina</th>
-                            </tr>
-                    </thead>
-                    <tbody>
-                        </tbody>
-                </table>
-            </div>
         </div>
+    </div>
+
+    <div id="campos-dinamicos" class="form-row mt-4">
+    </div>
+
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Guardar Registro</button>
+    </div>
+</form>
+<div id="mensaje-registro" class="mt-4 alert" style="display: none;"></div>
+
+<h3 class="section-title">Registros de Producción</h3>
+<div class="table-responsive">
+    <table class="table" id="tabla-registros">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Turno</th>
+                <th>Operario</th>
+                <th>Máquina</th>
+                <th>Valores</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
 
         
 
