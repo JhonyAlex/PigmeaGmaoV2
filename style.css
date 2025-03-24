@@ -201,7 +201,6 @@
         .nav-link:hover,
         .nav-link.active {
             color: #3b82f6;
-            border-color: #3b82f6;
         }
 
         .nav-link.active {
