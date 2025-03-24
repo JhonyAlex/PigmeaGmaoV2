@@ -94,6 +94,47 @@
     </table>
 </div>
 
+
+<div id="reportes-produccion" class="card" style="display: none;">
+    <h2 class="card-title">Reportes de Producción</h2>
+    <div class="form-group">
+        <label for="maquina-reporte" class="form-label">Máquina:</label>
+        <select id="maquina-reporte" name="maquina-reporte" class="form-select" required>
+            <option value="">Seleccione una máquina</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="fecha-inicio-reporte" class="form-label">Fecha de Inicio:</label>
+        <input type="date" id="fecha-inicio-reporte" name="fecha-inicio-reporte" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <label for="fecha-fin-reporte" class="form-label">Fecha de Fin:</label>
+        <input type="date" id="fecha-fin-reporte" name="fecha-fin-reporte" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <button id="generar-reporte" type="button" class="btn btn-secondary">Generar Reporte</button>
+    </div>
+    <div id="reporte-grafico" class="mt-6" style="display: none;">
+        <h3 class="text-lg font-semibold mb-4">Gráfico de Producción</h3>
+        <canvas id="grafico-produccion"></canvas>
+    </div>
+    <div id="reporte-tabla" class="mt-6 table-responsive" style="display: none;">
+        <h3 class="text-lg font-semibold mb-4">Tabla de Datos de Producción</h3>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Turno</th>
+                    <th>Operario</th>
+                    <th>Máquina</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+</div>
         
 
         <div id="admin-catalogos" class="card" style="display: none;">
