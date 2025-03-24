@@ -69,55 +69,58 @@
         });
 
         // --- Funciones de Administración de Turnos ---
-        function cargarTurnos() {
-            const listaTurnos = document.getElementById('lista-turnos');
-            listaTurnos.innerHTML = '';
-            const turnos = JSON.parse(localStorage.getItem('turnos')) || [];
-            turnos.forEach(turno => {
-                const li = document.createElement('li');
-                li.className = 'list-group-item';
-                li.textContent = `${turno.nombre} (${turno.horaInicio} - ${turno.horaFin})`;
-                listaTurnos.appendChild(li);
-            });
+       function cargarTurnos() {
+    const listaTurnos = document.getElementById('lista-turnos');
+    listaTurnos.innerHTML = '';
+    const turnos = JSON.parse(localStorage.getItem('turnos')) || [];
+    turnos.forEach(turno => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.textContent = turno.nombre;
+        listaTurnos.appendChild(li);
+    });
 
-             // Llena el select de turnos en el formulario de registro
-            const turnoSelect = document.getElementById('turno');
-            turnoSelect.innerHTML = '<option value="">Seleccione un turno</option>';
-            turnos.forEach(turno => {
-                const option = document.createElement('option');
-                option.value = turno.nombre;
-                option.textContent = `${turno.nombre} (${turno.horaInicio} - ${turno.horaFin})`;
-turnoSelect.appendChild(option);
-            });
-        }
+    // Llena el select de turnos en el formulario de registro
+    const turnoSelect = document.getElementById('turno');
+    turnoSelect.innerHTML = '<option value="">Seleccione un turno</option>';
+    turnos.forEach(turno => {
+        const option = document.createElement('option');
+        option.value = turno.nombre;
+        option.textContent = turno.nombre;
+        turnoSelect.appendChild(option);
+    });
+}
+       document.getElementById('form-agregar-turno').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const nombre = document.getElementById('nombre-turno').value.trim();
 
-        document.getElementById('form-agregar-turno').addEventListener('submit', (event) => {
-            event.preventDefault();
-            const nombre = document.getElementById('nombre-turno').value.trim();
-            const horaInicio = document.getElementById('hora-inicio-turno').value.trim();
-            const horaFin = document.getElementById('hora-fin-turno').value.trim();
+    if (!nombre) {
+        mostrarMensaje('Por favor, ingrese el nombre del turno.', 'danger', 'mensaje-turno');
+        return;
+    }
 
-            if (!nombre || !horaInicio || !horaFin) {
-                mostrarMensaje('Por favor, ingrese el nombre, la hora de inicio y la hora de fin del turno.', 'danger', 'mensaje-turno');
-                return;
-            }
+    // Validar que el turno sea uno de los permitidos
+    const turnosPermitidos = ['Mañana', 'Tarde', 'Noche'];
+    if (!turnosPermitidos.includes(nombre)) {
+        mostrarMensaje('El turno debe ser: Mañana, Tarde o Noche.', 'danger', 'mensaje-turno');
+        return;
+    }
 
-             if (horaFin <= horaInicio) {
-                mostrarMensaje('La hora de fin debe ser posterior a la hora de inicio.', 'danger', 'mensaje-turno');
-                return;
-            }
-
-            const nuevoTurno = { nombre, horaInicio, horaFin };
-            const turnos = JSON.parse(localStorage.getItem('turnos')) || [];
-            turnos.push(nuevoTurno);
-            localStorage.setItem('turnos', JSON.stringify(turnos));
-            cargarTurnos();
-            document.getElementById('nombre-turno').value = '';
-            document.getElementById('hora-inicio-turno').value = '';
-            document.getElementById('hora-fin-turno').value = '';
-            mostrarMensaje('Turno agregado correctamente.', 'success', 'mensaje-turno');
-        });
-
+    const nuevoTurno = { nombre };
+    const turnos = JSON.parse(localStorage.getItem('turnos')) || [];
+    
+    // Verificar si el turno ya existe
+    if (turnos.some(t => t.nombre.toLowerCase() === nombre.toLowerCase())) {
+        mostrarMensaje('Este turno ya existe.', 'danger', 'mensaje-turno');
+        return;
+    }
+    
+    turnos.push(nuevoTurno);
+    localStorage.setItem('turnos', JSON.stringify(turnos));
+    cargarTurnos();
+    document.getElementById('nombre-turno').value = '';
+    mostrarMensaje('Turno agregado correctamente.', 'success', 'mensaje-turno');
+});
         // --- Funciones de Administración de Operarios ---
         function cargarOperarios() {
             const listaOperarios = document.getElementById('lista-operarios');
@@ -253,65 +256,76 @@ turnoSelect.appendChild(option);
 
         // --- Funciones de Registro de Producción ---
         function actualizarFormularioRegistro() {
-            const maquinaSelect = document.getElementById('maquina');
-            const camposDinamicosDiv = document.getElementById('campos-dinamicos');
-            camposDinamicosDiv.innerHTML = ''; // Limpiar campos dinámicos
+    const maquinaSelect = document.getElementById('maquina');
+    const camposDinamicosDiv = document.getElementById('campos-dinamicos');
+    camposDinamicosDiv.innerHTML = ''; // Limpiar campos dinámicos
 
-            const maquinaSeleccionada = maquinaSelect.value;
-            const camposMaquinaData = JSON.parse(localStorage.getItem('camposMaquina')) || {};
+    const maquinaSeleccionada = maquinaSelect.value;
+    const camposMaquinaData = JSON.parse(localStorage.getItem('camposMaquina')) || {};
 
-            if (camposMaquinaData[maquinaSeleccionada]) {
-                const campos = camposMaquinaData[maquinaSeleccionada];
-                campos.forEach(campo => {
-                    const formGroup = document.createElement('div');
-                    formGroup.className = 'form-group';
+    if (camposMaquinaData[maquinaSeleccionada]) {
+        const campos = camposMaquinaData[maquinaSeleccionada];
+        campos.forEach(campo => {
+            const formCol = document.createElement('div');
+            formCol.className = 'form-col';
+            
+            const formGroup = document.createElement('div');
+            formGroup.className = 'form-group';
 
-                    const label = document.createElement('label');
-                    label.className = 'form-label';
-                    label.textContent = campo.nombre + ':';
-                    label.setAttribute('for', `campo-${campo.nombre}`);
-                    formGroup.appendChild(label);
+            const label = document.createElement('label');
+            label.className = 'form-label';
+            label.textContent = campo.nombre + ':';
+            label.setAttribute('for', `campo-${campo.nombre}`);
+            formGroup.appendChild(label);
 
-                    let input;
-                    switch (campo.tipo) {
-                        case 'texto':
-                            input = document.createElement('input');
-                            input.type = 'text';
-                            input.id = `campo-${campo.nombre}`;
-                            input.name = `campo-${campo.nombre}`;
-                            input.className = 'form-control';
-                            input.maxLength = "50";
-                            break;
-                        case 'numero':
-                            input = document.createElement('input');
-                            input.type = 'number';
-                            input.id = `campo-${campo.nombre}`;
-                            input.name = `campo-${campo.nombre}`;
-                            input.className = 'form-control';
-                            break;
-                        case 'lista':
-                            input = document.createElement('select');
-                            input.id = `campo-${campo.nombre}`;
-                            input.name = `campo-${campo.nombre}`;
-                            input.className = 'form-select';
-                            const defaultOption = document.createElement('option');
-                            defaultOption.value = "";
-                            defaultOption.textContent = `Seleccione ${campo.nombre}`;
-                            input.appendChild(defaultOption);
-                            campo.opciones.forEach(opcion => {
-                                const option = document.createElement('option');
-                                option.value = opcion;
-                                option.textContent = opcion;
-                                input.appendChild(option);
-                            });
-                            break;
-                    }
-                    input.required = true;
-                    formGroup.appendChild(input);
-                    camposDinamicosDiv.appendChild(formGroup);
-                });
+            let input;
+            switch (campo.tipo) {
+                case 'texto':
+                    input = document.createElement('input');
+                    input.type = 'text';
+                    input.id = `campo-${campo.nombre}`;
+                    input.name = `campo-${campo.nombre}`;
+                    input.className = 'form-control';
+                    input.maxLength = "50";
+                    break;
+                case 'numero':
+                    input = document.createElement('input');
+                    input.type = 'number';
+                    input.id = `campo-${campo.nombre}`;
+                    input.name = `campo-${campo.nombre}`;
+                    input.className = 'form-control';
+                    break;
+                case 'lista':
+                    input = document.createElement('select');
+                    input.id = `campo-${campo.nombre}`;
+                    input.name = `campo-${campo.nombre}`;
+                    input.className = 'form-select';
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = "";
+                    defaultOption.textContent = `Seleccione ${campo.nombre}`;
+                    input.appendChild(defaultOption);
+                    campo.opciones.forEach(opcion => {
+                        const option = document.createElement('option');
+                        option.value = opcion;
+                        option.textContent = opcion;
+                        input.appendChild(option);
+                    });
+                    break;
             }
-        }
+            input.required = true;
+            formGroup.appendChild(input);
+            formCol.appendChild(formGroup);
+            camposDinamicosDiv.appendChild(formCol);
+        });
+    }
+    
+    // Limpiar el estado de edición del formulario si existiera
+    const form = document.getElementById('form-registro-produccion');
+    if (form.dataset.editando !== undefined) {
+        delete form.dataset.editando;
+        document.querySelector('#form-registro-produccion button[type="submit"]').textContent = 'Guardar Registro';
+    }
+}
 
         document.getElementById('maquina').addEventListener('change', actualizarFormularioRegistro);
 
@@ -493,6 +507,259 @@ turnoSelect.appendChild(option);
             document.getElementById('reporte-tabla').style.display = 'block';
         });
 
+// Establecer fecha y hora actuales
+function actualizarFechaHora() {
+    const ahora = new Date();
+    const formatoFecha = ahora.toISOString().split('T')[0];
+    const horas = ahora.getHours().toString().padStart(2, '0');
+    const minutos = ahora.getMinutes().toString().padStart(2, '0');
+    const formatoHora = `${horas}:${minutos}`;
+    
+    document.getElementById('fecha').value = formatoFecha;
+    document.getElementById('hora').value = formatoHora;
+}
+
+// Actualizar fecha y hora al cargar la página
+actualizarFechaHora();
+// Actualizar fecha y hora cada minuto
+setInterval(actualizarFechaHora, 60000);
+
+// --- Funciones de Importación y Exportación de Base de Datos ---
+document.getElementById('exportar-bd').addEventListener('click', () => {
+    // Recopilar todos los datos del localStorage
+    const datos = {
+        maquinas: JSON.parse(localStorage.getItem('maquinas')) || [],
+        turnos: JSON.parse(localStorage.getItem('turnos')) || [],
+        operarios: JSON.parse(localStorage.getItem('operarios')) || [],
+        camposMaquina: JSON.parse(localStorage.getItem('camposMaquina')) || {},
+        registros: JSON.parse(localStorage.getItem('registros')) || []
+    };
+    
+    // Convertir a CSV o mantener como JSON
+    const formatoJSON = JSON.stringify(datos, null, 2);
+    
+    // Crear blob y enlace de descarga
+    const blob = new Blob([formatoJSON], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `base_datos_produccion_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    mostrarMensaje('Base de datos exportada correctamente.', 'success', 'mensaje-bd');
+});
+
+document.getElementById('importar-bd').addEventListener('change', (event) => {
+    const archivo = event.target.files[0];
+    if (!archivo) return;
+    
+    const lector = new FileReader();
+    lector.onload = function(e) {
+        try {
+            const datos = JSON.parse(e.target.result);
+            
+            // Validar estructura básica de los datos
+            if (!datos.maquinas || !datos.turnos || !datos.operarios || !datos.camposMaquina) {
+                throw new Error('El archivo no tiene el formato correcto.');
+            }
+            
+            // Guardar todos los datos en localStorage
+            localStorage.setItem('maquinas', JSON.stringify(datos.maquinas));
+            localStorage.setItem('turnos', JSON.stringify(datos.turnos));
+            localStorage.setItem('operarios', JSON.stringify(datos.operarios));
+            localStorage.setItem('camposMaquina', JSON.stringify(datos.camposMaquina));
+            localStorage.setItem('registros', JSON.stringify(datos.registros || []));
+            
+            // Recargar todos los datos en la UI
+            cargarMaquinas();
+            cargarTurnos();
+            cargarOperarios();
+            actualizarCamposPorMaquina();
+            actualizarFormularioRegistro();
+            
+            mostrarMensaje('Base de datos importada correctamente.', 'success', 'mensaje-bd');
+        } catch (error) {
+            mostrarMensaje(`Error al importar: ${error.message}`, 'danger', 'mensaje-bd');
+        }
+    };
+    lector.readAsText(archivo);
+});
+
+
+// --- Funciones para la tabla de registros ---
+function actualizarTablaRegistros() {
+    const tablaRegistros = document.querySelector('#tabla-registros tbody');
+    tablaRegistros.innerHTML = '';
+    
+    const registros = JSON.parse(localStorage.getItem('registros')) || [];
+    const camposMaquinaData = JSON.parse(localStorage.getItem('camposMaquina')) || {};
+    
+    registros.forEach((registro, index) => {
+        const fila = tablaRegistros.insertRow();
+        
+        // Datos básicos
+        const celdaFecha = fila.insertCell();
+        celdaFecha.textContent = registro.fecha;
+        
+        const celdaHora = fila.insertCell();
+        celdaHora.textContent = registro.hora;
+        
+        const celdaTurno = fila.insertCell();
+        celdaTurno.textContent = registro.turno;
+        
+        const celdaOperario = fila.insertCell();
+        celdaOperario.textContent = registro.operario;
+        
+        const celdaMaquina = fila.insertCell();
+        celdaMaquina.textContent = registro.maquina;
+        
+        // Valores de campos específicos
+        const celdaValores = fila.insertCell();
+        const camposMaquina = camposMaquinaData[registro.maquina] || [];
+        const valoresHTML = camposMaquina.map(campo => {
+            const nombreCampo = campo.nombre;
+            const valor = registro[`campo-${nombreCampo}`] || '';
+            return `<strong>${nombreCampo}:</strong> ${valor}`;
+        }).join('<br>');
+        celdaValores.innerHTML = valoresHTML;
+        
+        // Acciones
+        const celdaAcciones = fila.insertCell();
+        celdaAcciones.className = 'table-actions';
+        
+        const btnEditar = document.createElement('button');
+        btnEditar.className = 'btn-icon btn-edit';
+        btnEditar.textContent = 'Editar';
+        btnEditar.addEventListener('click', () => editarRegistro(index));
+        
+        const btnEliminar = document.createElement('button');
+        btnEliminar.className = 'btn-icon btn-delete';
+        btnEliminar.textContent = 'Eliminar';
+        btnEliminar.addEventListener('click', () => eliminarRegistro(index));
+        
+        celdaAcciones.appendChild(btnEditar);
+        celdaAcciones.appendChild(btnEliminar);
+    });
+}
+
+function editarRegistro(index) {
+    const registros = JSON.parse(localStorage.getItem('registros')) || [];
+    const registro = registros[index];
+    
+    // Seleccionar la máquina primero para que se carguen los campos dinámicos
+    document.getElementById('maquina').value = registro.maquina;
+    // Disparar el evento change para que se generen los campos dinámicos
+    const event = new Event('change');
+    document.getElementById('maquina').dispatchEvent(event);
+    
+    // Esperar a que se generen los campos dinámicos
+    setTimeout(() => {
+        // Asignar valores a los campos del formulario
+        document.getElementById('turno').value = registro.turno;
+        document.getElementById('operario').value = registro.operario;
+        
+        // Asignar valores a los campos dinámicos
+        const camposMaquinaData = JSON.parse(localStorage.getItem('camposMaquina')) || {};
+        const camposMaquina = camposMaquinaData[registro.maquina] || [];
+        
+        camposMaquina.forEach(campo => {
+            const inputCampo = document.getElementById(`campo-${campo.nombre}`);
+            if (inputCampo) {
+                inputCampo.value = registro[`campo-${campo.nombre}`] || '';
+            }
+        });
+        
+        // Guardar el índice del registro que se está editando
+        document.getElementById('form-registro-produccion').dataset.editando = index;
+        
+        // Cambiar el texto del botón de guardar
+        const btnGuardar = document.querySelector('#form-registro-produccion button[type="submit"]');
+        btnGuardar.textContent = 'Actualizar Registro';
+        
+        // Mostrar mensaje al usuario
+        mostrarMensaje('Editando registro. Complete los cambios y presione Actualizar.', 'success', 'mensaje-registro');
+    }, 100);
+}
+
+function eliminarRegistro(index) {
+    if (confirm('¿Está seguro de que desea eliminar este registro?')) {
+        const registros = JSON.parse(localStorage.getItem('registros')) || [];
+        registros.splice(index, 1);
+        localStorage.setItem('registros', JSON.stringify(registros));
+        actualizarTablaRegistros();
+        mostrarMensaje('Registro eliminado correctamente.', 'success', 'mensaje-registro');
+    }
+}
+
+// Modificar la función de manejo del formulario para soportar edición
+document.getElementById('form-registro-produccion').addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    const fecha = document.getElementById('fecha').value;
+    const hora = document.getElementById('hora').value;
+    const turno = document.getElementById('turno').value;
+    const operario = document.getElementById('operario').value;
+    const maquina = document.getElementById('maquina').value;
+
+    // Validación de campos comunes
+    if (!fecha || !hora || !turno || !operario || !maquina) {
+        mostrarMensaje('Por favor, complete todos los campos requeridos.', 'danger', 'mensaje-registro');
+        return;
+    }
+
+    // Validación de campos dinámicos
+    const camposMaquinaData = JSON.parse(localStorage.getItem('camposMaquina')) || {};
+    const camposDinamicos = camposMaquinaData[maquina] || [];
+    const registro = {
+        fecha,
+        hora,
+        turno,
+        operario,
+        maquina
+    };
+
+    let camposValidos = true;
+    camposDinamicos.forEach(campo => {
+        const valorCampo = document.getElementById(`campo-${campo.nombre}`).value;
+        if (!valorCampo) {
+            camposValidos = false;
+        }
+        registro[`campo-${campo.nombre}`] = valorCampo;
+    });
+
+    if (!camposValidos) {
+        mostrarMensaje('Por favor, complete todos los campos de la máquina.', 'danger', 'mensaje-registro');
+        return;
+    }
+
+    // Determinar si estamos editando o creando un nuevo registro
+    const editandoIndex = this.dataset.editando;
+    let registros = JSON.parse(localStorage.getItem('registros')) || [];
+    
+    if (editandoIndex !== undefined) {
+        // Modo edición
+        registros[editandoIndex] = registro;
+        delete this.dataset.editando;
+        document.querySelector('#form-registro-produccion button[type="submit"]').textContent = 'Guardar Registro';
+        mostrarMensaje('Registro actualizado correctamente.', 'success', 'mensaje-registro');
+    } else {
+        // Modo creación
+        registros.push(registro);
+        mostrarMensaje('Registro de producción guardado correctamente.', 'success', 'mensaje-registro');
+    }
+    
+    localStorage.setItem('registros', JSON.stringify(registros));
+    document.getElementById('form-registro-produccion').reset();
+    actualizarFormularioRegistro(); // Limpia los campos dinámicos
+    actualizarTablaRegistros(); // Actualiza la tabla de registros
+
+    // Volver a establecer la fecha y hora actuales
+    actualizarFechaHora();
+});
+
         // --- Inicialización ---
         document.addEventListener('DOMContentLoaded', () => {
             cargarMaquinas();
@@ -501,4 +768,5 @@ turnoSelect.appendChild(option);
             cargarCamposMaquina();
             actualizarFormularioRegistro(); // Asegúrate de que el formulario de registro se actualice al cargar la página
             mostrarSeccion('registro-produccion'); // Muestra la sección de registro por defecto
+                actualizarTablaRegistros(); // Cargar la tabla de registros al iniciar
         });
