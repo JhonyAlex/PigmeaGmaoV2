@@ -588,6 +588,16 @@ document.getElementById('importar-bd').addEventListener('change', (event) => {
     lector.readAsText(archivo);
 });
 
+function obtenerFechaHoraActuales() {
+    const ahora = new Date();
+    const formatoFecha = ahora.toISOString().split('T')[0];
+    const horas = ahora.getHours().toString().padStart(2, '0');
+    const minutos = ahora.getMinutes().toString().padStart(2, '0');
+    const formatoHora = `${horas}:${minutos}`;
+    return { fecha: formatoFecha, hora: formatoHora };
+}
+
+
 
 // --- Funciones para la tabla de registros ---
 function actualizarTablaRegistros() {
@@ -698,14 +708,13 @@ function eliminarRegistro(index) {
 document.getElementById('form-registro-produccion').addEventListener('submit', (event) => {
     event.preventDefault();
 
-    const fecha = document.getElementById('fecha').value;
-    const hora = document.getElementById('hora').value;
+    const { fecha, hora } = obtenerFechaHoraActuales();
     const turno = document.getElementById('turno').value;
     const operario = document.getElementById('operario').value;
     const maquina = document.getElementById('maquina').value;
 
     // Validación de campos comunes
-    if (!fecha || !hora || !turno || !operario || !maquina) {
+    if (!turno || !operario || !maquina) {
         mostrarMensaje('Por favor, complete todos los campos requeridos.', 'danger', 'mensaje-registro');
         return;
     }
