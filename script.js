@@ -101,83 +101,113 @@ function inicializarEventos() {
         e.preventDefault();
         cambiarSeccion('registro');
     });
-
+    
     document.getElementById('nav-admin').addEventListener('click', (e) => {
         e.preventDefault();
         cambiarSeccion('admin');
     });
-
+    
     document.getElementById('nav-reportes').addEventListener('click', (e) => {
         e.preventDefault();
         cambiarSeccion('reportes');
     });
-
+    
     // Formulario de registro
     document.getElementById('form-registro').addEventListener('submit', guardarRegistro);
     document.getElementById('seleccionMaquina').addEventListener('change', cargarCamposMaquina);
-
+    
     // Formulario de configuración general
     document.getElementById('form-config-general').addEventListener('submit', guardarConfiguracion);
-
+    
     // Botones de administración
     document.getElementById('btn-agregar-campo').addEventListener('click', mostrarModalCampo);
     document.getElementById('btn-guardar-maquina').addEventListener('click', guardarMaquina);
     document.getElementById('btn-guardar-campo').addEventListener('click', guardarCampo);
-
+    
     // Gestión del tipo de campo
-    document.getElementById('campo-tipo').addEventListener('change', function () {
+    document.getElementById('campo-tipo').addEventListener('change', function() {
         const tipoSeleccionado = this.value;
         const opcionesContenedor = document.getElementById('opciones-contenedor');
-
+        
         if (tipoSeleccionado === 'seleccion') {
             opcionesContenedor.classList.remove('d-none');
         } else {
             opcionesContenedor.classList.add('d-none');
         }
     });
-
+    
     // Botones para opciones
     document.getElementById('btn-agregar-opcion').addEventListener('click', agregarOpcion);
-
+    
     // Botones de importar/exportar
     document.getElementById('btn-exportar-registros').addEventListener('click', exportarRegistros);
     document.getElementById('btn-importar-registros').addEventListener('click', () => {
         document.getElementById('importar-registros-file').click();
     });
     document.getElementById('importar-registros-file').addEventListener('change', importarRegistros);
-
+    
     document.getElementById('btn-exportar-todo').addEventListener('click', exportarTodo);
     document.getElementById('btn-importar-todo').addEventListener('click', () => {
         document.getElementById('importar-todo-file').click();
     });
     document.getElementById('importar-todo-file').addEventListener('change', importarTodo);
-
+    
     // Botones de reset
     document.getElementById('btn-limpiar-registros').addEventListener('click', () => {
         confirmarAccion('limpiarRegistros', '¿Está seguro que desea eliminar todos los registros de producción?');
     });
-
+    
     document.getElementById('btn-reset-sistema').addEventListener('click', () => {
         confirmarAccion('resetSistema', '¿Está seguro que desea restablecer todo el sistema? Esta acción eliminará todas las máquinas, campos y registros.');
     });
-
+    
     document.getElementById('btn-confirmar').addEventListener('click', ejecutarAccionConfirmada);
-
+    
     // Filtros de reporte
     document.getElementById('form-filtros').addEventListener('submit', (e) => {
         e.preventDefault();
         generarReporte();
     });
+    
+    // Evento para botón de buscar campos similares (solo agregarlo si el elemento existe)
+    const btnBuscarCampos = document.getElementById('btn-buscar-campos-similares');
+    if (btnBuscarCampos) {
+        btnBuscarCampos.addEventListener('click', buscarCamposSimilares);
+    }
 
-    // Añadir dentro de la función inicializarEventos()
-    document.getElementById('btn-buscar-campos-similares').addEventListener('click', buscarCamposSimilares);
-    document.getElementById('campo-comun').addEventListener('change', function () {
-        if (this.checked) {
-            document.getElementById('campo-categoria').required = true;
-        } else {
-            document.getElementById('campo-categoria').required = false;
-        }
-    });
+    // Evento para checkbox de campo común (solo agregarlo si el elemento existe)
+    const campoComun = document.getElementById('campo-comun');
+    if (campoComun) {
+        campoComun.addEventListener('change', function() {
+            const campoCategoria = document.getElementById('campo-categoria');
+            if (campoCategoria) {
+                campoCategoria.required = this.checked;
+            }
+        });
+    }
+    
+    // Eventos para reportes avanzados (solo agregarlos si los elementos existen)
+    const btnAgregarCampoReporte = document.getElementById('btn-agregar-campo-reporte');
+    if (btnAgregarCampoReporte) {
+        btnAgregarCampoReporte.addEventListener('click', agregarCampoReporte);
+    }
+    
+    const filtroCategoria = document.getElementById('filtro-categoria');
+    if (filtroCategoria) {
+        filtroCategoria.addEventListener('change', cargarCamposReporte);
+    }
+    
+    const filtroMaquina = document.getElementById('filtro-maquina');
+    if (filtroMaquina && document.getElementById('lista-campos-reporte')) {
+        filtroMaquina.addEventListener('change', cargarCamposReporte);
+        
+        // Inicializar un campo de reporte si existe la estructura
+        setTimeout(function() {
+            if (typeof agregarCampoReporte === 'function') {
+                agregarCampoReporte();
+            }
+        }, 500);
+    }
 }
 
 // Actualización de interfaz
@@ -1710,18 +1740,6 @@ function actualizarInterfaz() {
     actualizarCategoriasReporte();
 }
 
-// Añadir estos eventos a inicializarEventos()
-function inicializarEventos() {
-    // Código existente...
-    
-    // Eventos para reportes avanzados
-    document.getElementById('btn-agregar-campo-reporte').addEventListener('click', agregarCampoReporte);
-    document.getElementById('filtro-categoria').addEventListener('change', cargarCamposReporte);
-    document.getElementById('filtro-maquina').addEventListener('change', cargarCamposReporte);
-    
-    // Inicializar con un campo de reporte
-    setTimeout(agregarCampoReporte, 500);
-}
 
 // Modificar la función generarReporte() para soportar múltiples campos
 function generarReporte() {
@@ -2167,7 +2185,750 @@ function generarEstadisticasAvanzadas(registros, camposReporte) {
 
 
 
+// FUNCIONES PARA CAMPOS COMUNES Y REPORTES AVANZADOS
 
+// Buscar campos similares
+function buscarCamposSimilares() {
+    const nombreBuscado = document.getElementById('campo-nombre').value.trim().toLowerCase();
+    if (nombreBuscado.length < 2) {
+        mostrarAlerta('Ingrese al menos 2 caracteres para buscar', 'warning');
+        return;
+    }
+    
+    const camposSimilaresContainer = document.getElementById('campos-similares-container');
+    const listaCamposSimilares = document.getElementById('lista-campos-similares');
+    listaCamposSimilares.innerHTML = '';
+    
+    // Buscar en campos comunes
+    const similares = camposComunes.filter(campo => 
+        campo.nombre.toLowerCase().includes(nombreBuscado)
+    );
+    
+    // También buscar en campos de máquinas
+    maquinas.forEach(maquina => {
+        if (maquina.campos) {
+            maquina.campos.forEach(campo => {
+                // Si el campo ya está en similares, lo omitimos
+                if (!similares.some(c => c.id === campo.id) && 
+                    campo.nombre.toLowerCase().includes(nombreBuscado)) {
+                    similares.push({
+                        ...campo,
+                        maquinaNombre: maquina.nombre
+                    });
+                }
+            });
+        }
+    });
+    
+    if (similares.length === 0) {
+        camposSimilaresContainer.classList.add('d-none');
+        return;
+    }
+    
+    // Mostrar resultados
+    similares.forEach(campo => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'list-group-item list-group-item-action';
+        item.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>${campo.nombre}</strong> 
+                    <span class="badge bg-primary ms-2">${capitalizarPrimeraLetra(campo.tipo)}</span>
+                    ${campo.categoria ? `<span class="badge bg-secondary ms-1">${campo.categoria}</span>` : ''}
+                </div>
+                ${campo.maquinaNombre ? `<small class="text-muted">Usado en: ${campo.maquinaNombre}</small>` : 
+                                       '<small class="text-success">Campo común</small>'}
+            </div>
+        `;
+        
+        item.addEventListener('click', () => aplicarCampoSeleccionado(campo));
+        listaCamposSimilares.appendChild(item);
+    });
+    
+    camposSimilaresContainer.classList.remove('d-none');
+}
+
+// Aplicar campo seleccionado
+function aplicarCampoSeleccionado(campo) {
+    document.getElementById('campo-nombre').value = campo.nombre;
+    document.getElementById('campo-tipo').value = campo.tipo;
+    document.getElementById('campo-obligatorio').checked = campo.obligatorio || false;
+    
+    if (campo.categoria) {
+        document.getElementById('campo-categoria').value = campo.categoria;
+    }
+    
+    // Manejar opciones si es de tipo selección
+    if (campo.tipo === 'seleccion' && campo.opciones) {
+        document.getElementById('opciones-contenedor').classList.remove('d-none');
+        document.getElementById('lista-opciones').innerHTML = '';
+        
+        campo.opciones.forEach(opcion => {
+            agregarOpcionConValor(opcion);
+        });
+    } else {
+        document.getElementById('opciones-contenedor').classList.add('d-none');
+    }
+    
+    // Ocultar la lista después de seleccionar
+    document.getElementById('campos-similares-container').classList.add('d-none');
+}
+
+// Actualizar categorías para reportes
+function actualizarCategoriasReporte() {
+    const filtroCategoria = document.getElementById('filtro-categoria');
+    if (!filtroCategoria) return;
+    
+    filtroCategoria.innerHTML = '<option value="todas" selected>Todas las categorías</option>';
+    
+    // Recopilar todas las categorías únicas
+    const categorias = new Set();
+    
+    // De los campos comunes
+    camposComunes.forEach(campo => {
+        if (campo.categoria) {
+            categorias.add(campo.categoria);
+        }
+    });
+    
+    // De los campos de máquinas
+    maquinas.forEach(maquina => {
+        if (maquina.campos) {
+            maquina.campos.forEach(campo => {
+                if (campo.categoria) {
+                    categorias.add(campo.categoria);
+                }
+            });
+        }
+    });
+    
+    // Agregar opciones
+    categorias.forEach(categoria => {
+        const option = document.createElement('option');
+        option.value = categoria;
+        option.textContent = categoria;
+        filtroCategoria.appendChild(option);
+    });
+}
+
+// Cargar campos para reportes según la categoría seleccionada
+function cargarCamposReporte() {
+    // Obtener todos los selectores de campos
+    const selectores = document.querySelectorAll('.campo-reporte');
+    if (selectores.length === 0) return;
+    
+    const categoriaSeleccionada = document.getElementById('filtro-categoria').value;
+    const maquinaSeleccionada = document.getElementById('filtro-maquina').value;
+    
+    selectores.forEach(selector => {
+        const valorActual = selector.value; // Guardar el valor actual
+        selector.innerHTML = '<option value="" selected disabled>Seleccione un campo</option>';
+        
+        // Recopilar campos numéricos filtrados por categoría y máquina
+        const camposDisponibles = [];
+        
+        // Filtrar campos de máquinas
+        maquinas.forEach(maquina => {
+            if (maquinaSeleccionada !== 'todas' && maquina.id !== maquinaSeleccionada) {
+                return; // Saltar si no es la máquina seleccionada
+            }
+            
+            if (maquina.campos) {
+                maquina.campos.forEach(campo => {
+                    // Filtrar por categoría si es necesario
+                    if (categoriaSeleccionada !== 'todas' && campo.categoria !== categoriaSeleccionada) {
+                        return;
+                    }
+                    
+                    // Agregar campos numéricos y otros útiles para reportes
+                    if (campo.tipo === 'numero' || campo.tipo === 'seleccion') {
+                        camposDisponibles.push({
+                            id: campo.id,
+                            nombre: campo.nombre,
+                            tipo: campo.tipo,
+                            maquina: maquina.nombre
+                        });
+                    }
+                });
+            }
+        });
+        
+        // Agregar opciones
+        camposDisponibles.forEach(campo => {
+            const option = document.createElement('option');
+            option.value = JSON.stringify({id: campo.id, tipo: campo.tipo});
+            option.textContent = `${campo.nombre} (${campo.maquina})`;
+            selector.appendChild(option);
+        });
+        
+        // Intentar restaurar el valor anterior
+        if (valorActual) {
+            selector.value = valorActual;
+        }
+    });
+}
+
+// Agregar campo a reporte
+function agregarCampoReporte() {
+    const listaCamposReporte = document.getElementById('lista-campos-reporte');
+    const sinCamposReporte = document.getElementById('sin-campos-reporte');
+    
+    if (!listaCamposReporte || !sinCamposReporte) return;
+    
+    const nuevoCampo = document.createElement('div');
+    nuevoCampo.className = 'row mb-2 campo-reporte-item';
+    nuevoCampo.innerHTML = `
+        <div class="col-md-5">
+            <select class="form-select campo-reporte">
+                <option value="" selected disabled>Seleccione un campo</option>
+            </select>
+        </div>
+        <div class="col-md-5">
+            <select class="form-select operacion-reporte">
+                <option value="sum">Suma</option>
+                <option value="avg">Promedio</option>
+                <option value="max">Máximo</option>
+                <option value="min">Mínimo</option>
+                <option value="count">Conteo</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="button" class="btn btn-outline-danger w-100 btn-eliminar-campo-reporte">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    
+    listaCamposReporte.appendChild(nuevoCampo);
+    
+    // Agregar evento para eliminar campo
+    nuevoCampo.querySelector('.btn-eliminar-campo-reporte').addEventListener('click', function() {
+        nuevoCampo.remove();
+        
+        // Mostrar mensaje si no hay campos
+        if (document.querySelectorAll('.campo-reporte-item').length === 0) {
+            sinCamposReporte.classList.remove('d-none');
+        }
+    });
+    
+    // Cargar opciones del selector
+    cargarCamposReporte();
+    
+    // Ocultar mensaje de sin campos
+    sinCamposReporte.classList.add('d-none');
+}
+
+// Función para generar reporte avanzado
+function generarReporte() {
+    const maquinaId = document.getElementById('filtro-maquina').value;
+    const desde = document.getElementById('filtro-desde').value ? new Date(document.getElementById('filtro-desde').value) : null;
+    const hasta = document.getElementById('filtro-hasta').value ? new Date(document.getElementById('filtro-hasta').value + 'T23:59:59') : null;
+    const agrupacion = document.getElementById('filtro-agrupacion').value;
+    const tipoGrafico = document.getElementById('filtro-tipo-grafico').value;
+    
+    // Verificar si estamos usando reportes avanzados o básicos
+    const usandoReportesAvanzados = document.getElementById('lista-campos-reporte') !== null;
+    
+    if (usandoReportesAvanzados) {
+        const categoriaId = document.getElementById('filtro-categoria').value;
+        
+        // Obtener los campos seleccionados para el reporte
+        const camposReporte = [];
+        document.querySelectorAll('.campo-reporte-item').forEach(item => {
+            const campoSelect = item.querySelector('.campo-reporte');
+            const operacionSelect = item.querySelector('.operacion-reporte');
+            
+            if (campoSelect.value) {
+                const campoInfo = JSON.parse(campoSelect.value);
+                camposReporte.push({
+                    id: campoInfo.id,
+                    tipo: campoInfo.tipo,
+                    operacion: operacionSelect.value
+                });
+            }
+        });
+        
+        if (camposReporte.length === 0) {
+            mostrarAlerta('Seleccione al menos un campo para el reporte', 'warning');
+            return;
+        }
+        
+        // Filtrar registros
+        let registrosFiltrados = [...registros];
+        
+        if (maquinaId !== 'todas') {
+            registrosFiltrados = registrosFiltrados.filter(r => r.maquinaId === maquinaId);
+        }
+        
+        if (desde) {
+            registrosFiltrados = registrosFiltrados.filter(r => new Date(r.fecha) >= desde);
+        }
+        
+        if (hasta) {
+            registrosFiltrados = registrosFiltrados.filter(r => new Date(r.fecha) <= hasta);
+        }
+        
+        // Filtrar por categoría si es necesario
+        if (categoriaId !== 'todas') {
+            registrosFiltrados = registrosFiltrados.filter(r => {
+                // Obtener la máquina del registro
+                const maquina = maquinas.find(m => m.id === r.maquinaId);
+                if (!maquina) return false;
+                
+                // Verificar si algún campo del registro tiene la categoría seleccionada
+                return Object.keys(r.valores).some(campoId => {
+                    const campoEnMaquina = maquina.campos.find(c => c.id === campoId);
+                    return campoEnMaquina && campoEnMaquina.categoria === categoriaId;
+                });
+            });
+        }
+        
+        if (registrosFiltrados.length === 0) {
+            document.getElementById('sin-datos-grafico').classList.remove('d-none');
+            if (chartProduccion) {
+                chartProduccion.destroy();
+                chartProduccion = null;
+            }
+            document.getElementById('estadisticas-contenedor').innerHTML = '<div class="alert alert-info">No hay datos disponibles para los filtros seleccionados.</div>';
+            return;
+        }
+        
+        document.getElementById('sin-datos-grafico').classList.add('d-none');
+        
+        // Generar datos para cada campo seleccionado
+        const datosPorCampo = {};
+        
+        camposReporte.forEach(campoReporte => {
+            datosPorCampo[campoReporte.id] = agruparDatosAvanzados(
+                registrosFiltrados, 
+                agrupacion, 
+                campoReporte.id, 
+                campoReporte.operacion
+            );
+        });
+        
+        // Generar título del gráfico
+        let tituloGrafico = 'Reporte de Producción';
+        
+        if (maquinaId !== 'todas') {
+            const maquina = maquinas.find(m => m.id === maquinaId);
+            if (maquina) {
+                tituloGrafico += ` - ${maquina.nombre}`;
+            }
+        }
+        
+        if (categoriaId !== 'todas') {
+            tituloGrafico += ` - Categoría: ${categoriaId}`;
+        }
+        
+        document.getElementById('titulo-grafico').textContent = tituloGrafico;
+        
+        // Generar gráfico avanzado
+        generarGraficoAvanzado(datosPorCampo, tipoGrafico, camposReporte);
+        
+        // Generar estadísticas avanzadas
+        generarEstadisticasAvanzadas(registrosFiltrados, camposReporte);
+    } else {
+        // Usar el modo de reporte original
+        const campoId = document.getElementById('filtro-campo') ? document.getElementById('filtro-campo').value : null;
+        
+        // Filtrar registros
+        let registrosFiltrados = [...registros];
+        
+        if (maquinaId !== 'todas') {
+            registrosFiltrados = registrosFiltrados.filter(r => r.maquinaId === maquinaId);
+        }
+        
+        if (desde) {
+            registrosFiltrados = registrosFiltrados.filter(r => new Date(r.fecha) >= desde);
+        }
+        
+        if (hasta) {
+            registrosFiltrados = registrosFiltrados.filter(r => new Date(r.fecha) <= hasta);
+        }
+        
+        if (registrosFiltrados.length === 0) {
+            document.getElementById('sin-datos-grafico').classList.remove('d-none');
+            if (chartProduccion) {
+                chartProduccion.destroy();
+                chartProduccion = null;
+            }
+            document.getElementById('estadisticas-contenedor').innerHTML = '<div class="alert alert-info">No hay datos disponibles para los filtros seleccionados.</div>';
+            return;
+        }
+        
+        document.getElementById('sin-datos-grafico').classList.add('d-none');
+        
+        // Agrupar datos para el gráfico
+        const datosAgrupados = agruparDatos(registrosFiltrados, agrupacion, campoId);
+        
+        // Actualizar título del gráfico
+        let tituloGrafico = 'Producción';
+        
+        if (maquinaId !== 'todas') {
+            const maquina = maquinas.find(m => m.id === maquinaId);
+            if (maquina) {
+                tituloGrafico += ` - ${maquina.nombre}`;
+            }
+        }
+        
+        if (campoId) {
+            // Buscar el nombre del campo
+            let nombreCampo = '';
+            for (const maquina of maquinas) {
+                const campo = maquina.campos.find(c => c.id === campoId);
+                if (campo) {
+                    nombreCampo = campo.nombre;
+                    break;
+                }
+            }
+            
+            if (nombreCampo) {
+                tituloGrafico += ` - ${nombreCampo}`;
+            }
+        }
+        
+        document.getElementById('titulo-grafico').textContent = tituloGrafico;
+        
+        // Generar gráfico
+        generarGrafico(datosAgrupados, tipoGrafico);
+        
+        // Generar estadísticas
+        generarEstadisticas(registrosFiltrados, campoId);
+    }
+}
+
+// Función para agrupar datos de forma avanzada
+function agruparDatosAvanzados(registros, agrupacion, campoId, operacion) {
+    const datos = {};
+    
+    // Inicializar los grupos para almacenar valores sin procesar
+    const gruposValores = {};
+    
+    registros.forEach(registro => {
+        // Verificar si el registro tiene el campo seleccionado
+        if (registro.valores && registro.valores[campoId]) {
+            let valor;
+            
+            // Manejar diferentes tipos de campos
+            if (registro.valores[campoId].tipo === 'numero') {
+                valor = registro.valores[campoId].valor || 0;
+            } else if (registro.valores[campoId].tipo === 'seleccion') {
+                valor = 1; // Para conteo de selecciones
+            } else {
+                return; // No procesamos otros tipos en gráficos
+            }
+            
+            // Obtener la fecha para agrupar
+            const fecha = new Date(registro.fecha);
+            let clave = '';
+            
+            switch (agrupacion) {
+                case 'dia':
+                    clave = fecha.toISOString().split('T')[0];
+                    break;
+                    
+                case 'semana':
+                    // Obtener el primer día de la semana (lunes)
+                    const primerDia = new Date(fecha);
+                    const diaSemana = fecha.getDay() || 7; // 0 es domingo, convertir a 7
+                    primerDia.setDate(fecha.getDate() - diaSemana + 1);
+                    clave = primerDia.toISOString().split('T')[0];
+                    break;
+                    
+                case 'mes':
+                    clave = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+                    break;
+            }
+            
+            // Inicializar el grupo si no existe
+            if (!gruposValores[clave]) {
+                gruposValores[clave] = [];
+            }
+            
+            // Añadir el valor al grupo
+            gruposValores[clave].push(valor);
+        }
+    });
+    
+    // Procesar cada grupo según la operación requerida
+    for (const [clave, valores] of Object.entries(gruposValores)) {
+        let resultado;
+        
+        switch (operacion) {
+            case 'sum':
+                resultado = valores.reduce((sum, val) => sum + val, 0);
+                break;
+            case 'avg':
+                resultado = valores.length > 0 ? valores.reduce((sum, val) => sum + val, 0) / valores.length : 0;
+                break;
+            case 'max':
+                resultado = Math.max(...valores);
+                break;
+            case 'min':
+                resultado = Math.min(...valores);
+                break;
+            case 'count':
+                resultado = valores.length;
+                break;
+            default:
+                resultado = valores.reduce((sum, val) => sum + val, 0); // Por defecto suma
+        }
+        
+        datos[clave] = resultado;
+    }
+    
+    // Ordenar por fecha
+    const datosOrdenados = {};
+    Object.keys(datos).sort().forEach(key => {
+        datosOrdenados[key] = datos[key];
+    });
+    
+    return datosOrdenados;
+}
+
+// Generar gráfico avanzado con múltiples campos
+function generarGraficoAvanzado(datosPorCampo, tipo, camposReporte) {
+    // Recopilar todas las etiquetas únicas (fechas)
+    const todasEtiquetas = new Set();
+    
+    Object.values(datosPorCampo).forEach(datos => {
+        Object.keys(datos).forEach(etiqueta => {
+            todasEtiquetas.add(etiqueta);
+        });
+    });
+    
+    // Convertir a array y ordenar
+    const etiquetas = Array.from(todasEtiquetas).sort();
+    
+    // Formatear etiquetas para visualización
+    const etiquetasFormateadas = etiquetas.map(clave => {
+        if (clave.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            // Es una fecha en formato YYYY-MM-DD
+            const fecha = new Date(clave);
+            return fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+        } else if (clave.match(/^\d{4}-\d{2}$/)) {
+            // Es un mes en formato YYYY-MM
+            const [año, mes] = clave.split('-');
+            const fecha = new Date(parseInt(año), parseInt(mes) - 1, 1);
+            return fecha.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
+        }
+        return clave;
+    });
+    
+    // Preparar datasets
+    const datasets = [];
+    
+    // Colores para diferentes series
+    const colores = [
+        'rgba(54, 162, 235, 0.7)',
+        'rgba(255, 99, 132, 0.7)',
+        'rgba(255, 206, 86, 0.7)',
+        'rgba(75, 192, 192, 0.7)',
+        'rgba(153, 102, 255, 0.7)',
+        'rgba(255, 159, 64, 0.7)'
+    ];
+    
+    // Crear un dataset para cada campo
+    camposReporte.forEach((campoReporte, index) => {
+        const datos = datosPorCampo[campoReporte.id];
+        
+        // Buscar el nombre del campo
+        let nombreCampo = 'Campo';
+        let nombreOperacion = '';
+        
+        // Buscar en todas las máquinas
+        for (const maquina of maquinas) {
+            const campo = maquina.campos.find(c => c.id === campoReporte.id);
+            if (campo) {
+                nombreCampo = campo.nombre;
+                break;
+            }
+        }
+        
+        // Traducir la operación
+        switch (campoReporte.operacion) {
+            case 'sum': nombreOperacion = 'Suma'; break;
+            case 'avg': nombreOperacion = 'Promedio'; break;
+            case 'max': nombreOperacion = 'Máximo'; break;
+            case 'min': nombreOperacion = 'Mínimo'; break;
+            case 'count': nombreOperacion = 'Conteo'; break;
+        }
+        
+        // Preparar valores para todas las etiquetas
+        const valores = etiquetas.map(etiqueta => {
+            return datos[etiqueta] || 0;
+        });
+        
+        // Color para este dataset
+        const color = colores[index % colores.length];
+        
+        datasets.push({
+            label: `${nombreCampo} (${nombreOperacion})`,
+            data: valores,
+            backgroundColor: tipo === 'line' ? color : colores.map(c => c.replace('0.7', `0.${7 - index % 5}`)),
+            borderColor: tipo === 'line' ? color.replace('0.7', '1') : colores.map(c => c.replace('0.7', '1')),
+            borderWidth: 1
+        });
+    });
+    
+    // Configurar el gráfico
+    const ctx = document.getElementById('chart-produccion').getContext('2d');
+    
+    // Destruir gráfico anterior si existe
+    if (chartProduccion) {
+        chartProduccion.destroy();
+    }
+    
+    // Configuración según tipo de gráfico
+    let config = {
+        type: tipo,
+        data: {
+            labels: etiquetasFormateadas,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true
+                },
+                tooltip: {
+                    enabled: true
+                }
+            }
+        }
+    };
+    
+    // Opciones específicas según tipo de gráfico
+    if (tipo === 'bar' || tipo === 'line') {
+        config.options.scales = {
+            y: {
+                beginAtZero: true
+            }
+        };
+    }
+    
+    // Crear gráfico
+    chartProduccion = new Chart(ctx, config);
+}
+
+// Generar estadísticas avanzadas
+function generarEstadisticasAvanzadas(registros, camposReporte) {
+    const estadisticasContenedor = document.getElementById('estadisticas-contenedor');
+    estadisticasContenedor.innerHTML = '';
+    
+    // Si no hay campos seleccionados, mostrar solo cantidad de registros
+    if (camposReporte.length === 0) {
+        estadisticasContenedor.innerHTML = `
+            <div class="stats-card">
+                <h4>Total de Registros</h4>
+                <div class="value">${registros.length}</div>
+            </div>
+            <div class="alert alert-info">
+                Seleccione campos para ver estadísticas avanzadas.
+            </div>
+        `;
+        return;
+    }
+    
+    // Mostrar total de registros
+    estadisticasContenedor.innerHTML = `
+        <div class="stats-card">
+            <h4>Total de Registros</h4>
+            <div class="value">${registros.length}</div>
+        </div>
+    `;
+    
+    // Procesar cada campo
+    camposReporte.forEach(campoReporte => {
+        // Verificar si hay valores para este campo
+        const valoresCampo = [];
+        
+        registros.forEach(registro => {
+            if (registro.valores && registro.valores[campoReporte.id]) {
+                const valor = registro.valores[campoReporte.id].valor;
+                if (registro.valores[campoReporte.id].tipo === 'numero' && !isNaN(valor)) {
+                    valoresCampo.push(valor);
+                }
+            }
+        });
+        
+        // Buscar nombre del campo
+        let nombreCampo = 'Campo';
+        for (const maquina of maquinas) {
+            const campo = maquina.campos.find(c => c.id === campoReporte.id);
+            if (campo) {
+                nombreCampo = campo.nombre;
+                break;
+            }
+        }
+        
+        if (valoresCampo.length === 0) {
+            const cardElement = document.createElement('div');
+            cardElement.className = 'stats-card';
+            cardElement.innerHTML = `
+                <h4>${nombreCampo}</h4>
+                <div class="alert alert-info mb-0">
+                    No hay datos numéricos disponibles.
+                </div>
+            `;
+            estadisticasContenedor.appendChild(cardElement);
+            return;
+        }
+        
+        // Calcular estadísticas
+        const sum = valoresCampo.reduce((a, b) => a + b, 0);
+        const avg = sum / valoresCampo.length;
+        const max = Math.max(...valoresCampo);
+        const min = Math.min(...valoresCampo);
+        
+        // Mostrar estadísticas según la operación seleccionada
+        let estadisticaHTML = '';
+        
+        switch (campoReporte.operacion) {
+            case 'sum':
+                estadisticaHTML = `<div class="value">${sum.toFixed(2)}</div>`;
+                break;
+            case 'avg':
+                estadisticaHTML = `<div class="value">${avg.toFixed(2)}</div>`;
+                break;
+            case 'max':
+                estadisticaHTML = `<div class="value">${max.toFixed(2)}</div>`;
+                break;
+            case 'min':
+                estadisticaHTML = `<div class="value">${min.toFixed(2)}</div>`;
+                break;
+            case 'count':
+                estadisticaHTML = `<div class="value">${valoresCampo.length}</div>`;
+                break;
+            default:
+                estadisticaHTML = `
+                    <div class="row">
+                        <div class="col-6">
+                            <small>Total:</small>
+                            <div class="value">${sum.toFixed(2)}</div>
+                        </div>
+                        <div class="col-6">
+                            <small>Promedio:</small>
+                            <div class="value">${avg.toFixed(2)}</div>
+                        </div>
+                    </div>
+                `;
+        }
+        
+        // Añadir card de estadísticas
+        const cardElement = document.createElement('div');
+        cardElement.className = 'stats-card';
+        cardElement.innerHTML = `
+            <h4>${nombreCampo}</h4>
+            ${estadisticaHTML}
+        `;
+        estadisticasContenedor.appendChild(cardElement);
+    });
+}
 
 
 
