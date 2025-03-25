@@ -1,255 +1,425 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Registro de Producción</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/@tailwindcss/browser@latest"></script>
-    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <link href="styles.css" rel="stylesheet">
 </head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-gear-fill me-2"></i>Sistema de Registro de Producción
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" id="nav-registro">Registro</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="nav-admin">Administración</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="nav-reportes">Reportes</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <div class="nav-link text-white" id="fecha-hora-actual">
+                            <i class="bi bi-clock me-1"></i>
+                            <span id="datetime-display"></span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-<body class="bg-gray-100 font-sans antialiased">
-    <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-semibold text-gray-800 mb-6 text-center">Sistema de Registro de Producción</h1>
+    <div class="container mt-4">
+        <!-- Sección de Registro -->
+        <div id="seccion-registro" class="seccion">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-light">
+                    <h2 id="titulo-formulario">Registro de Producción</h2>
+                    <p id="descripcion-formulario" class="text-muted">Ingrese la información de producción para la máquina seleccionada.</p>
+                </div>
+                <div class="card-body">
+                    <form id="form-registro" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="seleccionMaquina" class="form-label">Seleccione una Máquina</label>
+                            <select class="form-select" id="seleccionMaquina" required>
+                                <option value="" selected disabled>-- Seleccione una máquina --</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                Por favor seleccione una máquina.
+                            </div>
+                        </div>
+                        <div id="campos-dinamicos">
+                            <!-- Aquí se generarán los campos dinámicos -->
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i> Guardar Registro
+                        </button>
+                    </form>
+                </div>
+            </div>
 
-        <ul class="nav-tabs">
-            <li class="nav-item">
-                <a class="nav-link active" href="#registro-produccion">Registro de Producción</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#reportes-produccion">Reportes de Producción</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#admin-catalogos">Administración de Catálogos</a>
-            </li>
-        </ul>
-
-        <!-- Sección de Registro de Producción -->
-        <div id="registro-produccion" class="card">
-            <h2 class="card-title">Registro de Producción</h2>
-            <form id="form-registro-produccion" class="form-horizontal">
-                <div class="form-row">
-                    <div class="form-col">
-                        <div class="form-group">
-                            <label for="fecha" class="form-label">Fecha:</label>
-                            <input type="date" id="fecha" name="fecha" class="form-control" readonly>
-                        </div>
-                    </div>
-                    <div class="form-col">
-                        <div class="form-group">
-                            <label for="hora" class="form-label">Hora:</label>
-                            <input type="time" id="hora" name="hora" class="form-control" readonly>
-                        </div>
-                    </div>
-                    <div class="form-col">
-                        <div class="form-group">
-                            <label for="turno" class="form-label">Turno:</label>
-                            <select id="turno" name="turno" class="form-select" required>
-                                <option value="">Seleccione un turno</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-col">
-                        <div class="form-group">
-                            <label for="operario" class="form-label">Operario:</label>
-                            <select id="operario" name="operario" class="form-select" required>
-                                <option value="">Seleccione un operario</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-col">
-                        <div class="form-group">
-                            <label for="maquina" class="form-label">Máquina:</label>
-                            <select id="maquina" name="maquina" class="form-select" required>
-                                <option value="">Seleccione una máquina</option>
-                            </select>
-                        </div>
+            <div class="card shadow mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h3>Últimos Registros</h3>
+                    <div>
+                        <button id="btn-exportar-registros" class="btn btn-sm btn-outline-secondary me-1">
+                            <i class="bi bi-download me-1"></i>Exportar
+                        </button>
+                        <button id="btn-importar-registros" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-upload me-1"></i>Importar
+                        </button>
+                        <input type="file" id="importar-registros-file" accept=".json" class="d-none">
                     </div>
                 </div>
-
-                <div id="campos-dinamicos" class="form-row mt-4">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha y Hora</th>
+                                    <th>Máquina</th>
+                                    <th>Detalles</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-registros">
+                                <!-- Aquí se generan las filas dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="sin-registros" class="alert alert-info d-none">
+                        No hay registros disponibles.
+                    </div>
                 </div>
-
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">Guardar Registro</button>
-                </div>
-            </form>
-            <div id="mensaje-registro" class="mt-4 alert" style="display: none;"></div>
-
-            <h3 class="section-title">Registros de Producción</h3>
-            <div class="table-responsive">
-                <table class="table" id="tabla-registros">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Hora</th>
-                            <th>Turno</th>
-                            <th>Operario</th>
-                            <th>Máquina</th>
-                            <th>Valores</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
             </div>
         </div>
 
-        <!-- Sección de Reportes de Producción -->
-        <div id="reportes-produccion" class="card" style="display: none;">
-            <h2 class="card-title">Reportes de Producción</h2>
-            <div class="form-group">
-                <label for="maquina-reporte" class="form-label">Máquina:</label>
-                <select id="maquina-reporte" name="maquina-reporte" class="form-select" required>
-                    <option value="">Seleccione una máquina</option>
-                </select>
+        <!-- Sección de Administración -->
+        <div id="seccion-admin" class="seccion d-none">
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow h-100">
+                        <div class="card-header bg-light">
+                            <h3>Configuración General</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="form-config-general">
+                                <div class="mb-3">
+                                    <label for="titulo-app" class="form-label">Título del Formulario</label>
+                                    <input type="text" class="form-control" id="titulo-app" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="descripcion-app" class="form-label">Descripción del Formulario</label>
+                                    <textarea class="form-control" id="descripcion-app" rows="2"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save me-1"></i> Guardar Configuración
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow h-100">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h3>Gestión de Datos</h3>
+                            <div>
+                                <button id="btn-exportar-todo" class="btn btn-sm btn-outline-secondary me-1">
+                                    <i class="bi bi-download me-1"></i>Exportar Todo
+                                </button>
+                                <button id="btn-importar-todo" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-upload me-1"></i>Importar Todo
+                                </button>
+                                <input type="file" id="importar-todo-file" accept=".json" class="d-none">
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <button id="btn-limpiar-registros" class="btn btn-warning">
+                                    <i class="bi bi-trash me-1"></i> Limpiar Registros de Producción
+                                </button>
+                                <button id="btn-reset-sistema" class="btn btn-danger">
+                                    <i class="bi bi-exclamation-triangle me-1"></i> Restablecer Sistema
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="fecha-inicio-reporte" class="form-label">Fecha de Inicio:</label>
-                <input type="date" id="fecha-inicio-reporte" name="fecha-inicio-reporte" class="form-control" required>
-            </div>
-            <div class="form-group">
-                <label for="fecha-fin-reporte" class="form-label">Fecha de Fin:</label>
-                <input type="date" id="fecha-fin-reporte" name="fecha-fin-reporte" class="form-control" required>
-            </div>
-            <div class="form-group">
-                <button id="generar-reporte" type="button" class="btn btn-secondary">Generar Reporte</button>
-            </div>
-            <div id="reporte-grafico" class="mt-6" style="display: none;">
-                <h3 class="text-lg font-semibold mb-4">Gráfico de Producción</h3>
-                <canvas id="grafico-produccion"></canvas>
-            </div>
-            <div id="reporte-tabla" class="mt-6 table-responsive" style="display: none;">
-                <h3 class="text-lg font-semibold mb-4">Tabla de Datos de Producción</h3>
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Hora</th>
-                            <th>Turno</th>
-                            <th>Operario</th>
-                            <th>Máquina</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
+
+            <div class="card shadow mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h3>Máquinas</h3>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalMaquina">
+                        <i class="bi bi-plus-circle me-1"></i> Nueva Máquina
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Descripción</th>
+                                    <th>Cantidad de Campos</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-maquinas">
+                                <!-- Aquí se generan las filas dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="sin-maquinas" class="alert alert-info d-none">
+                        No hay máquinas configuradas. Añada una nueva máquina para comenzar.
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Sección de Administración de Catálogos -->
-        <div id="admin-catalogos" class="card" style="display: none;">
-            <h2 class="card-title">Administración de Catálogos</h2>
-            
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-4">Administración de Turnos</h3>
-                <form id="form-agregar-turno" class="form-horizontal">
-                    <div class="form-group">
-                        <label for="nombre-turno" class="form-label">Nombre del Turno:</label>
-                        <input type="text" id="nombre-turno" name="nombre-turno" class="form-control" required placeholder="Mañana, Tarde o Noche">
-                    </div>
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary">Agregar Turno</button>
-                    </div>
-                </form>
-                <div id="mensaje-turno" class="mt-4 alert" style="display: none;"></div>
-                <ul id="lista-turnos" class="list-group mt-4">
-                </ul>
-            </div>
-            
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-4">Administración de Máquinas</h3>
-                <form id="form-agregar-maquina" class="form-horizontal">
-                    <div class="form-group">
-                        <label for="nombre-maquina" class="form-label">Nombre de la Máquina:</label>
-                        <input type="text" id="nombre-maquina" name="nombre-maquina" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary">Agregar Máquina</button>
-                    </div>
-                </form>
-                <div id="mensaje-maquina" class="mt-4 alert" style="display: none;"></div>
-                <ul id="lista-maquinas" class="list-group mt-4">
-                </ul>
-            </div>
-            
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-4">Administración de Operarios</h3>
-                <form id="form-agregar-operario" class="form-horizontal">
-                    <div class="form-group">
-                        <label for="nombre-operario" class="form-label">Nombre del Operario:</label>
-                        <input type="text" id="nombre-operario" name="nombre-operario" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary">Agregar Operario</button>
-                    </div>
-                </form>
-                <div id="mensaje-operario" class="mt-4 alert" style="display: none;"></div>
-                <ul id="lista-operarios" class="list-group mt-4">
-                </ul>
-            </div>
-            
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-4">Administración de Campos de Máquina</h3>
-                <form id="form-agregar-campo-maquina" class="form-horizontal">
-                    <div class="form-group">
-                        <label for="maquina-campo" class="form-label">Máquina:</label>
-                        <select id="maquina-campo" name="maquina-campo" class="form-select" required>
-                            <option value="">Seleccione una máquina</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="nombre-campo" class="form-label">Nombre del Campo:</label>
-                        <input type="text" id="nombre-campo" name="nombre-campo" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="tipo-campo" class="form-label">Tipo de Campo:</label>
-                        <select id="tipo-campo" name="tipo-campo" class="form-select" required>
-                            <option value="">Seleccione un tipo de campo</option>
-                            <option value="texto">Texto</option>
-                            <option value="numero">Número</option>
-                            <option value="lista">Lista</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="opciones-campo" class="form-label">Opciones (separadas por comas):</label>
-                        <input type="text" id="opciones-campo" name="opciones-campo" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label for="campo-obligatorio" class="form-label">Campo Obligatorio:</label>
-                        <input type="checkbox" id="campo-obligatorio" name="campo-obligatorio" class="form-check-input">
-                    </div>
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary">Agregar Campo</button>
-                    </div>
-                </form>
-                <div id="mensaje-campo-maquina" class="mt-4 alert" style="display: none;"></div>
-                <div class="mt-6">
-                    <h4 class="font-semibold mb-2">Campos por Máquina</h4>
-                    <div id="campos-por-maquina" class="border rounded-md p-4">
-                    </div>
+        <!-- Sección de Reportes -->
+        <div id="seccion-reportes" class="seccion d-none">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-light">
+                    <h3>Filtros de Reporte</h3>
+                </div>
+                <div class="card-body">
+                    <form id="form-filtros" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="filtro-maquina" class="form-label">Máquina</label>
+                            <select class="form-select" id="filtro-maquina">
+                                <option value="todas" selected>Todas las máquinas</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="filtro-desde" class="form-label">Desde</label>
+                            <input type="date" class="form-control" id="filtro-desde">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="filtro-hasta" class="form-label">Hasta</label>
+                            <input type="date" class="form-control" id="filtro-hasta">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="filtro-agrupacion" class="form-label">Agrupar por</label>
+                            <select class="form-select" id="filtro-agrupacion">
+                                <option value="dia">Día</option>
+                                <option value="semana">Semana</option>
+                                <option value="mes">Mes</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="filtro-campo" class="form-label">Campo numérico</label>
+                            <select class="form-select" id="filtro-campo">
+                                <option value="" selected disabled>Seleccione un campo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="filtro-tipo-grafico" class="form-label">Tipo de Gráfico</label>
+                            <select class="form-select" id="filtro-tipo-grafico">
+                                <option value="bar">Barras</option>
+                                <option value="line">Líneas</option>
+                                <option value="pie">Circular</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-1"></i> Generar Reporte
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
-            
-            <div class="mt-6 pt-6 border-t border-gray-200">
-                <h3 class="text-lg font-semibold mb-4">Administración de Base de Datos</h3>
-                <div class="flex space-x-4">
-                    <button id="exportar-bd" class="btn btn-secondary">Exportar Base de Datos</button>
-                    <div class="form-group">
-                        <label for="importar-bd" class="btn btn-secondary">Importar Base de Datos</label>
-                        <input type="file" id="importar-bd" class="hidden" accept=".json,.csv">
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card shadow mb-4">
+                        <div class="card-header bg-light">
+                            <h3 id="titulo-grafico">Gráfico de Producción</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container" style="position: relative; height:400px;">
+                                <canvas id="chart-produccion"></canvas>
+                            </div>
+                            <div id="sin-datos-grafico" class="alert alert-info mt-3 d-none">
+                                No hay datos disponibles para mostrar en el gráfico.
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div id="mensaje-bd" class="mt-4 alert" style="display: none;"></div>
+                <div class="col-md-4">
+                    <div class="card shadow mb-4">
+                        <div class="card-header bg-light">
+                            <h3>Estadísticas</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="estadisticas-contenedor">
+                                <div class="alert alert-info">
+                                    Seleccione filtros y genere un reporte para ver estadísticas.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Modal para Máquinas -->
+    <div class="modal fade" id="modalMaquina" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="tituloModalMaquina">Nueva Máquina</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-maquina">
+                        <input type="hidden" id="maquina-id">
+                        <div class="mb-3">
+                            <label for="maquina-nombre" class="form-label">Nombre</label>
+                            <input type="text" class="form-control" id="maquina-nombre" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="maquina-descripcion" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="maquina-descripcion" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0">Campos de Registro</label>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-agregar-campo">
+                                    <i class="bi bi-plus-circle me-1"></i> Agregar Campo
+                                </button>
+                            </div>
+                            <div id="lista-campos" class="list-group">
+                                <!-- Aquí se añadirán dinámicamente los campos -->
+                            </div>
+                            <div id="sin-campos" class="alert alert-info mt-2">
+                                No hay campos definidos. Añada al menos un campo.
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btn-guardar-maquina">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Campo -->
+    <div class="modal fade" id="modalCampo" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="tituloModalCampo">Nuevo Campo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-campo">
+                        <input type="hidden" id="campo-id">
+                        <div class="mb-3">
+                            <label for="campo-nombre" class="form-label">Nombre</label>
+                            <input type="text" class="form-control" id="campo-nombre" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="campo-tipo" class="form-label">Tipo</label>
+                            <select class="form-select" id="campo-tipo" required>
+                                <option value="" selected disabled>Seleccione un tipo</option>
+                                <option value="texto">Texto</option>
+                                <option value="numero">Número</option>
+                                <option value="seleccion">Selección</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 d-none" id="opciones-contenedor">
+                            <label class="form-label">Opciones</label>
+                            <div id="lista-opciones">
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control opcion-valor" placeholder="Valor">
+                                    <button class="btn btn-outline-danger btn-eliminar-opcion" type="button">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-agregar-opcion">
+                                <i class="bi bi-plus-circle me-1"></i> Agregar Opción
+                            </button>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="campo-obligatorio">
+                            <label class="form-check-label" for="campo-obligatorio">
+                                Campo obligatorio
+                            </label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btn-guardar-campo">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Visualizar Registro -->
+    <div class="modal fade" id="modalVerRegistro" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalles del Registro</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <dl class="row" id="detalles-registro">
+                        <!-- Aquí se generan los detalles dinámicamente -->
+                    </dl>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación -->
+    <div class="modal fade" id="modalConfirmacion" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="titulo-confirmacion">Confirmar acción</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="mensaje-confirmacion">¿Está seguro de realizar esta acción?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="btn-confirmar">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white text-center p-3 mt-5">
+        <div class="container">
+            <p class="mb-0">Sistema de Registro de Producción &copy; 2025 - Desarrollado para JhonyAlex</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script.js"></script>
 </body>
-
 </html>
