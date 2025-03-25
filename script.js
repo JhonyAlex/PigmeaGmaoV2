@@ -971,7 +971,6 @@ document.getElementById('form-agregar-campo-maquina').addEventListener('submit',
     localStorage.setItem('camposMaquina', JSON.stringify(camposMaquina));
     actualizarCamposPorMaquina();
     actualizarFormularioRegistro(); // Actualiza el formulario de registro con los nuevos campos
-    actualizarFechaHora();
 
     // Limpiar el formulario
     document.getElementById('maquina-campo').value = '';
