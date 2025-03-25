@@ -191,56 +191,97 @@
 
         <!-- Sección de Reportes -->
         <div id="seccion-reportes" class="seccion d-none">
-            <div class="card shadow mb-4">
-                <div class="card-header bg-light">
-                    <h3>Filtros de Reporte</h3>
-                </div>
-                <div class="card-body">
-                    <form id="form-filtros" class="row g-3">
-                        <div class="col-md-4">
-                            <label for="filtro-maquina" class="form-label">Máquina</label>
-                            <select class="form-select" id="filtro-maquina">
-                                <option value="todas" selected>Todas las máquinas</option>
-                            </select>
+<!-- Reemplazar la sección de filtros en reportes (dentro de seccion-reportes) -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-light">
+        <h3>Filtros de Reporte</h3>
+    </div>
+    <div class="card-body">
+        <form id="form-filtros" class="row g-3">
+            <div class="col-md-4">
+                <label for="filtro-maquina" class="form-label">Máquina</label>
+                <select class="form-select" id="filtro-maquina">
+                    <option value="todas" selected>Todas las máquinas</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="filtro-desde" class="form-label">Desde</label>
+                <input type="date" class="form-control" id="filtro-desde">
+            </div>
+            <div class="col-md-4">
+                <label for="filtro-hasta" class="form-label">Hasta</label>
+                <input type="date" class="form-control" id="filtro-hasta">
+            </div>
+            <div class="col-md-4">
+                <label for="filtro-agrupacion" class="form-label">Agrupar por</label>
+                <select class="form-select" id="filtro-agrupacion">
+                    <option value="dia">Día</option>
+                    <option value="semana">Semana</option>
+                    <option value="mes">Mes</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="filtro-categoria" class="form-label">Categoría</label>
+                <select class="form-select" id="filtro-categoria">
+                    <option value="todas" selected>Todas las categorías</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="filtro-tipo-grafico" class="form-label">Tipo de Gráfico</label>
+                <select class="form-select" id="filtro-tipo-grafico">
+                    <option value="bar">Barras</option>
+                    <option value="line">Líneas</option>
+                    <option value="pie">Circular</option>
+                </select>
+            </div>
+            
+            <div class="col-12">
+                <div class="card border-light mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Campos para el reporte</span>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btn-agregar-campo-reporte">
+                            <i class="bi bi-plus-circle me-1"></i> Agregar Campo
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="lista-campos-reporte">
+                            <div class="row mb-2 campo-reporte-item">
+                                <div class="col-md-5">
+                                    <select class="form-select campo-reporte">
+                                        <option value="" selected disabled>Seleccione un campo</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-5">
+                                    <select class="form-select operacion-reporte">
+                                        <option value="sum">Suma</option>
+                                        <option value="avg">Promedio</option>
+                                        <option value="max">Máximo</option>
+                                        <option value="min">Mínimo</option>
+                                        <option value="count">Conteo</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="button" class="btn btn-outline-danger w-100 btn-eliminar-campo-reporte">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-4">
-                            <label for="filtro-desde" class="form-label">Desde</label>
-                            <input type="date" class="form-control" id="filtro-desde">
+                        <div id="sin-campos-reporte" class="alert alert-info d-none">
+                            Agregue al menos un campo para generar el reporte.
                         </div>
-                        <div class="col-md-4">
-                            <label for="filtro-hasta" class="form-label">Hasta</label>
-                            <input type="date" class="form-control" id="filtro-hasta">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="filtro-agrupacion" class="form-label">Agrupar por</label>
-                            <select class="form-select" id="filtro-agrupacion">
-                                <option value="dia">Día</option>
-                                <option value="semana">Semana</option>
-                                <option value="mes">Mes</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="filtro-campo" class="form-label">Campo numérico</label>
-                            <select class="form-select" id="filtro-campo">
-                                <option value="" selected disabled>Seleccione un campo</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="filtro-tipo-grafico" class="form-label">Tipo de Gráfico</label>
-                            <select class="form-select" id="filtro-tipo-grafico">
-                                <option value="bar">Barras</option>
-                                <option value="line">Líneas</option>
-                                <option value="pie">Circular</option>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-search me-1"></i> Generar Reporte
-                            </button>
-                        </div>
-                    </form>
+                    </div>
                 </div>
             </div>
+            
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search me-1"></i> Generar Reporte
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
             <div class="row">
                 <div class="col-md-8">
@@ -284,33 +325,67 @@
                     <h5 class="modal-title" id="tituloModalMaquina">Nueva Máquina</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <form id="form-maquina">
-                        <input type="hidden" id="maquina-id">
-                        <div class="mb-3">
-                            <label for="maquina-nombre" class="form-label">Nombre</label>
-                            <input type="text" class="form-control" id="maquina-nombre" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="maquina-descripcion" class="form-label">Descripción</label>
-                            <textarea class="form-control" id="maquina-descripcion" rows="2"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <label class="form-label mb-0">Campos de Registro</label>
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-agregar-campo">
-                                    <i class="bi bi-plus-circle me-1"></i> Agregar Campo
-                                </button>
-                            </div>
-                            <div id="lista-campos" class="list-group">
-                                <!-- Aquí se añadirán dinámicamente los campos -->
-                            </div>
-                            <div id="sin-campos" class="alert alert-info mt-2">
-                                No hay campos definidos. Añada al menos un campo.
-                            </div>
-                        </div>
-                    </form>
+                <!-- Reemplaza la parte inicial del formulario en el modal de campo (modalCampo) -->
+<div class="modal-body">
+    <form id="form-campo">
+        <input type="hidden" id="campo-id">
+        <div class="mb-3">
+            <label for="campo-nombre" class="form-label">Nombre</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="campo-nombre" required>
+                <button class="btn btn-outline-secondary" type="button" id="btn-buscar-campos-similares">
+                    <i class="bi bi-search"></i> Buscar similares
+                </button>
+            </div>
+        </div>
+        <div id="campos-similares-container" class="mb-3 d-none">
+            <label class="form-label">Campos similares existentes</label>
+            <div class="list-group" id="lista-campos-similares">
+                <!-- Aquí se mostrarán campos similares -->
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="campo-tipo" class="form-label">Tipo</label>
+            <select class="form-select" id="campo-tipo" required>
+                <option value="" selected disabled>Seleccione un tipo</option>
+                <option value="texto">Texto</option>
+                <option value="numero">Número</option>
+                <option value="seleccion">Selección</option>
+            </select>
+        </div>
+        <div class="mb-3 d-none" id="opciones-contenedor">
+            <label class="form-label">Opciones</label>
+            <div id="lista-opciones">
+                <div class="input-group mb-2">
+                    <input type="text" class="form-control opcion-valor" placeholder="Valor">
+                    <button class="btn btn-outline-danger btn-eliminar-opcion" type="button">
+                        <i class="bi bi-trash"></i>
+                    </button>
                 </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-agregar-opcion">
+                <i class="bi bi-plus-circle me-1"></i> Agregar Opción
+            </button>
+        </div>
+        <div class="mb-3">
+            <label for="campo-categoria" class="form-label">Categoría para reportes</label>
+            <input type="text" class="form-control" id="campo-categoria" placeholder="Ej: Producción, Calidad, etc.">
+            <small class="form-text text-muted">Ayuda a agrupar campos relacionados en reportes</small>
+        </div>
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="campo-obligatorio">
+            <label class="form-check-label" for="campo-obligatorio">
+                Campo obligatorio
+            </label>
+        </div>
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="campo-comun">
+            <label class="form-check-label" for="campo-comun">
+                Guardar como campo común reutilizable
+            </label>
+        </div>
+    </form>
+</div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" id="btn-guardar-maquina">Guardar</button>
