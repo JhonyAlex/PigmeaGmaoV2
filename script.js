@@ -366,20 +366,21 @@ modal.show();
 }
 
 // Guardar máquina
+// Guardar máquina
 function guardarMaquina() {
     const nombre = document.getElementById('maquina-nombre').value.trim();
     if (!nombre) {
         mostrarAlerta('El nombre de la máquina es obligatorio', 'danger');
         return;
     }
-
+    
     const descripcion = document.getElementById('maquina-descripcion').value.trim();
-
+    
     if (maquinaEditando) {
         // Actualizar máquina existente
         maquinaEditando.nombre = nombre;
         maquinaEditando.descripcion = descripcion;
-
+        
         // Actualizar índice en el array
         const index = maquinas.findIndex(m => m.id === maquinaEditando.id);
         if (index !== -1) {
@@ -393,16 +394,24 @@ function guardarMaquina() {
             descripcion: descripcion,
             campos: []
         };
-
+        
         maquinas.push(nuevaMaquina);
     }
-
+    
     guardarDatos();
     actualizarInterfaz();
-    const modal = bootstrap.Modal.getInstance(document.getElementById('modalMaquina'));
-    if (modal) {
+    
+    // Cerrar el modal correctamente
+    const modalElement = document.getElementById('modalMaquina');
+    const modalInstance = bootstrap.Modal.getInstance(modalElement);
+    if (modalInstance) {
+        modalInstance.hide();
+    } else {
+        // Alternativa si no se encuentra la instancia
+        const modal = new bootstrap.Modal(modalElement);
         modal.hide();
     }
+    
     mostrarAlerta('Máquina guardada correctamente', 'success');
 }
 
@@ -2865,6 +2874,17 @@ function generarGraficoAvanzado(datosPorCampo, tipo, camposReporte) {
     chartProduccion = new Chart(ctx, config);
 }
 
+// Añade esta función de utilidad
+function getModal(modalId) {
+    const modalElement = document.getElementById(modalId);
+    const instance = bootstrap.Modal.getInstance(modalElement);
+    if (instance) {
+        return instance;
+    } else {
+        return new bootstrap.Modal(modalElement);
+    }
+}
+
 // Generar estadísticas avanzadas
 function generarEstadisticasAvanzadas(registros, camposReporte) {
     const estadisticasContenedor = document.getElementById('estadisticas-contenedor');
@@ -3019,5 +3039,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalConfirmacionEl = document.getElementById('modalConfirmacion');
     if (modalConfirmacionEl) {
         window.modalConfirmacion = new bootstrap.Modal(modalConfirmacionEl);
+    }
+}
+);
+
+// Inicializar modales correctamente al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar todos los modales de Bootstrap
+    document.querySelectorAll('.modal').forEach(modalElement => {
+        new bootstrap.Modal(modalElement);
+    });
+    
+    // Asegurar que el botón de guardar máquina funcione
+    const btnGuardarMaquina = document.getElementById('btn-guardar-maquina');
+    if (btnGuardarMaquina) {
+        btnGuardarMaquina.addEventListener('click', guardarMaquina);
+    }
+    
+    // Asegurar que el botón de reset sistema funcione
+    const btnResetSistema = document.getElementById('btn-reset-sistema');
+    if (btnResetSistema) {
+        btnResetSistema.addEventListener('click', function() {
+            confirmarAccion('resetSistema', '¿Está seguro que desea restablecer todo el sistema? Esta acción eliminará todas las máquinas, campos y registros.');
+        });
     }
 });
