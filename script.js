@@ -11,6 +11,19 @@ let campoEditando = null;
 let accionConfirmacion = null;
 let chartProduccion = null;
 
+
+// Inicialización de modales (después de las variables globales)
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar todos los modales
+    const modales = document.querySelectorAll('.modal');
+    modales.forEach(modal => {
+        new bootstrap.Modal(modal);
+    });
+});
+
+
+
+
 // Modales de Bootstrap
 const modalMaquina = new bootstrap.Modal(document.getElementById('modalMaquina'));
 const modalCampo = new bootstrap.Modal(document.getElementById('modalCampo'));
@@ -255,6 +268,22 @@ function cambiarSeccion(seccion) {
     }
 }
 
+// Añadir después de la función cambiarSeccion()
+// Mostrar modal de nueva máquina
+function mostrarModalMaquina() {
+    maquinaEditando = null;
+    document.getElementById('tituloModalMaquina').textContent = 'Nueva Máquina';
+    document.getElementById('form-maquina').reset();
+    document.getElementById('maquina-id').value = '';
+    document.getElementById('lista-campos').innerHTML = '';
+    document.getElementById('sin-campos').classList.remove('d-none');
+    
+    const modalElement = document.getElementById('modalMaquina');
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+}
+
+
 // GESTIÓN DE MAQUINAS Y CAMPOS
 
 // Mostrar modal de nueva máquina
@@ -264,7 +293,8 @@ function mostrarModalMaquina() {
     document.getElementById('form-maquina').reset();
     document.getElementById('lista-campos').innerHTML = '';
     document.getElementById('sin-campos').classList.remove('d-none');
-    modalMaquina.show();
+    const modal = new bootstrap.Modal(document.getElementById('modalMaquina'));
+modal.show();
 }
 
 // Mostrar modal para editar máquina
@@ -331,7 +361,8 @@ function editarMaquina(id) {
         document.getElementById('sin-campos').classList.remove('d-none');
     }
 
-    modalMaquina.show();
+    const modal = new bootstrap.Modal(document.getElementById('modalMaquina'));
+modal.show();
 }
 
 // Guardar máquina
@@ -368,7 +399,10 @@ function guardarMaquina() {
 
     guardarDatos();
     actualizarInterfaz();
-    modalMaquina.hide();
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalMaquina'));
+    if (modal) {
+        modal.hide();
+    }
     mostrarAlerta('Máquina guardada correctamente', 'success');
 }
 
@@ -1236,41 +1270,57 @@ function actualizarSelectoresCamposReporte() {
 }
 
 // Actualizar tabla de máquinas
+// Reemplaza la función actualizarTablaMaquinas() completa
 function actualizarTablaMaquinas() {
     const tablaMaquinas = document.getElementById('tabla-maquinas');
     const sinMaquinas = document.getElementById('sin-maquinas');
-
+    
     if (maquinas.length === 0) {
         tablaMaquinas.innerHTML = '';
         sinMaquinas.classList.remove('d-none');
         return;
     }
-
+    
     sinMaquinas.classList.add('d-none');
-
+    
     let html = '';
-
+    
     maquinas.forEach(maquina => {
         const cantidadCampos = maquina.campos ? maquina.campos.length : 0;
-
+        
         html += `
-            <tr>
+            <tr data-id="${maquina.id}">
                 <td>${maquina.nombre}</td>
                 <td>${maquina.descripcion || '-'}</td>
                 <td>${cantidadCampos}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary btn-action" onclick="editarMaquina('${maquina.id}')">
+                    <button class="btn btn-sm btn-outline-primary btn-action btn-editar-maquina">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger btn-action" onclick="eliminarMaquina('${maquina.id}')">
+                    <button class="btn btn-sm btn-outline-danger btn-action btn-eliminar-maquina">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>
             </tr>
         `;
     });
-
+    
     tablaMaquinas.innerHTML = html;
+    
+    // Asignar eventos a los botones de la tabla
+    tablaMaquinas.querySelectorAll('.btn-editar-maquina').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.closest('tr').dataset.id;
+            editarMaquina(id);
+        });
+    });
+    
+    tablaMaquinas.querySelectorAll('.btn-eliminar-maquina').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.closest('tr').dataset.id;
+            eliminarMaquina(id);
+        });
+    });
 }
 
 // Actualizar tabla de registros
@@ -2939,10 +2989,35 @@ function generarEstadisticasAvanzadas(registros, camposReporte) {
 
 
 // Evento de carga inicial
-document.addEventListener('DOMContentLoaded', function () {
+// Evento de carga inicial (reemplaza el último event listener)
+document.addEventListener('DOMContentLoaded', function() {
     // Añadir evento para nueva máquina en la tabla de administración
-    document.querySelector('.card-header .btn-primary').addEventListener('click', mostrarModalMaquina);
-
+    const btnNuevaMaquina = document.querySelector('.card-header .btn-primary');
+    if (btnNuevaMaquina) {
+        btnNuevaMaquina.addEventListener('click', mostrarModalMaquina);
+    }
+    
     // Iniciar en la sección de registro
     cambiarSeccion('registro');
+    
+    // Inicializar objetos de Bootstrap
+    const modalMaquinaEl = document.getElementById('modalMaquina');
+    if (modalMaquinaEl) {
+        window.modalMaquina = new bootstrap.Modal(modalMaquinaEl);
+    }
+    
+    const modalCampoEl = document.getElementById('modalCampo');
+    if (modalCampoEl) {
+        window.modalCampo = new bootstrap.Modal(modalCampoEl);
+    }
+    
+    const modalVerRegistroEl = document.getElementById('modalVerRegistro');
+    if (modalVerRegistroEl) {
+        window.modalVerRegistro = new bootstrap.Modal(modalVerRegistroEl);
+    }
+    
+    const modalConfirmacionEl = document.getElementById('modalConfirmacion');
+    if (modalConfirmacionEl) {
+        window.modalConfirmacion = new bootstrap.Modal(modalConfirmacionEl);
+    }
 });
