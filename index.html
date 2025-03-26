@@ -3,73 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Datos Genérico</title>
-    <link href="css/bootstrap.min.css" rel="stylesheet">
-    <link href="css/style.css" rel="stylesheet">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+    <title>Sistema de Registro Genérico</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Estilos personalizados -->
+    <link href="css/styles.css" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">📊 Logger</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <a class="navbar-brand" href="#">Sistema de Registro Flexible</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="#" data-section="register">Registro</a>
+                        <a class="nav-link" href="#" data-route="register">Registro</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#" data-section="reports">Reportes</a>
+                        <a class="nav-link" href="#" data-route="reports">Reportes</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#" data-section="admin">Administración</a>
+                        <a class="nav-link" href="#" data-route="admin">Administración</a>
                     </li>
                 </ul>
-                 <div class="d-flex">
-                    <button id="export-button" class="btn btn-outline-secondary btn-sm me-2" type="button">Exportar Datos</button>
-                    <label for="import-file" class="btn btn-outline-secondary btn-sm">Importar Datos</label>
-                    <input type="file" id="import-file" accept=".json" style="display: none;">
+                <div class="d-flex">
+                    <button id="export-data-btn" class="btn btn-outline-light me-2">Exportar Datos</button>
+                    <div class="position-relative">
+                        <button id="import-btn" class="btn btn-outline-light">Importar Datos</button>
+                        <input type="file" id="import-file" class="d-none" accept=".json">
+                    </div>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="container mt-4">
-        <section id="register-section">
-            </section>
+    <!-- Contenido principal (cambia según la ruta) -->
+    <div id="main-content"></div>
 
-        <section id="reports-section" class="d-none">
-            </section>
-
-        <section id="admin-section" class="d-none">
-            </section>
-    </main>
-
-    <div class="modal fade" id="mainModal" tabindex="-1" aria-labelledby="mainModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg"> <div class="modal-content">
+    <!-- Modales -->
+    <!-- Modal para entidades -->
+    <div class="modal fade" id="entityModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="mainModalLabel">Título Modal</h5>
+                    <h5 class="modal-title" id="entityModalTitle">Entidad Principal</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body" id="mainModalBody">
-                    </div>
-                <div class="modal-footer" id="mainModalFooter">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    </div>
+                <div class="modal-body">
+                    <form id="entityForm">
+                        <input type="hidden" id="entity-id">
+                        <div class="mb-3">
+                            <label for="entity-name" class="form-label">Nombre</label>
+                            <input type="text" class="form-control" id="entity-name" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="saveEntityBtn">Guardar</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/storage.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/admin.js"></script>
-    <script src="js/register.js"></script>
-    <script src="js/reports.js"></script>
+    <!-- Modal para campos -->
+    <div class="modal fade" id="fieldModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="fieldModalTitle">Campo Personalizado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="fieldForm">
+                        <input type="hidden" id="field-id">
+                        <div class="mb-3">
+                            <label for="field-name" class="form-label">Nombre del Campo</label>
+                            <input type="text" class="form-control" id="field-name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="field-type" class="form-label">Tipo de Campo</label>
+                            <select class="form-select" id="field-type" required>
+                                <option value="text">Texto</option>
+                                <option value="number">Número</option>
+                                <option value="select">Selección</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="options-container" style="display: none;">
+                            <label class="form-label">Opciones</label>
+                            <div id="options-list">
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control field-option" placeholder="Opción">
+                                    <button type="button" class="btn btn-outline-danger remove-option">×</button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="add-option-btn">
+                                Agregar Opción
+                            </button>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="field-required">
+                            <label class="form-check-label" for="field-required">Campo Obligatorio</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="saveFieldBtn">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para asignar campos -->
+    <div class="modal fade" id="assignFieldsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Asignar Campos a <span id="entity-name-title"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Campos Disponibles</h6>
+                            <div class="list-group" id="available-fields-list">
+                                <!-- Campos disponibles -->
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Campos Asignados</h6>
+                            <div class="list-group" id="assigned-fields-list">
+                                <!-- Campos asignados -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-primary" id="saveAssignFieldsBtn">Guardar Asignación</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmación -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Acción</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirm-message">¿Está seguro de realizar esta acción?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="confirmActionBtn">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de visualización de registro -->
+    <div class="modal fade" id="viewRecordModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalles del Registro</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="record-details"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    
+    <!-- Aplicación JavaScript -->
+    <script src="js/models/storage.js"></script>
+    <script src="js/models/entity.js"></script>
+    <script src="js/models/field.js"></script>
+    <script src="js/models/record.js"></script>
+    <script src="js/utils/validation.js"></script>
+    <script src="js/utils/ui.js"></script>
+    <script src="js/utils/export.js"></script>
+    <script src="js/utils/charts.js"></script>
+    <script src="js/views/admin.js"></script>
+    <script src="js/views/register.js"></script>
+    <script src="js/views/reports.js"></script>
+    <script src="js/router.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
