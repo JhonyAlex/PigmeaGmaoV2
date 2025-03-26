@@ -157,4 +157,17 @@ const RecordModel = {
         
         return reportData;
     }
+
+    delete(id) {
+        const data = StorageService.getData();
+        const initialLength = data.records.length;
+        
+        data.records = data.records.filter(record => record.id !== id);
+        StorageService.saveData(data);
+        
+        return data.records.length < initialLength;
+    }
+
+
+
 };

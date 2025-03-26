@@ -17,7 +17,26 @@ const EntityModel = {
      */
     getById(id) {
         const entities = this.getAll();
-        return entities.find(entity => entity.id === id) || null;
+        const entity = entities.find(entity => entity.id === id) || null;
+        
+        // Asegurar formato de campos compatible
+        if (entity) {
+            // Normalizar campos (convertir objetos o strings a objetos)
+            entity.fields = entity.fields.map((field, index) => {
+                if (typeof field === 'string') {
+                    return {
+                        id: field,
+                        order: index
+                    };
+                }
+                return field;
+            });
+            
+            // Ordenar campos por la propiedad order
+            entity.fields.sort((a, b) => a.order - b.order);
+        }
+        
+        return entity;
     },
     
     /**
@@ -88,7 +107,24 @@ const EntityModel = {
         
         if (entityIndex === -1) return null;
         
-        data.entities[entityIndex].fields = fieldIds;
+        // Convertir el array simple de IDs a un array de objetos con orden
+        data.entities[entityIndex].fields = fieldIds.map((fieldId, index) => {
+            // Si el campo ya existe en la entidad, mantener su orden actual
+            const existingField = data.entities[entityIndex].fields.find(
+                field => typeof field === 'object' ? field.id === fieldId : field === fieldId
+            );
+            
+            if (existingField && typeof existingField === 'object') {
+                return existingField;
+            }
+            
+            // Si es nuevo o estaba en formato antiguo, crear objeto con orden
+            return {
+                id: fieldId,
+                order: index
+            };
+        });
+        
         StorageService.saveData(data);
         
         return data.entities[entityIndex];
