@@ -93,7 +93,7 @@
             UI.hideModal();
             Register.refreshIfNeeded(); // Actualizar dropdown en registro
             Reports.refreshIfNeeded(); // Actualizar filtro en reportes
-
+            return false; // Add this line
         } else if (form.id === 'field-form') {
             const name = form.querySelector('#field-name').value.trim();
             const type = form.querySelector('#field-type').value;
@@ -161,6 +161,7 @@
             UI.hideModal();
             Register.refreshIfNeeded(); // Si la entidad editada estaba seleccionada
         }
+        return false; // Add this line
     }
 
     // Exponer función de inicialización
