@@ -3,321 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro Genérico de Datos</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Sistema de Registro Flexible</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body { padding: 20px; }
-        .tab-content { margin-top: 20px; }
-        #dynamicForm { margin-bottom: 20px; }
-        .record-table { margin-top: 20px; }
-        .report-chart { max-width: 600px; margin: auto; }
-        .modal-lg { max-width: 800px !important; }
-    </style>
 </head>
 <body>
-    <div class="container">
-        <ul class="nav nav-tabs" id="myTab" role="tablist">
-            <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#admin">Administración</a></li>
-            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#register">Registro</a></li>
-            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#reports">Reportes</a></li>
-        </ul>
-
-        <div class="tab-content">
-            <!-- ADMINISTRATION TAB -->
-            <div id="admin" class="tab-pane fade show active">
-                <h2>Administración</h2>
-                <div class="row">
-                    <div class="col-md-6">
-                        <h4>Entidades Principales</h4>
-                        <button class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#entityModal">Agregar Entidad</button>
-                        <ul id="entitiesList" class="list-group"></ul>
-                    </div>
-                    <div class="col-md-6">
-                        <h4>Campos Personalizados</h4>
-                        <button class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#fieldModal">Agregar Campo</button>
-                        <ul id="fieldsList" class="list-group"></ul>
-                    </div>
-                </div>
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        <h4>Configuración General</h4>
-                        <div class="mb-3">
-                            <label class="form-label">Título</label>
-                            <input type="text" class="form-control" id="configTitle">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Descripción</label>
-                            <input type="text" class="form-control" id="configDescription">
-                        </div>
-                        <button class="btn btn-success" onclick="saveConfiguration()">Guardar Configuración</button>
-                    </div>
-                </div>
+    <!-- Barra de navegación -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand" id="appTitle"></span>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <button class="nav-link" onclick="showSection('registro')">Registro</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" onclick="showSection('admin')">Administración</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" onclick="showSection('reportes')">Reportes</button>
+                    </li>
+                </ul>
+                <button class="btn btn-outline-light" onclick="toggleDataModal()">Importar/Exportar</button>
             </div>
+        </div>
+    </nav>
 
-            <!-- REGISTRATION TAB -->
-            <div id="register" class="tab-pane fade">
-                <h2 id="regTitle"></h2>
-                <p id="regDescription"></p>
-                <div class="mb-3">
-                    <label class="form-label">Entidad Principal</label>
-                    <select class="form-select" id="entitySelect"></select>
-                </div>
-                <div id="dynamicForm"></div>
-                <button class="btn btn-primary" onclick="saveRegistration()">Guardar Registro</button>
-                <div class="mt-4">
-                    <h4>Últimos Registros</h4>
-                    <table class="table table-striped record-table"></table>
-                </div>
-            </div>
+    <!-- Contenedor principal -->
+    <div class="container-fluid mt-4">
+        
+        <!-- Sección de Registro -->
+        <div id="registroSection" class="section">
+            <!-- ... Formulario dinámico ... -->
+        </div>
 
-            <!-- REPORTS TAB -->
-            <div id="reports" class="tab-pane fade">
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="mb-3">
-                            <label class="form-label">Filtrar por Entidad</label>
-                            <select class="form-select" id="reportEntityFilter"></select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Rango de Fechas</label>
-                            <input type="date" class="form-control" id="dateFrom">
-                            <input type="date" class="form-control mt-2" id="dateTo">
-                        </div>
-                        <button class="btn btn-secondary" onclick="generateReport()">Generar Reporte</button>
-                    </div>
-                    <div class="col-md-9">
-                        <div id="reportContainer"></div>
-                    </div>
-                </div>
-            </div>
+        <!-- Sección de Administración -->
+        <div id="adminSection" class="section d-none">
+            <!-- ... Gestión de entidades y campos ... -->
+        </div>
+
+        <!-- Sección de Reportes -->
+        <div id="reportesSection" class="section d-none">
+            <!-- ... Filtros y gráficos ... -->
         </div>
     </div>
 
-    <!-- MODALS -->
-    <div class="modal" id="entityModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Agregar/Editar Entidad</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="text" class="form-control mb-2" id="entityName">
-                    <button class="btn btn-primary w-100" onclick="saveEntity()">Guardar</button>
-                </div>
-            </div>
-        </div>
+    <!-- Modales -->
+    <div class="modal fade" id="entityModal">
+        <!-- ... Formulario entidades ... -->
     </div>
 
-    <div class="modal" id="fieldModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Agregar/Editar Campo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Nombre del Campo</label>
-                        <input type="text" class="form-control" id="fieldName">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Tipo de Campo</label>
-                        <select class="form-select" id="fieldType">
-                            <option value="text">Texto</option>
-                            <option value="number">Número</option>
-                            <option value="select">Selección</option>
-                        </select>
-                    </div>
-                    <div class="mb-3 d-none" id="optionsContainer">
-                        <label class="form-label">Opciones (separadas por comas)</label>
-                        <input type="text" class="form-control" id="fieldOptions">
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="fieldRequired">
-                        <label class="form-check-label">Requerido</label>
-                    </div>
-                    <button class="btn btn-primary mt-3" onclick="saveField()">Guardar Campo</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Data storage keys
-        const ENTITIES_KEY = 'custom_entities';
-        const FIELDS_KEY = 'custom_fields';
-        const RECORDS_KEY = 'data_records';
-        const CONFIG_KEY = 'app_config';
-
-        // Initialize Bootstrap components
-        const tabNav = new bootstrap.Tab(document.querySelector('#admin'));
-
-        // Global variables
-        let entities = [];
-        let fields = [];
-        let records = [];
-        let config = { title: '', description: '' };
-
-        // Load data from localStorage on startup
-        function loadData() {
-            entities = JSON.parse(localStorage.getItem(ENTITIES_KEY)) || [];
-            fields = JSON.parse(localStorage.getItem(FIELDS_KEY)) || [];
-            records = JSON.parse(localStorage.getItem(RECORDS_KEY)) || [];
-            config = JSON.parse(localStorage.getItem(CONFIG_KEY)) || config;
-            updateUI();
-        }
-
-        // UI Update functions
-        function updateUI() {
-            updateEntitiesList();
-            updateFieldsList();
-            updateRegistrationForm();
-            updateRecentRecords();
-            updateReportFilters();
-            updateConfigForm();
-        }
-
-        // Entity management
-        function saveEntity() {
-            const name = document.getElementById('entityName').value;
-            if (name) {
-                const newEntity = { name };
-                entities.push(newEntity);
-                saveToStorage(ENTITIES_KEY, entities);
-                updateEntitiesList();
-                document.getElementById('entityModal').dispatchEvent(new Event('hidden.bs.modal'));
-            }
-        }
-
-        // Field management
-        function saveField() {
-            const name = document.getElementById('fieldName').value;
-            const type = document.getElementById('fieldType').value;
-            const options = type === 'select' ? document.getElementById('fieldOptions').value.split(',') : [];
-            const required = document.getElementById('fieldRequired').checked;
-
-            if (name && type) {
-                const newField = { name, type, options, required };
-                fields.push(newField);
-                saveToStorage(FIELDS_KEY, fields);
-                updateFieldsList();
-                document.getElementById('fieldModal').dispatchEvent(new Event('hidden.bs.modal'));
-            }
-        }
-
-        // Configuration
-        function saveConfiguration() {
-            config.title = document.getElementById('configTitle').value;
-            config.description = document.getElementById('configDescription').value;
-            saveToStorage(CONFIG_KEY, config);
-        }
-
-        // Registration form
-        function updateRegistrationForm() {
-            const entitySelect = document.getElementById('entitySelect');
-            entitySelect.innerHTML = '';
-            entities.forEach(e => {
-                const option = document.createElement('option');
-                option.value = e.name;
-                option.textContent = e.name;
-                entitySelect.appendChild(option);
-            });
-
-            entitySelect.addEventListener('change', () => {
-                const selectedEntity = entities.find(e => e.name === entitySelect.value);
-                const formContainer = document.getElementById('dynamicForm');
-                formContainer.innerHTML = '';
-                const fieldsAssigned = fields.filter(f => selectedEntity.assignedFields?.includes(f.name));
-
-                fieldsAssigned.forEach(field => {
-                    const fieldDiv = document.createElement('div');
-                    fieldDiv.className = 'mb-3';
-                    fieldDiv.innerHTML = `
-                        <label class="form-label">${field.name}</label>
-                        ${createInputField(field)}
-                    `;
-                    formContainer.appendChild(fieldDiv);
-                });
-            });
-        }
-
-        // Input field creation
-        function createInputField(field) {
-            if (field.type === 'text') {
-                return `<input type="text" class="form-control ${field.required ? 'required' : ''}" name="${field.name}">`;
-            } else if (field.type === 'number') {
-                return `<input type="number" class="form-control ${field.required ? 'required' : ''}" name="${field.name}">`;
-            } else if (field.type === 'select') {
-                const optionsHtml = field.options.map(opt => `<option>${opt.trim()}</option>`).join('');
-                return `<select class="form-select ${field.required ? 'required' : ''}" name="${field.name}">
-                            ${optionsHtml}
-                        </select>`;
-            }
-        }
-
-        // Save registration
-        function saveRegistration() {
-            const entity = document.getElementById('entitySelect').value;
-            const formData = new FormData(document.getElementById('dynamicForm'));
-            const data = {};
-            formData.forEach((value, key) => data[key] = value);
-            data.entity = entity;
-            data.timestamp = new Date().toISOString();
-
-            records.push(data);
-            saveToStorage(RECORDS_KEY, records);
-            updateRecentRecords();
-            document.getElementById('dynamicForm').innerHTML = '';
-        }
-
-        // Recent records
-        function updateRecentRecords() {
-            const table = document.querySelector('.record-table');
-            table.innerHTML = '<tr><th>Entidad</th><th>Datos</th><th>Fecha</th></tr>';
-            const recent = records.slice(-5).reverse();
-            recent.forEach(record => {
-                const row = table.insertRow();
-                row.innerHTML = `
-                    <td>${record.entity}</td>
-                    <td>${JSON.stringify(record).slice(1, -1)}</td>
-                    <td>${new Date(record.timestamp).toLocaleString()}</td>
-                `;
-            });
-        }
-
-        // Reports
-        function generateReport() {
-            // Basic implementation placeholder
-            const canvas = document.createElement('canvas');
-            canvas.id = 'myChart';
-            document.getElementById('reportContainer').innerHTML = '';
-            document.getElementById('reportContainer').appendChild(canvas);
-            new Chart(canvas, {
-                type: 'bar',
-                data: {
-                    labels: ['Entity A', 'Entity B'],
-                    datasets: [{
-                        label: 'Total Metros',
-                        data: [12, 19],
-                        backgroundColor: ['#FF6384', '#36A2EB']
-                    }]
-                }
-            });
-        }
-
-        // Utility functions
-        function saveToStorage(key, data) {
-            localStorage.setItem(key, JSON.stringify(data));
-            updateUI();
-        }
-
-        // Initialization
-        window.onload = () => {
-            loadData();
-            bootstrap.Tab.getInstance(document.querySelector('#admin')).show();
-        };
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
