@@ -1,3066 +1,915 @@
-// Inicialización y variables globales
-let maquinas = [];
-let registros = [];
-let camposComunes = [];
-let configApp = {
-    titulo: 'Registro de Producción',
-    descripcion: 'Ingrese la información de producción para la máquina seleccionada.'
-};
-let maquinaEditando = null;
-let campoEditando = null;
-let accionConfirmacion = null;
-let chartProduccion = null;
-
-
-// Inicialización de modales (después de las variables globales)
-document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar todos los modales
-    const modales = document.querySelectorAll('.modal');
-    modales.forEach(modal => {
-        new bootstrap.Modal(modal);
-    });
-});
-
-
-
-
-// Modales de Bootstrap
-const modalMaquina = new bootstrap.Modal(document.getElementById('modalMaquina'));
-const modalCampo = new bootstrap.Modal(document.getElementById('modalCampo'));
-const modalVerRegistro = new bootstrap.Modal(document.getElementById('modalVerRegistro'));
-const modalConfirmacion = new bootstrap.Modal(document.getElementById('modalConfirmacion'));
-
-// Inicialización
-document.addEventListener('DOMContentLoaded', function () {
-    // Cargar datos desde localStorage
-    cargarDatos();
-
-    // Actualizar fecha y hora
-    actualizarFechaHora();
-    setInterval(actualizarFechaHora, 1000);
-
-    // Inicializar eventos
-    inicializarEventos();
-
-    // Actualizar UI
-    actualizarInterfaz();
-});
-
-// Funciones de carga de datos
-function cargarDatos() {
-    try {
-        // Cargar maquinas
-        const maquinasGuardadas = localStorage.getItem('maquinas');
-        if (maquinasGuardadas) {
-            maquinas = JSON.parse(maquinasGuardadas);
-        }
-
-        // Cargar registros
-        const registrosGuardados = localStorage.getItem('registros');
-        if (registrosGuardados) {
-            registros = JSON.parse(registrosGuardados);
-        }
-
-        // Cargar configuración
-        const configGuardada = localStorage.getItem('configApp');
-        if (configGuardada) {
-            configApp = JSON.parse(configGuardada);
-        }
-
-        // Cargar campos comunes
-        const camposComunesGuardados = localStorage.getItem('camposComunes');
-        if (camposComunesGuardados) {
-            camposComunes = JSON.parse(camposComunesGuardados);
-        }
-    } catch (error) {
-        console.error('Error al cargar datos:', error);
-        mostrarAlerta('Error al cargar datos. Se utilizarán los valores por defecto.', 'danger');
-    }
-}
-
-// Guardado de datos
-// Modificar en la función guardarDatos()
-function guardarDatos() {
-    try {
-        localStorage.setItem('maquinas', JSON.stringify(maquinas));
-        localStorage.setItem('registros', JSON.stringify(registros));
-        localStorage.setItem('configApp', JSON.stringify(configApp));
-        localStorage.setItem('camposComunes', JSON.stringify(camposComunes));
-    } catch (error) {
-        console.error('Error al guardar datos:', error);
-        mostrarAlerta('Error al guardar datos en localStorage.', 'danger');
-    }
-}
-
-// Actualizar fecha y hora
-function actualizarFechaHora() {
-    const ahora = new Date();
-    const opciones = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+document.addEventListener('DOMContentLoaded', () => {
+    // --- VARIABLES GLOBALES Y ESTADO ---
+    let config = {
+        systemTitle: "Sistema de Registro de Producción",
+        systemDescription: "Registre aquí la producción diaria.",
+        entityTypeName: "Máquina", // Nombre configurable para la entidad principal
+        // entityTypeNamePlural: "Máquinas" // Podríamos añadir pluralización automática o manual
     };
-    document.getElementById('datetime-display').textContent = ahora.toLocaleDateString('es-ES', opciones);
-}
+    let availableFields = []; // { id: 'field_123', name: 'Total Metros', type: 'number', options: [] }
+    let entities = []; // { id: 'entity_456', name: 'Torno CNC 1', fields: [{ fieldId: 'field_123', required: true }] }
+    let productionLogs = []; // { id: 'log_789', entityId: 'entity_456', timestamp: 1678886400000, data: { field_123: 150.5 } }
 
-// Inicialización de eventos
-function inicializarEventos() {
-    // Navegación
-    document.getElementById('nav-registro').addEventListener('click', (e) => {
-        e.preventDefault();
-        cambiarSeccion('registro');
-    });
-    
-    document.getElementById('nav-admin').addEventListener('click', (e) => {
-        e.preventDefault();
-        cambiarSeccion('admin');
-    });
-    
-    document.getElementById('nav-reportes').addEventListener('click', (e) => {
-        e.preventDefault();
-        cambiarSeccion('reportes');
-    });
-    
-    // Formulario de registro
-    document.getElementById('form-registro').addEventListener('submit', guardarRegistro);
-    document.getElementById('seleccionMaquina').addEventListener('change', cargarCamposMaquina);
-    
-    // Formulario de configuración general
-    document.getElementById('form-config-general').addEventListener('submit', guardarConfiguracion);
-    
-    // Botones de administración
-    document.getElementById('btn-agregar-campo').addEventListener('click', mostrarModalCampo);
-    document.getElementById('btn-guardar-maquina').addEventListener('click', guardarMaquina);
-    document.getElementById('btn-guardar-campo').addEventListener('click', guardarCampo);
-    
-    // Gestión del tipo de campo
-    document.getElementById('campo-tipo').addEventListener('change', function() {
-        const tipoSeleccionado = this.value;
-        const opcionesContenedor = document.getElementById('opciones-contenedor');
-        
-        if (tipoSeleccionado === 'seleccion') {
-            opcionesContenedor.classList.remove('d-none');
-        } else {
-            opcionesContenedor.classList.add('d-none');
+    let currentChart = null; // Referencia al gráfico actual de Chart.js
+
+    // --- ELEMENTOS DEL DOM ---
+    // Generales
+    const appTitle = document.getElementById('appTitle');
+    const navAppTitle = document.getElementById('navAppTitle');
+    const mainTitle = document.getElementById('mainTitle');
+    const mainDescription = document.getElementById('mainDescription');
+    const liveClock = document.getElementById('liveClock');
+    const currentLogTime = document.getElementById('currentLogTime');
+    const entitySelector = document.getElementById('entitySelector');
+    const entitySelectorLabel = document.getElementById('entitySelectorLabel');
+    const dynamicFieldsContainer = document.getElementById('dynamicFieldsContainer');
+    const logForm = document.getElementById('logForm');
+    const recentLogsContainer = document.getElementById('recentLogsContainer');
+    const noRecentLogs = document.getElementById('noRecentLogs');
+    const exportDataBtn = document.getElementById('exportDataBtn');
+    const importDataInput = document.getElementById('importDataInput');
+    const toastElement = document.getElementById('liveToast');
+    const toastTitle = document.getElementById('toastTitle');
+    const toastBody = document.getElementById('toastBody');
+    const bsToast = new bootstrap.Toast(toastElement, { delay: 3000 });
+
+    // Administración
+    const adminModal = document.getElementById('adminModal');
+    const adminSystemTitle = document.getElementById('adminSystemTitle');
+    const adminSystemDesc = document.getElementById('adminSystemDesc');
+    const adminEntityName = document.getElementById('adminEntityName');
+    const saveGeneralSettingsBtn = document.getElementById('saveGeneralSettingsBtn');
+    const addFieldForm = document.getElementById('addFieldForm');
+    const newFieldName = document.getElementById('newFieldName');
+    const newFieldType = document.getElementById('newFieldType');
+    const newFieldOptionsContainer = document.getElementById('newFieldOptionsContainer');
+    const newFieldOptions = document.getElementById('newFieldOptions');
+    const availableFieldsList = document.getElementById('availableFieldsList');
+    const addEntityForm = document.getElementById('addEntityForm');
+    const entityListTitle = document.getElementById('entityListTitle');
+    const newEntityName = document.getElementById('newEntityName');
+    const entitiesList = document.getElementById('entitiesList');
+    const entityTypeLabels = document.querySelectorAll('.entity-type-label'); // Para actualizar etiquetas dinámicamente
+
+    // Modal Configuración Entidad
+    const configureEntityModal = document.getElementById('configureEntityModal');
+    const configureEntityModalLabel = document.getElementById('configureEntityModalLabel');
+    const configureEntityName = document.getElementById('configureEntityName');
+    const configEntityIdHidden = document.getElementById('configEntityIdHidden');
+    const addFieldToEntitySelector = document.getElementById('addFieldToEntitySelector');
+    const addFieldToEntityBtn = document.getElementById('addFieldToEntityBtn');
+    const assignedFieldsList = document.getElementById('assignedFieldsList');
+    const bsConfigureEntityModal = new bootstrap.Modal(configureEntityModal);
+
+    // Reportes
+    const reportEntityName = document.getElementById('reportEntityName');
+    const reportFieldSelector = document.getElementById('reportFieldSelector');
+    const reportTypeSelector = document.getElementById('reportTypeSelector');
+    const generateReportBtn = document.getElementById('generateReportBtn');
+    const productionChartCtx = document.getElementById('productionChart').getContext('2d');
+    const reportSummary = document.getElementById('reportSummary');
+
+    // --- FUNCIONES AUXILIARES ---
+
+    // Genera IDs únicos simples
+    const generateId = (prefix) => `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+    // Muestra notificaciones Toast
+    const showToast = (message, title = "Notificación", type = "info") => {
+        toastTitle.textContent = title;
+        toastBody.textContent = message;
+        // Opcional: Cambiar color según tipo
+        toastElement.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info');
+        if (type === 'success') toastElement.classList.add('bg-success', 'text-white');
+        else if (type === 'error') toastElement.classList.add('bg-danger', 'text-white');
+        else if (type === 'warning') toastElement.classList.add('bg-warning', 'text-dark');
+        else toastElement.classList.add('bg-light', 'text-dark'); // default info
+
+        bsToast.show();
+    };
+
+    // Guarda todo el estado en localStorage
+    const saveData = () => {
+        try {
+            const dataToSave = { config, availableFields, entities, productionLogs };
+            localStorage.setItem('productionAppData', JSON.stringify(dataToSave));
+            console.log("Datos guardados en localStorage.");
+        } catch (error) {
+            console.error("Error al guardar en localStorage:", error);
+            showToast("Error al guardar datos. Posiblemente el almacenamiento está lleno.", "Error", "error");
         }
-    });
-    
-    // Botones para opciones
-    document.getElementById('btn-agregar-opcion').addEventListener('click', agregarOpcion);
-    
-    // Botones de importar/exportar
-    document.getElementById('btn-exportar-registros').addEventListener('click', exportarRegistros);
-    document.getElementById('btn-importar-registros').addEventListener('click', () => {
-        document.getElementById('importar-registros-file').click();
-    });
-    document.getElementById('importar-registros-file').addEventListener('change', importarRegistros);
-    
-    document.getElementById('btn-exportar-todo').addEventListener('click', exportarTodo);
-    document.getElementById('btn-importar-todo').addEventListener('click', () => {
-        document.getElementById('importar-todo-file').click();
-    });
-    document.getElementById('importar-todo-file').addEventListener('change', importarTodo);
-    
-    // Botones de reset
-    document.getElementById('btn-limpiar-registros').addEventListener('click', () => {
-        confirmarAccion('limpiarRegistros', '¿Está seguro que desea eliminar todos los registros de producción?');
-    });
-    
-    document.getElementById('btn-reset-sistema').addEventListener('click', () => {
-        confirmarAccion('resetSistema', '¿Está seguro que desea restablecer todo el sistema? Esta acción eliminará todas las máquinas, campos y registros.');
-    });
-    
-    document.getElementById('btn-confirmar').addEventListener('click', ejecutarAccionConfirmada);
-    
-    // Filtros de reporte
-    document.getElementById('form-filtros').addEventListener('submit', (e) => {
-        e.preventDefault();
-        generarReporte();
-    });
-    
-    // Evento para botón de buscar campos similares (solo agregarlo si el elemento existe)
-    const btnBuscarCampos = document.getElementById('btn-buscar-campos-similares');
-    if (btnBuscarCampos) {
-        btnBuscarCampos.addEventListener('click', buscarCamposSimilares);
-    }
+    };
 
-    // Evento para checkbox de campo común (solo agregarlo si el elemento existe)
-    const campoComun = document.getElementById('campo-comun');
-    if (campoComun) {
-        campoComun.addEventListener('change', function() {
-            const campoCategoria = document.getElementById('campo-categoria');
-            if (campoCategoria) {
-                campoCategoria.required = this.checked;
+    // Carga los datos desde localStorage
+    const loadData = () => {
+        const savedData = localStorage.getItem('productionAppData');
+        if (savedData) {
+            try {
+                const parsedData = JSON.parse(savedData);
+                config = parsedData.config || config;
+                availableFields = parsedData.availableFields || [];
+                entities = parsedData.entities || [];
+                productionLogs = parsedData.productionLogs || [];
+                console.log("Datos cargados desde localStorage.");
+            } catch (error) {
+                console.error("Error al parsear datos de localStorage:", error);
+                showToast("Error al cargar datos guardados. Se usarán valores por defecto.", "Error", "error");
+                // Opcional: Limpiar localStorage si está corrupto
+                // localStorage.removeItem('productionAppData');
             }
-        });
-    }
-    
-    // Eventos para reportes avanzados (solo agregarlos si los elementos existen)
-    const btnAgregarCampoReporte = document.getElementById('btn-agregar-campo-reporte');
-    if (btnAgregarCampoReporte) {
-        btnAgregarCampoReporte.addEventListener('click', agregarCampoReporte);
-    }
-    
-    const filtroCategoria = document.getElementById('filtro-categoria');
-    if (filtroCategoria) {
-        filtroCategoria.addEventListener('change', cargarCamposReporte);
-    }
-    
-    const filtroMaquina = document.getElementById('filtro-maquina');
-    if (filtroMaquina && document.getElementById('lista-campos-reporte')) {
-        filtroMaquina.addEventListener('change', cargarCamposReporte);
-        
-        // Inicializar un campo de reporte si existe la estructura
-        setTimeout(function() {
-            if (typeof agregarCampoReporte === 'function') {
-                agregarCampoReporte();
-            }
-        }, 500);
-    }
-}
-
-// Actualización de interfaz
-function actualizarInterfaz() {
-    // Actualizar título y descripción
-    document.getElementById('titulo-formulario').textContent = configApp.titulo;
-    document.getElementById('descripcion-formulario').textContent = configApp.descripcion;
-
-    // Actualizar campos del formulario de configuración
-    document.getElementById('titulo-app').value = configApp.titulo;
-    document.getElementById('descripcion-app').value = configApp.descripcion;
-
-    // Actualizar selectores de máquinas
-    actualizarSelectoresMaquinas();
-
-    // Actualizar tabla de máquinas
-    actualizarTablaMaquinas();
-
-    // Actualizar tabla de registros
-    actualizarTablaRegistros();
-
-    // Actualizar selectores de campos para reportes
-    actualizarSelectoresCamposReporte();
-}
-
-// Cambio de sección
-function cambiarSeccion(seccion) {
-    const secciones = document.querySelectorAll('.seccion');
-    secciones.forEach(s => s.classList.add('d-none'));
-
-    const navItems = document.querySelectorAll('.nav-link');
-    navItems.forEach(item => item.classList.remove('active'));
-
-    document.getElementById(`seccion-${seccion}`).classList.remove('d-none');
-    document.getElementById(`nav-${seccion}`).classList.add('active');
-
-    if (seccion === 'reportes') {
-        // Pre-configurar filtros de fecha para el último mes
-        const hoy = new Date();
-        const haceMes = new Date();
-        haceMes.setMonth(haceMes.getMonth() - 1);
-
-        document.getElementById('filtro-desde').valueAsDate = haceMes;
-        document.getElementById('filtro-hasta').valueAsDate = hoy;
-    }
-}
-
-// Añadir después de la función cambiarSeccion()
-// Mostrar modal de nueva máquina
-function mostrarModalMaquina() {
-    maquinaEditando = null;
-    document.getElementById('tituloModalMaquina').textContent = 'Nueva Máquina';
-    document.getElementById('form-maquina').reset();
-    document.getElementById('maquina-id').value = '';
-    document.getElementById('lista-campos').innerHTML = '';
-    document.getElementById('sin-campos').classList.remove('d-none');
-    
-    const modalElement = document.getElementById('modalMaquina');
-    const modal = new bootstrap.Modal(modalElement);
-    modal.show();
-}
-
-
-// GESTIÓN DE MAQUINAS Y CAMPOS
-
-// Mostrar modal de nueva máquina
-function mostrarModalMaquina() {
-    maquinaEditando = null;
-    document.getElementById('tituloModalMaquina').textContent = 'Nueva Máquina';
-    document.getElementById('form-maquina').reset();
-    document.getElementById('lista-campos').innerHTML = '';
-    document.getElementById('sin-campos').classList.remove('d-none');
-    const modal = new bootstrap.Modal(document.getElementById('modalMaquina'));
-modal.show();
-}
-
-// Mostrar modal para editar máquina
-function editarMaquina(id) {
-    const maquina = maquinas.find(m => m.id === id);
-    if (!maquina) return;
-
-    maquinaEditando = maquina;
-
-    document.getElementById('tituloModalMaquina').textContent = 'Editar Máquina';
-    document.getElementById('maquina-id').value = maquina.id;
-    document.getElementById('maquina-nombre').value = maquina.nombre;
-    document.getElementById('maquina-descripcion').value = maquina.descripcion || '';
-
-    // Cargar campos
-    const listaCampos = document.getElementById('lista-campos');
-    listaCampos.innerHTML = '';
-
-    if (maquina.campos && maquina.campos.length > 0) {
-        document.getElementById('sin-campos').classList.add('d-none');
-
-        maquina.campos.forEach(campo => {
-            const itemCampo = document.createElement('div');
-            itemCampo.className = 'list-group-item d-flex justify-content-between align-items-center';
-            itemCampo.dataset.id = campo.id;
-
-            const infoCampo = document.createElement('div');
-            infoCampo.innerHTML = `
-                <h6 class="mb-0">${campo.nombre} <span class="badge bg-${campo.obligatorio ? 'danger' : 'secondary'} ms-2">${campo.obligatorio ? 'Obligatorio' : 'Opcional'}</span></h6>
-                <small class="text-muted">Tipo: ${capitalizarPrimeraLetra(campo.tipo)}</small>
-            `;
-
-            const botonesAccion = document.createElement('div');
-            botonesAccion.innerHTML = `
-                <button class="btn btn-sm btn-outline-primary me-1 btn-editar-campo" data-id="${campo.id}">
-                    <i class="bi bi-pencil"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-danger btn-eliminar-campo" data-id="${campo.id}">
-                    <i class="bi bi-trash"></i>
-                </button>
-            `;
-
-            itemCampo.appendChild(infoCampo);
-            itemCampo.appendChild(botonesAccion);
-            listaCampos.appendChild(itemCampo);
-        });
-
-        // Eventos para editar y eliminar campos
-        document.querySelectorAll('.btn-editar-campo').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const campoId = btn.dataset.id;
-                const campo = maquina.campos.find(c => c.id === campoId);
-                if (campo) editarCampo(campo);
-            });
-        });
-
-        document.querySelectorAll('.btn-eliminar-campo').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const campoId = btn.dataset.id;
-                eliminarCampo(campoId);
-            });
-        });
-    } else {
-        document.getElementById('sin-campos').classList.remove('d-none');
-    }
-
-    const modal = new bootstrap.Modal(document.getElementById('modalMaquina'));
-modal.show();
-}
-
-// Guardar máquina
-// Guardar máquina
-function guardarMaquina() {
-    const nombre = document.getElementById('maquina-nombre').value.trim();
-    if (!nombre) {
-        mostrarAlerta('El nombre de la máquina es obligatorio', 'danger');
-        return;
-    }
-    
-    const descripcion = document.getElementById('maquina-descripcion').value.trim();
-    
-    if (maquinaEditando) {
-        // Actualizar máquina existente
-        maquinaEditando.nombre = nombre;
-        maquinaEditando.descripcion = descripcion;
-        
-        // Actualizar índice en el array
-        const index = maquinas.findIndex(m => m.id === maquinaEditando.id);
-        if (index !== -1) {
-            maquinas[index] = maquinaEditando;
         }
-    } else {
-        // Crear nueva máquina
-        const nuevaMaquina = {
-            id: generarId(),
-            nombre: nombre,
-            descripcion: descripcion,
-            campos: []
-        };
-        
-        maquinas.push(nuevaMaquina);
-    }
-    
-    guardarDatos();
-    actualizarInterfaz();
-    
-    // Cerrar el modal correctamente
-    const modalElement = document.getElementById('modalMaquina');
-    const modalInstance = bootstrap.Modal.getInstance(modalElement);
-    if (modalInstance) {
-        modalInstance.hide();
-    } else {
-        // Alternativa si no se encuentra la instancia
-        const modal = new bootstrap.Modal(modalElement);
-        modal.hide();
-    }
-    
-    mostrarAlerta('Máquina guardada correctamente', 'success');
-}
+        // Asegurarse de que las estructuras básicas existan si no se cargaron
+        config = config || { systemTitle: "Sistema de Registro", systemDescription: "Registre producción.", entityTypeName: "Elemento" };
+        availableFields = Array.isArray(availableFields) ? availableFields : [];
+        entities = Array.isArray(entities) ? entities : [];
+        productionLogs = Array.isArray(productionLogs) ? productionLogs : [];
+    };
 
-// Eliminar máquina
-function eliminarMaquina(id) {
-    confirmarAccion('eliminarMaquina', '¿Está seguro que desea eliminar esta máquina? Esta acción también eliminará todos los registros asociados.', id);
-}
+    // Obtiene el nombre de un campo por su ID
+    const getFieldName = (fieldId) => availableFields.find(f => f.id === fieldId)?.name || 'Campo Desconocido';
+    // Obtiene el nombre de una entidad por su ID
+    const getEntityName = (entityId) => entities.find(e => e.id === entityId)?.name || 'Entidad Desconocida';
 
-function ejecutarEliminarMaquina(id) {
-    // Eliminar registros de la máquina
-    registros = registros.filter(r => r.maquinaId !== id);
 
-    // Eliminar la máquina
-    maquinas = maquinas.filter(m => m.id !== id);
+    // --- FUNCIONES DE RENDERIZADO (Actualización de UI en tiempo real) ---
 
-    guardarDatos();
-    actualizarInterfaz();
-    mostrarAlerta('Máquina eliminada correctamente', 'success');
-}
+    // Actualiza títulos, descripciones y etiquetas basadas en 'config'
+    const renderGlobalConfig = () => {
+        appTitle.textContent = config.systemTitle;
+        navAppTitle.textContent = config.systemTitle.substring(0, 20); // Acortar para navbar
+        mainTitle.textContent = config.systemTitle;
+        mainDescription.textContent = config.systemDescription;
+        entitySelectorLabel.textContent = `Seleccionar ${config.entityTypeName}:`;
+        entityListTitle.textContent = `Gestión de ${config.entityTypeName}s`; // Simple pluralización añadiendo 's'
+        reportEntityName.textContent = config.entityTypeName;
 
-// Mostrar modal de nuevo campo
-function mostrarModalCampo() {
-    campoEditando = null;
-    document.getElementById('tituloModalCampo').textContent = 'Nuevo Campo';
-    document.getElementById('form-campo').reset();
-    document.getElementById('opciones-contenedor').classList.add('d-none');
-    document.getElementById('lista-opciones').innerHTML = '';
-    agregarOpcion(); // Agregar una opción por defecto para selección
-    modalCampo.show();
-}
+        // Actualizar todas las etiquetas dinámicas
+        entityTypeLabels.forEach(label => label.textContent = config.entityTypeName);
 
-// Modificar la función editarCampo()
-function editarCampo(campo) {
-    campoEditando = campo;
-    
-    document.getElementById('tituloModalCampo').textContent = 'Editar Campo';
-    document.getElementById('campo-id').value = campo.id;
-    document.getElementById('campo-nombre').value = campo.nombre;
-    document.getElementById('campo-tipo').value = campo.tipo;
-    document.getElementById('campo-obligatorio').checked = campo.obligatorio;
-    document.getElementById('campo-categoria').value = campo.categoria || '';
-    
-    // Verificar si es un campo común
-    const esComun = camposComunes.some(c => c.id === campo.id);
-    document.getElementById('campo-comun').checked = esComun;
-    
-    // Mostrar opciones si es tipo selección
-    const opcionesContenedor = document.getElementById('opciones-contenedor');
-    const listaOpciones = document.getElementById('lista-opciones');
-    listaOpciones.innerHTML = '';
-    
-    if (campo.tipo === 'seleccion') {
-        opcionesContenedor.classList.remove('d-none');
-        
-        if (campo.opciones && campo.opciones.length > 0) {
-            campo.opciones.forEach(opcion => {
-                agregarOpcionConValor(opcion);
-            });
-        } else {
-            agregarOpcion();
-        }
-    } else {
-        opcionesContenedor.classList.add('d-none');
-    }
-    
-    // Ocultar lista de campos similares
-    document.getElementById('campos-similares-container').classList.add('d-none');
-    
-    modalCampo.show();
-}
+        // Actualizar valores en el modal de admin
+        adminSystemTitle.value = config.systemTitle;
+        adminSystemDesc.value = config.systemDescription;
+        adminEntityName.value = config.entityTypeName;
+    };
 
-// Guardar campo
-// Reemplazar la función guardarCampo()
-function guardarCampo() {
-    const nombre = document.getElementById('campo-nombre').value.trim();
-    const tipo = document.getElementById('campo-tipo').value;
-    const obligatorio = document.getElementById('campo-obligatorio').checked;
-    const categoria = document.getElementById('campo-categoria').value.trim();
-    const esComun = document.getElementById('campo-comun').checked;
-    
-    if (!nombre || !tipo) {
-        mostrarAlerta('Nombre y tipo de campo son obligatorios', 'danger');
-        return;
-    }
-    
-    if (esComun && !categoria) {
-        mostrarAlerta('La categoría es obligatoria para campos comunes', 'danger');
-        return;
-    }
-    
-    // Obtener opciones si es tipo selección
-    let opciones = [];
-    if (tipo === 'seleccion') {
-        const opcionesInputs = document.querySelectorAll('.opcion-valor');
-        
-        opcionesInputs.forEach(input => {
-            const valor = input.value.trim();
-            if (valor) {
-                opciones.push(valor);
-            }
-        });
-        
-        if (opciones.length === 0) {
-            mostrarAlerta('Debe agregar al menos una opción para el campo de selección', 'danger');
+    // Renderiza la lista de campos disponibles en Admin
+    const renderAvailableFields = () => {
+        availableFieldsList.innerHTML = ''; // Limpiar lista
+        if (availableFields.length === 0) {
+            availableFieldsList.innerHTML = '<li class="list-group-item text-muted">No hay campos definidos.</li>';
             return;
         }
-    }
-    
-    const nuevoCampo = {
-        id: campoEditando ? campoEditando.id : generarId(),
-        nombre: nombre,
-        tipo: tipo,
-        obligatorio: obligatorio,
-        categoria: categoria
+        availableFields.forEach(field => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.innerHTML = `
+                <span>${field.name} (${field.type}${field.type === 'select' ? ` [${(field.options || []).join(', ')}]` : ''})</span>
+                <button class="btn btn-sm btn-danger delete-field-btn" data-field-id="${field.id}">Eliminar</button>
+            `;
+            availableFieldsList.appendChild(li);
+        });
+
+        // Actualizar selector de campos en reportes
+        renderReportFieldSelector();
     };
-    
-    if (tipo === 'seleccion') {
-        nuevoCampo.opciones = opciones;
-    }
-    
-    // Si es campo común, guardarlo en la lista de campos comunes
-    if (esComun) {
-        // Verificar si ya existe (actualizar) o es nuevo
-        const indiceExistente = camposComunes.findIndex(c => c.id === nuevoCampo.id);
-        if (indiceExistente !== -1) {
-            camposComunes[indiceExistente] = nuevoCampo;
+
+     // Renderiza la lista de entidades (máquinas) en Admin y el selector principal
+    const renderEntities = () => {
+        entitiesList.innerHTML = '';
+        entitySelector.innerHTML = '<option value="" selected disabled>-- Elija una opción --</option>'; // Resetear selector
+
+        if (entities.length === 0) {
+            entitiesList.innerHTML = `<li class="list-group-item text-muted">No hay ${config.entityTypeName}s definidos.</li>`;
         } else {
-            camposComunes.push(nuevoCampo);
-        }
-    }
-    
-    if (campoEditando) {
-        // Actualizar campo existente en la máquina
-        const index = maquinaEditando.campos.findIndex(c => c.id === campoEditando.id);
-        if (index !== -1) {
-            maquinaEditando.campos[index] = nuevoCampo;
-        }
-    } else {
-        // Agregar nuevo campo a la máquina
-        if (!maquinaEditando.campos) {
-            maquinaEditando.campos = [];
-        }
-        maquinaEditando.campos.push(nuevoCampo);
-    }
-    
-    guardarDatos();
-    
-    // Actualizar la lista de campos en el modal de máquina
-    editarMaquina(maquinaEditando.id);
-    
-    modalCampo.hide();
-    mostrarAlerta('Campo guardado correctamente', 'success');
-}
+            entities.forEach(entity => {
+                // Añadir a lista en Admin
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                li.dataset.entityId = entity.id; // Guardar ID en el elemento
+                li.innerHTML = `
+                    <span>${entity.name}</span>
+                    <div>
+                        <button class="btn btn-sm btn-warning me-2 configure-entity-btn" data-entity-id="${entity.id}">Configurar Campos</button>
+                        <button class="btn btn-sm btn-danger delete-entity-btn" data-entity-id="${entity.id}">Eliminar</button>
+                    </div>
+                `;
+                entitiesList.appendChild(li);
 
-// Eliminar campo
-function eliminarCampo(id) {
-    if (!maquinaEditando || !maquinaEditando.campos) return;
-
-    maquinaEditando.campos = maquinaEditando.campos.filter(c => c.id !== id);
-
-    // Actualizar la lista de campos en el modal
-    editarMaquina(maquinaEditando.id);
-
-    mostrarAlerta('Campo eliminado correctamente', 'success');
-}
-
-// Añadir estas nuevas funciones después de la función eliminarCampo()
-
-// Buscar campos similares
-function buscarCamposSimilares() {
-    const nombreBuscado = document.getElementById('campo-nombre').value.trim().toLowerCase();
-    if (nombreBuscado.length < 2) {
-        mostrarAlerta('Ingrese al menos 2 caracteres para buscar', 'warning');
-        return;
-    }
-    
-    const camposSimilaresContainer = document.getElementById('campos-similares-container');
-    const listaCamposSimilares = document.getElementById('lista-campos-similares');
-    listaCamposSimilares.innerHTML = '';
-    
-    // Buscar en campos comunes
-    const similares = camposComunes.filter(campo => 
-        campo.nombre.toLowerCase().includes(nombreBuscado)
-    );
-    
-    // También buscar en campos de máquinas
-    maquinas.forEach(maquina => {
-        if (maquina.campos) {
-            maquina.campos.forEach(campo => {
-                // Si el campo ya está en similares, lo omitimos
-                if (!similares.some(c => c.id === campo.id) && 
-                    campo.nombre.toLowerCase().includes(nombreBuscado)) {
-                    similares.push({
-                        ...campo,
-                        maquinaNombre: maquina.nombre
-                    });
-                }
+                // Añadir a selector principal
+                const option = document.createElement('option');
+                option.value = entity.id;
+                option.textContent = entity.name;
+                entitySelector.appendChild(option);
             });
         }
-    });
-    
-    if (similares.length === 0) {
-        camposSimilaresContainer.classList.add('d-none');
-        return;
-    }
-    
-    // Mostrar resultados
-    similares.forEach(campo => {
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'list-group-item list-group-item-action';
-        item.innerHTML = `
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <strong>${campo.nombre}</strong> 
-                    <span class="badge bg-primary ms-2">${capitalizarPrimeraLetra(campo.tipo)}</span>
-                    ${campo.categoria ? `<span class="badge bg-secondary ms-1">${campo.categoria}</span>` : ''}
+         // Resetear formulario si no hay entidades
+         if (entities.length === 0) {
+            renderLogForm(); // Limpiará el formulario
+         }
+    };
+
+    // Renderiza los campos dinámicos en el formulario de registro según la entidad seleccionada
+    const renderLogForm = () => {
+        dynamicFieldsContainer.innerHTML = ''; // Limpiar campos anteriores
+        const selectedEntityId = entitySelector.value;
+
+        if (!selectedEntityId) {
+            // No hay entidad seleccionada, no mostrar campos
+            return;
+        }
+
+        const entity = entities.find(e => e.id === selectedEntityId);
+        if (!entity || !entity.fields || entity.fields.length === 0) {
+             dynamicFieldsContainer.innerHTML = `<p class="text-muted">Esta ${config.entityTypeName} no tiene campos configurados.</p>`;
+            return;
+        }
+
+        // Ordenar campos (si tuviéramos un campo de orden) o simplemente por cómo están
+        entity.fields.forEach(entityField => {
+            const fieldDefinition = availableFields.find(f => f.id === entityField.fieldId);
+            if (!fieldDefinition) return; // Campo no encontrado (debería limpiarse?)
+
+            const fieldId = `logfield_${entity.id}_${fieldDefinition.id}`; // ID único para el input
+            const isRequired = entityField.required;
+
+            const div = document.createElement('div');
+            div.className = 'mb-3';
+
+            let labelHtml = `<label for="${fieldId}" class="form-label">${fieldDefinition.name}${isRequired ? '<span class="required-label"></span>' : ''}</label>`;
+            let inputHtml = '';
+
+            switch (fieldDefinition.type) {
+                case 'number':
+                    inputHtml = `<input type="number" step="any" class="form-control" id="${fieldId}" data-field-id="${fieldDefinition.id}" ${isRequired ? 'required' : ''}>`;
+                    break;
+                case 'select':
+                    const optionsHtml = (fieldDefinition.options || [])
+                        .map(opt => `<option value="${opt}">${opt}</option>`)
+                        .join('');
+                    inputHtml = `
+                        <select class="form-select" id="${fieldId}" data-field-id="${fieldDefinition.id}" ${isRequired ? 'required' : ''}>
+                            <option value="" selected disabled>-- Seleccione --</option>
+                            ${optionsHtml}
+                        </select>`;
+                    break;
+                case 'text':
+                default:
+                    inputHtml = `<input type="text" class="form-control" id="${fieldId}" data-field-id="${fieldDefinition.id}" ${isRequired ? 'required' : ''}>`;
+                    break;
+            }
+
+            div.innerHTML = labelHtml + inputHtml;
+            dynamicFieldsContainer.appendChild(div);
+        });
+    };
+
+    // Renderiza la lista de últimos registros
+    const renderRecentLogs = (limit = 10) => {
+        recentLogsContainer.innerHTML = ''; // Limpiar
+        if (productionLogs.length === 0) {
+            noRecentLogs.style.display = 'block';
+            return;
+        }
+
+        noRecentLogs.style.display = 'none';
+        // Mostrar los últimos 'limit' registros, más recientes primero
+        const recent = [...productionLogs].reverse().slice(0, limit);
+
+        recent.forEach(log => {
+            const logTime = new Date(log.timestamp).toLocaleString('es-ES');
+            const entityName = getEntityName(log.entityId);
+            let dataDetails = Object.entries(log.data)
+                .map(([fieldId, value]) => `<strong>${getFieldName(fieldId)}:</strong> ${value}`)
+                .join('; ');
+
+            const div = document.createElement('div');
+            div.className = 'list-group-item list-group-item-action flex-column align-items-start';
+            // Añadimos botón de eliminar al registro
+            div.innerHTML = `
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">${entityName}</h6>
+                    <small class="text-muted">${logTime}</small>
                 </div>
-                ${campo.maquinaNombre ? `<small class="text-muted">Usado en: ${campo.maquinaNombre}</small>` : 
-                                       '<small class="text-success">Campo común</small>'}
-            </div>
-        `;
-        
-        item.addEventListener('click', () => aplicarCampoSeleccionado(campo));
-        listaCamposSimilares.appendChild(item);
-    });
-    
-    camposSimilaresContainer.classList.remove('d-none');
-}
-
-// Aplicar campo seleccionado
-function aplicarCampoSeleccionado(campo) {
-    document.getElementById('campo-nombre').value = campo.nombre;
-    document.getElementById('campo-tipo').value = campo.tipo;
-    document.getElementById('campo-obligatorio').checked = campo.obligatorio || false;
-    
-    if (campo.categoria) {
-        document.getElementById('campo-categoria').value = campo.categoria;
-    }
-    
-    // Manejar opciones si es de tipo selección
-    if (campo.tipo === 'seleccion' && campo.opciones) {
-        document.getElementById('opciones-contenedor').classList.remove('d-none');
-        document.getElementById('lista-opciones').innerHTML = '';
-        
-        campo.opciones.forEach(opcion => {
-            agregarOpcionConValor(opcion);
+                <p class="mb-1 small">${dataDetails}</p>
+                <button class="btn btn-sm btn-outline-danger float-end delete-log-btn" data-log-id="${log.id}">Eliminar</button>
+            `;
+            recentLogsContainer.appendChild(div);
         });
-    } else {
-        document.getElementById('opciones-contenedor').classList.add('d-none');
-    }
-    
-    // Ocultar la lista después de seleccionar
-    document.getElementById('campos-similares-container').classList.add('d-none');
-}
-
-
-// Agregar opción para campo tipo selección
-function agregarOpcion() {
-    const listaOpciones = document.getElementById('lista-opciones');
-
-    const opcionContainer = document.createElement('div');
-    opcionContainer.className = 'input-group mb-2';
-
-    opcionContainer.innerHTML = `
-        <input type="text" class="form-control opcion-valor" placeholder="Valor">
-        <button class="btn btn-outline-danger btn-eliminar-opcion" type="button">
-            <i class="bi bi-trash"></i>
-        </button>
-    `;
-
-    listaOpciones.appendChild(opcionContainer);
-
-    // Asignar evento para eliminar opción
-    opcionContainer.querySelector('.btn-eliminar-opcion').addEventListener('click', function () {
-        opcionContainer.remove();
-    });
-}
-
-// Agregar opción con valor
-function agregarOpcionConValor(valor) {
-    const listaOpciones = document.getElementById('lista-opciones');
-
-    const opcionContainer = document.createElement('div');
-    opcionContainer.className = 'input-group mb-2';
-
-    opcionContainer.innerHTML = `
-        <input type="text" class="form-control opcion-valor" placeholder="Valor" value="${valor}">
-        <button class="btn btn-outline-danger btn-eliminar-opcion" type="button">
-            <i class="bi bi-trash"></i>
-        </button>
-    `;
-
-    listaOpciones.appendChild(opcionContainer);
-
-    // Asignar evento para eliminar opción
-    opcionContainer.querySelector('.btn-eliminar-opcion').addEventListener('click', function () {
-        opcionContainer.remove();
-    });
-}
-
-// GESTIÓN DE REGISTROS
-
-// Cargar campos de la máquina seleccionada
-function cargarCamposMaquina() {
-    const maquinaId = document.getElementById('seleccionMaquina').value;
-    const camposDinamicos = document.getElementById('campos-dinamicos');
-    camposDinamicos.innerHTML = '';
-
-    if (!maquinaId) return;
-
-    const maquina = maquinas.find(m => m.id === maquinaId);
-    if (!maquina || !maquina.campos || maquina.campos.length === 0) {
-        camposDinamicos.innerHTML = '<div class="alert alert-info">Esta máquina no tiene campos configurados.</div>';
-        return;
-    }
-
-    maquina.campos.forEach(campo => {
-        const campoContainer = document.createElement('div');
-        campoContainer.className = 'mb-3';
-
-        const label = document.createElement('label');
-        label.className = 'form-label';
-        label.setAttribute('for', `campo_${campo.id}`);
-        label.textContent = campo.nombre;
-
-        if (campo.obligatorio) {
-            label.innerHTML += ' <span class="text-danger">*</span>';
-        }
-
-        campoContainer.appendChild(label);
-
-        let input;
-
-        switch (campo.tipo) {
-            case 'texto':
-                input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'form-control';
-                input.id = `campo_${campo.id}`;
-                input.name = `campo_${campo.id}`;
-                if (campo.obligatorio) input.required = true;
-                break;
-
-            case 'numero':
-                input = document.createElement('input');
-                input.type = 'number';
-                input.className = 'form-control';
-                input.id = `campo_${campo.id}`;
-                input.name = `campo_${campo.id}`;
-                if (campo.obligatorio) input.required = true;
-                break;
-
-            case 'seleccion':
-                input = document.createElement('select');
-                input.className = 'form-select';
-                input.id = `campo_${campo.id}`;
-                input.name = `campo_${campo.id}`;
-
-                // Opción por defecto
-                const opcionDefault = document.createElement('option');
-                opcionDefault.value = '';
-                opcionDefault.textContent = '-- Seleccione una opción --';
-                opcionDefault.selected = true;
-                opcionDefault.disabled = true;
-                input.appendChild(opcionDefault);
-
-                // Agregar opciones
-                if (campo.opciones && campo.opciones.length > 0) {
-                    campo.opciones.forEach(opcion => {
-                        const opcionElement = document.createElement('option');
-                        opcionElement.value = opcion;
-                        opcionElement.textContent = opcion;
-                        input.appendChild(opcionElement);
-                    });
-                }
-
-                if (campo.obligatorio) input.required = true;
-                break;
-        }
-
-        const invalidFeedback = document.createElement('div');
-        invalidFeedback.className = 'invalid-feedback';
-        invalidFeedback.textContent = `Por favor, complete el campo ${campo.nombre.toLowerCase()}.`;
-
-        campoContainer.appendChild(input);
-        campoContainer.appendChild(invalidFeedback);
-        camposDinamicos.appendChild(campoContainer);
-    });
-}
-
-// Guardar registro
-function guardarRegistro(e) {
-    e.preventDefault();
-
-    const form = document.getElementById('form-registro');
-
-    if (!form.checkValidity()) {
-        e.stopPropagation();
-        form.classList.add('was-validated');
-        return;
-    }
-
-    const maquinaId = document.getElementById('seleccionMaquina').value;
-    const maquina = maquinas.find(m => m.id === maquinaId);
-
-    if (!maquina) {
-        mostrarAlerta('Máquina no encontrada', 'danger');
-        return;
-    }
-
-    // Recopilar valores de los campos
-    const valores = {};
-
-    maquina.campos.forEach(campo => {
-        const input = document.getElementById(`campo_${campo.id}`);
-        if (input) {
-            valores[campo.id] = {
-                nombre: campo.nombre,
-                tipo: campo.tipo,
-                valor: campo.tipo === 'numero' ? parseFloat(input.value) : input.value
-            };
-        }
-    });
-
-    // Crear nuevo registro
-    const nuevoRegistro = {
-        id: generarId(),
-        maquinaId: maquinaId,
-        maquinaNombre: maquina.nombre,
-        fecha: new Date().toISOString(),
-        valores: valores
     };
 
-    // Agregar al inicio del array para que los más recientes aparezcan primero
-    registros.unshift(nuevoRegistro);
+     // Renderiza el selector de campos numéricos para el reporte
+     const renderReportFieldSelector = () => {
+        reportFieldSelector.innerHTML = '<option value="" selected disabled>-- Seleccione un campo --</option>';
+        const numericFields = availableFields.filter(f => f.type === 'number');
+        numericFields.forEach(field => {
+            const option = document.createElement('option');
+            option.value = field.id;
+            option.textContent = field.name;
+            reportFieldSelector.appendChild(option);
+        });
+    };
 
-    guardarDatos();
-    actualizarTablaRegistros();
+    // Genera y muestra el gráfico de producción
+    const renderProductionChart = () => {
+        const selectedFieldId = reportFieldSelector.value;
+        const selectedChartType = reportTypeSelector.value || 'bar';
 
-    // Resetear formulario
-    form.classList.remove('was-validated');
-    form.reset();
-    document.getElementById('campos-dinamicos').innerHTML = '';
-
-    mostrarAlerta('Registro guardado correctamente', 'success');
-}
-
-// Ver detalles de registro
-function verRegistro(id) {
-    const registro = registros.find(r => r.id === id);
-    if (!registro) return;
-
-    const detalles = document.getElementById('detalles-registro');
-    detalles.innerHTML = '';
-
-    // Crear los detalles básicos
-    let html = `
-        <dt class="col-sm-4">Máquina</dt>
-        <dd class="col-sm-8">${registro.maquinaNombre}</dd>
-        
-        <dt class="col-sm-4">Fecha y Hora</dt>
-        <dd class="col-sm-8">${formatearFecha(registro.fecha)}</dd>
-    `;
-
-    // Agregar valores de campos
-    for (const key in registro.valores) {
-        const campo = registro.valores[key];
-        html += `
-            <dt class="col-sm-4">${campo.nombre}</dt>
-            <dd class="col-sm-8">${campo.valor}</dd>
-        `;
-    }
-
-    detalles.innerHTML = html;
-    modalVerRegistro.show();
-}
-
-// Eliminar registro
-function eliminarRegistro(id) {
-    confirmarAccion('eliminarRegistro', '¿Está seguro que desea eliminar este registro?', id);
-}
-
-function ejecutarEliminarRegistro(id) {
-    registros = registros.filter(r => r.id !== id);
-    guardarDatos();
-    actualizarTablaRegistros();
-    mostrarAlerta('Registro eliminado correctamente', 'success');
-}
-
-// REPORTES Y ESTADÍSTICAS
-
-// Generar reporte
-function generarReporte() {
-    const maquinaId = document.getElementById('filtro-maquina').value;
-    const desde = document.getElementById('filtro-desde').value ? new Date(document.getElementById('filtro-desde').value) : null;
-    const hasta = document.getElementById('filtro-hasta').value ? new Date(document.getElementById('filtro-hasta').value + 'T23:59:59') : null;
-    const agrupacion = document.getElementById('filtro-agrupacion').value;
-    const campoId = document.getElementById('filtro-campo').value;
-    const tipoGrafico = document.getElementById('filtro-tipo-grafico').value;
-
-    // Filtrar registros
-    let registrosFiltrados = [...registros];
-
-    if (maquinaId !== 'todas') {
-        registrosFiltrados = registrosFiltrados.filter(r => r.maquinaId === maquinaId);
-    }
-
-    if (desde) {
-        registrosFiltrados = registrosFiltrados.filter(r => new Date(r.fecha) >= desde);
-    }
-
-    if (hasta) {
-        registrosFiltrados = registrosFiltrados.filter(r => new Date(r.fecha) <= hasta);
-    }
-
-    if (registrosFiltrados.length === 0) {
-        document.getElementById('sin-datos-grafico').classList.remove('d-none');
-        if (chartProduccion) {
-            chartProduccion.destroy();
-            chartProduccion = null;
-        }
-        document.getElementById('estadisticas-contenedor').innerHTML = '<div class="alert alert-info">No hay datos disponibles para los filtros seleccionados.</div>';
-        return;
-    }
-
-    document.getElementById('sin-datos-grafico').classList.add('d-none');
-
-    // Agrupar datos para el gráfico
-    const datosAgrupados = agruparDatos(registrosFiltrados, agrupacion, campoId);
-
-    // Actualizar título del gráfico
-    let tituloGrafico = 'Producción';
-
-    if (maquinaId !== 'todas') {
-        const maquina = maquinas.find(m => m.id === maquinaId);
-        if (maquina) {
-            tituloGrafico += ` - ${maquina.nombre}`;
-        }
-    }
-
-    if (campoId) {
-        // Buscar el nombre del campo
-        let nombreCampo = '';
-        for (const maquina of maquinas) {
-            const campo = maquina.campos.find(c => c.id === campoId);
-            if (campo) {
-                nombreCampo = campo.nombre;
-                break;
+        if (!selectedFieldId) {
+            // Limpiar gráfico si no hay campo seleccionado
+            if (currentChart) {
+                currentChart.destroy();
+                currentChart = null;
             }
+             reportSummary.innerHTML = ''; // Limpiar resumen
+            productionChartCtx.clearRect(0, 0, productionChartCtx.canvas.width, productionChartCtx.canvas.height); // Limpiar canvas
+            showToast("Seleccione un campo numérico para generar el reporte.", "Información", "info");
+            return;
         }
 
-        if (nombreCampo) {
-            tituloGrafico += ` - ${nombreCampo}`;
-        }
-    }
+        const fieldName = getFieldName(selectedFieldId);
+        const reportData = {}; // { entityId: totalValue }
+        let grandTotal = 0;
 
-    document.getElementById('titulo-grafico').textContent = tituloGrafico;
-
-    // Generar gráfico
-    generarGrafico(datosAgrupados, tipoGrafico);
-
-    // Generar estadísticas
-    generarEstadisticas(registrosFiltrados, campoId);
-}
-
-// Agrupar datos para gráfico
-function agruparDatos(registros, agrupacion, campoId) {
-    const datos = {};
-
-    registros.forEach(registro => {
-        // Verificar si el registro tiene el campo seleccionado
-        if (!campoId || (registro.valores && registro.valores[campoId])) {
-            let valor = 1; // Por defecto, contar registros
-
-            // Si hay un campo numérico seleccionado, usar ese valor
-            if (campoId && registro.valores[campoId] && registro.valores[campoId].tipo === 'numero') {
-                valor = registro.valores[campoId].valor || 0;
+        productionLogs.forEach(log => {
+            if (log.data && log.data[selectedFieldId] !== undefined && log.data[selectedFieldId] !== null && log.data[selectedFieldId] !== '') {
+                const value = parseFloat(log.data[selectedFieldId]);
+                if (!isNaN(value)) {
+                    if (!reportData[log.entityId]) {
+                        reportData[log.entityId] = 0;
+                    }
+                    reportData[log.entityId] += value;
+                    grandTotal += value;
+                }
             }
+        });
 
-            // Obtener la fecha para agrupar
-            const fecha = new Date(registro.fecha);
-            let clave = '';
+        const labels = [];
+        const dataValues = [];
+        const backgroundColors = []; // Para pie/bar
+        const borderColors = []; // Para line/bar
 
-            switch (agrupacion) {
-                case 'dia':
-                    clave = fecha.toISOString().split('T')[0];
-                    break;
+        // Colores base (puedes añadir más)
+        const baseColors = [
+            'rgba(54, 162, 235, 0.6)', 'rgba(255, 99, 132, 0.6)', 'rgba(75, 192, 192, 0.6)',
+            'rgba(255, 206, 86, 0.6)', 'rgba(153, 102, 255, 0.6)', 'rgba(255, 159, 64, 0.6)',
+             'rgba(199, 199, 199, 0.6)', 'rgba(83, 102, 255, 0.6)', 'rgba(100, 255, 100, 0.6)'
+        ];
+        const baseBorderColors = baseColors.map(color => color.replace('0.6', '1')); // Opacidad completa para bordes
 
-                case 'semana':
-                    // Obtener el primer día de la semana (lunes)
-                    const primerDia = new Date(fecha);
-                    const diaSemana = fecha.getDay() || 7; // 0 es domingo, convertir a 7
-                    primerDia.setDate(fecha.getDate() - diaSemana + 1);
-                    clave = primerDia.toISOString().split('T')[0];
-                    break;
-
-                case 'mes':
-                    clave = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
-                    break;
-            }
-
-            if (!datos[clave]) {
-                datos[clave] = 0;
-            }
-
-            datos[clave] += valor;
-        }
-    });
-
-    // Ordenar por fecha
-    const datosOrdenados = {};
-    Object.keys(datos).sort().forEach(key => {
-        datosOrdenados[key] = datos[key];
-    });
-
-    return datosOrdenados;
-}
-
-// Generar gráfico
-function generarGrafico(datos, tipo) {
-    const etiquetas = [];
-    const valores = [];
-
-    for (const [clave, valor] of Object.entries(datos)) {
-        // Formatear la etiqueta según el tipo de agrupación
-        let etiqueta = clave;
-        if (clave.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            // Es una fecha en formato YYYY-MM-DD
-            const fecha = new Date(clave);
-            etiqueta = fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
-        } else if (clave.match(/^\d{4}-\d{2}$/)) {
-            // Es un mes en formato YYYY-MM
-            const [año, mes] = clave.split('-');
-            const fecha = new Date(parseInt(año), parseInt(mes) - 1, 1);
-            etiqueta = fecha.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
+        let colorIndex = 0;
+        for (const entityId in reportData) {
+            labels.push(getEntityName(entityId));
+            dataValues.push(reportData[entityId]);
+             backgroundColors.push(baseColors[colorIndex % baseColors.length]);
+            borderColors.push(baseBorderColors[colorIndex % baseBorderColors.length]);
+            colorIndex++;
         }
 
-        etiquetas.push(etiqueta);
-        valores.push(valor);
-    }
+        if (currentChart) {
+            currentChart.destroy(); // Destruir gráfico anterior si existe
+        }
 
-    // Configurar el gráfico
-    const ctx = document.getElementById('chart-produccion').getContext('2d');
-
-    // Destruir gráfico anterior si existe
-    if (chartProduccion) {
-        chartProduccion.destroy();
-    }
-
-    // Configurar colores
-    const colores = [
-        'rgba(54, 162, 235, 0.7)',
-        'rgba(255, 99, 132, 0.7)',
-        'rgba(255, 206, 86, 0.7)',
-        'rgba(75, 192, 192, 0.7)',
-        'rgba(153, 102, 255, 0.7)',
-        'rgba(255, 159, 64, 0.7)'
-    ];
-
-    // Configuración según tipo de gráfico
-    let config = {
-        type: tipo,
-        data: {
-            labels: etiquetas,
-            datasets: [{
-                label: 'Producción',
-                data: valores,
-                backgroundColor: tipo === 'line' ? colores[0] : colores,
-                borderColor: tipo === 'line' ? colores[0] : colores.map(c => c.replace('0.7', '1')),
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: tipo === 'pie'
+        try {
+            currentChart = new Chart(productionChartCtx, {
+                type: selectedChartType,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `Total de ${fieldName} por ${config.entityTypeName}`,
+                        data: dataValues,
+                        backgroundColor: selectedChartType === 'line' ? 'transparent' : backgroundColors, // No rellenar en línea por defecto
+                        borderColor: borderColors,
+                        borderWidth: selectedChartType === 'line' ? 2 : 1, // Línea más gruesa
+                        tension: selectedChartType === 'line' ? 0.1 : 0 // Curvatura para líneas
+                    }]
                 },
-                tooltip: {
-                    enabled: true
-                }
-            }
-        }
-    };
-
-    // Opciones específicas según tipo de gráfico
-    if (tipo === 'bar' || tipo === 'line') {
-        config.options.scales = {
-            y: {
-                beginAtZero: true
-            }
-        };
-    }
-
-    // Crear gráfico
-    chartProduccion = new Chart(ctx, config);
-}
-
-// Generar estadísticas
-function generarEstadisticas(registros, campoId) {
-    const estadisticasContenedor = document.getElementById('estadisticas-contenedor');
-    estadisticasContenedor.innerHTML = '';
-
-    // Si no hay un campo numérico seleccionado, mostrar solo cantidad de registros
-    if (!campoId) {
-        estadisticasContenedor.innerHTML = `
-            <div class="stats-card">
-                <h4>Total de Registros</h4>
-                <div class="value">${registros.length}</div>
-            </div>
-            <div class="alert alert-info">
-                Seleccione un campo numérico para ver estadísticas avanzadas.
-            </div>
-        `;
-        return;
-    }
-
-    // Verificar si el campo seleccionado es numérico
-    let esNumerico = false;
-    let valores = [];
-
-    registros.forEach(registro => {
-        if (registro.valores && registro.valores[campoId] && registro.valores[campoId].tipo === 'numero') {
-            esNumerico = true;
-            const valor = registro.valores[campoId].valor;
-            if (!isNaN(valor)) {
-                valores.push(valor);
-            }
-        }
-    });
-
-    if (!esNumerico || valores.length === 0) {
-        estadisticasContenedor.innerHTML = `
-            <div class="stats-card">
-                <h4>Total de Registros</h4>
-                <div class="value">${registros.length}</div>
-            </div>
-            <div class="alert alert-info">
-                No hay datos numéricos disponibles para el campo seleccionado.
-            </div>
-        `;
-        return;
-    }
-
-    // Calcular estadísticas
-    const sum = valores.reduce((a, b) => a + b, 0);
-    const avg = sum / valores.length;
-    const max = Math.max(...valores);
-    const min = Math.min(...valores);
-
-    // Añadir estadísticas
-    estadisticasContenedor.innerHTML = `
-        <div class="stats-card">
-            <h4>Total de Registros</h4>
-            <div class="value">${registros.length}</div>
-        </div>
-        <div class="stats-card">
-            <h4>Total</h4>
-            <div class="value">${sum.toFixed(2)}</div>
-        </div>
-        <div class="stats-card">
-            <h4>Promedio</h4>
-            <div class="value">${avg.toFixed(2)}</div>
-        </div>
-        <div class="stats-card">
-            <h4>Máximo</h4>
-            <div class="value">${max.toFixed(2)}</div>
-        </div>
-        <div class="stats-card">
-            <h4>Mínimo</h4>
-            <div class="value">${min.toFixed(2)}</div>
-        </div>
-    `;
-}
-
-// CONFIGURACIÓN
-
-// Guardar configuración general
-function guardarConfiguracion(e) {
-    e.preventDefault();
-
-    const titulo = document.getElementById('titulo-app').value.trim();
-    const descripcion = document.getElementById('descripcion-app').value.trim();
-
-    if (!titulo) {
-        mostrarAlerta('El título es obligatorio', 'danger');
-        return;
-    }
-
-    configApp.titulo = titulo;
-    configApp.descripcion = descripcion;
-
-    guardarDatos();
-    actualizarInterfaz();
-
-    mostrarAlerta('Configuración guardada correctamente', 'success');
-}
-
-// UTILIDADES
-
-// Actualizar selectores de máquinas
-function actualizarSelectoresMaquinas() {
-    // Selector para el formulario de registro
-    const selectorMaquinas = document.getElementById('seleccionMaquina');
-    selectorMaquinas.innerHTML = '<option value="" selected disabled>-- Seleccione una máquina --</option>';
-
-    // Selector para filtros de reportes
-    const filtroMaquina = document.getElementById('filtro-maquina');
-    filtroMaquina.innerHTML = '<option value="todas" selected>Todas las máquinas</option>';
-
-    if (maquinas.length > 0) {
-        maquinas.forEach(maquina => {
-            // Agregar al selector de registro
-            const optionRegistro = document.createElement('option');
-            optionRegistro.value = maquina.id;
-            optionRegistro.textContent = maquina.nombre;
-            selectorMaquinas.appendChild(optionRegistro);
-
-            // Agregar al selector de filtros
-            const optionFiltro = document.createElement('option');
-            optionFiltro.value = maquina.id;
-            optionFiltro.textContent = maquina.nombre;
-            filtroMaquina.appendChild(optionFiltro);
-        });
-    }
-}
-
-// Actualizar selectores de campos para reportes
-function actualizarSelectoresCamposReporte() {
-    const filtroCampo = document.getElementById('filtro-campo');
-    filtroCampo.innerHTML = '<option value="" selected disabled>Seleccione un campo</option>';
-
-    // Recopilar todos los campos numéricos de todas las máquinas
-    const camposNumericos = [];
-
-    maquinas.forEach(maquina => {
-        if (maquina.campos && maquina.campos.length > 0) {
-            maquina.campos.forEach(campo => {
-                if (campo.tipo === 'numero') {
-                    camposNumericos.push({
-                        id: campo.id,
-                        nombre: `${campo.nombre} (${maquina.nombre})`
-                    });
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // Ajustarse al contenedor
+                    scales: (selectedChartType !== 'pie') ? { // Las escalas no aplican a 'pie'
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: fieldName }
+                        },
+                        x: {
+                             title: { display: true, text: config.entityTypeName }
+                        }
+                    } : {},
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: `Comparativa de ${fieldName}`
+                        }
+                    }
                 }
             });
+
+            // Mostrar resumen (suma total)
+            reportSummary.innerHTML = `<strong>Suma Total de ${fieldName}: ${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>`;
+
+        } catch (error) {
+            console.error("Error al crear el gráfico:", error);
+            showToast("Error al generar el gráfico.", "Error", "error");
+             reportSummary.innerHTML = ''; // Limpiar resumen en caso de error
+        }
+    };
+
+    // --- MANEJADORES DE EVENTOS ---
+
+    // Actualizar reloj cada segundo
+    setInterval(() => {
+        const now = new Date();
+        liveClock.textContent = now.toLocaleTimeString('es-ES');
+        currentLogTime.textContent = `Hora actual: ${now.toLocaleTimeString('es-ES')}`;
+    }, 1000);
+
+    // Guardar Configuración General (Admin)
+    saveGeneralSettingsBtn.addEventListener('click', () => {
+        const oldEntityName = config.entityTypeName;
+        config.systemTitle = adminSystemTitle.value.trim() || config.systemTitle;
+        config.systemDescription = adminSystemDesc.value.trim() || config.systemDescription;
+        config.entityTypeName = adminEntityName.value.trim() || config.entityTypeName;
+
+        if (config.entityTypeName !== oldEntityName) {
+             // Opcional: Preguntar confirmación si el nombre cambia, ya que afecta toda la UI
+            console.log(`Nombre de entidad cambiado de "${oldEntityName}" a "${config.entityTypeName}"`);
+        }
+
+        saveData();
+        renderGlobalConfig(); // Actualizar toda la UI relevante
+        renderEntities(); // Nombres en la lista de entidades pueden necesitar actualizarse (ej. 'Agregar Máquina')
+        showToast("Configuración general guardada.", "Éxito", "success");
+    });
+
+     // Mostrar/ocultar opciones de campo 'select' en Admin
+    newFieldType.addEventListener('change', (e) => {
+        if (e.target.value === 'select') {
+            newFieldOptionsContainer.style.display = 'block';
+            newFieldOptions.required = true;
+        } else {
+            newFieldOptionsContainer.style.display = 'none';
+            newFieldOptions.required = false;
+            newFieldOptions.value = ''; // Limpiar por si acaso
         }
     });
 
-    if (camposNumericos.length > 0) {
-        camposNumericos.forEach(campo => {
-            const option = document.createElement('option');
-            option.value = campo.id;
-            option.textContent = campo.nombre;
-            filtroCampo.appendChild(option);
-        });
-    } else {
-        const option = document.createElement('option');
-        option.value = "";
-        option.textContent = "No hay campos numéricos disponibles";
-        option.disabled = true;
-        filtroCampo.appendChild(option);
-    }
-}
+    // Agregar nuevo Campo (Admin)
+    addFieldForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = newFieldName.value.trim();
+        const type = newFieldType.value;
+        let options = [];
 
-// Actualizar tabla de máquinas
-// Reemplaza la función actualizarTablaMaquinas() completa
-function actualizarTablaMaquinas() {
-    const tablaMaquinas = document.getElementById('tabla-maquinas');
-    const sinMaquinas = document.getElementById('sin-maquinas');
-    
-    if (maquinas.length === 0) {
-        tablaMaquinas.innerHTML = '';
-        sinMaquinas.classList.remove('d-none');
-        return;
-    }
-    
-    sinMaquinas.classList.add('d-none');
-    
-    let html = '';
-    
-    maquinas.forEach(maquina => {
-        const cantidadCampos = maquina.campos ? maquina.campos.length : 0;
-        
-        html += `
-            <tr data-id="${maquina.id}">
-                <td>${maquina.nombre}</td>
-                <td>${maquina.descripcion || '-'}</td>
-                <td>${cantidadCampos}</td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary btn-action btn-editar-maquina">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger btn-action btn-eliminar-maquina">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-    
-    tablaMaquinas.innerHTML = html;
-    
-    // Asignar eventos a los botones de la tabla
-    tablaMaquinas.querySelectorAll('.btn-editar-maquina').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const id = this.closest('tr').dataset.id;
-            editarMaquina(id);
-        });
-    });
-    
-    tablaMaquinas.querySelectorAll('.btn-eliminar-maquina').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const id = this.closest('tr').dataset.id;
-            eliminarMaquina(id);
-        });
-    });
-}
+        if (type === 'select') {
+            options = newFieldOptions.value.split(',')
+                         .map(opt => opt.trim())
+                         .filter(opt => opt.length > 0);
+            if (options.length === 0) {
+                showToast("Debe ingresar al menos una opción válida para el tipo 'Selección'.", "Error", "error");
+                return;
+            }
+        }
 
-// Actualizar tabla de registros
-function actualizarTablaRegistros() {
-    const tablaRegistros = document.getElementById('tabla-registros');
-    const sinRegistros = document.getElementById('sin-registros');
+        // Validar que no exista un campo con el mismo nombre (sensible a mayúsculas/minúsculas)
+        if (availableFields.some(f => f.name.toLowerCase() === name.toLowerCase())) {
+             showToast(`Ya existe un campo llamado "${name}".`, "Error", "error");
+             return;
+        }
 
-    if (registros.length === 0) {
-        tablaRegistros.innerHTML = '';
-        sinRegistros.classList.remove('d-none');
-        return;
-    }
+        const newField = {
+            id: generateId('field'),
+            name: name,
+            type: type,
+            options: type === 'select' ? options : [] // Guardar opciones solo si es select
+        };
 
-    sinRegistros.classList.add('d-none');
-
-    let html = '';
-
-    // Mostrar solo los últimos 20 registros para no sobrecargar la tabla
-    const registrosMostrar = registros.slice(0, 20);
-
-    registrosMostrar.forEach(registro => {
-        html += `
-            <tr>
-                <td>${formatearFecha(registro.fecha)}</td>
-                <td>${registro.maquinaNombre}</td>
-                <td>
-                    <button class="btn btn-sm btn-outline-info" onclick="verRegistro('${registro.id}')">
-                        <i class="bi bi-eye"></i> Ver Detalles
-                    </button>
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-outline-danger" onclick="eliminarRegistro('${registro.id}')">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
+        availableFields.push(newField);
+        saveData();
+        renderAvailableFields(); // Actualizar lista UI
+        addFieldForm.reset(); // Limpiar formulario
+        newFieldOptionsContainer.style.display = 'none'; // Ocultar opciones de select
+        showToast(`Campo "${name}" agregado.`, "Éxito", "success");
     });
 
-    tablaRegistros.innerHTML = html;
-}
+     // Eliminar Campo (Admin - Delegación de eventos)
+    availableFieldsList.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-field-btn')) {
+            const fieldId = e.target.dataset.fieldId;
+            const fieldName = getFieldName(fieldId);
 
-// IMPORTACIÓN Y EXPORTACIÓN
-
-// Exportar registros
-function exportarRegistros() {
-    if (registros.length === 0) {
-        mostrarAlerta('No hay registros para exportar', 'warning');
-        return;
-    }
-
-    exportarJSON(registros, 'registros_produccion');
-}
-
-// Importar registros
-function importarRegistros(event) {
-    const archivo = event.target.files[0];
-    if (!archivo) return;
-
-    importarJSON(archivo, (datos) => {
-        if (Array.isArray(datos)) {
-            // Validar estructura básica de los registros
-            const validos = datos.filter(registro =>
-                registro.id &&
-                registro.maquinaId &&
-                registro.maquinaNombre &&
-                registro.fecha &&
-                registro.valores
+            // *** IMPORTANTE: Validación de dependencias ***
+            const isFieldInUse = entities.some(entity =>
+                entity.fields && entity.fields.some(ef => ef.fieldId === fieldId)
             );
 
-            if (validos.length === 0) {
-                mostrarAlerta('El archivo no contiene registros válidos', 'danger');
+            if (isFieldInUse) {
+                showToast(`El campo "${fieldName}" está siendo usado por una o más ${config.entityTypeName}s y no puede ser eliminado directamente. Primero quítelo de todas las configuraciones.`, "Error", "error");
                 return;
             }
 
-            registros = [...validos, ...registros];
-            guardarDatos();
-            actualizarTablaRegistros();
+            // Confirmación
+             if (confirm(`¿Está seguro de que desea eliminar el campo "${fieldName}"? Esta acción no se puede deshacer.`)) {
+                availableFields = availableFields.filter(f => f.id !== fieldId);
 
-            mostrarAlerta(`Se importaron ${validos.length} registros correctamente`, 'success');
-        } else {
-            mostrarAlerta('El archivo no contiene un formato válido', 'danger');
-        }
-    });
+                // Opcional: Limpiar datos huérfanos en logs (más complejo)
+                // Por ahora, los datos permanecerán pero no se mostrarán bien si el campo se borra
+                // productionLogs.forEach(log => {
+                //     if (log.data && log.data[fieldId]) {
+                //         delete log.data[fieldId];
+                //     }
+                // });
 
-    // Limpiar input file
-    event.target.value = '';
-}
-
-// Exportar todo el sistema
-function exportarTodo() {
-    const datosSistema = {
-        maquinas: maquinas,
-        registros: registros,
-        configApp: configApp,
-        version: '1.0',
-        fecha: new Date().toISOString()
-    };
-
-    exportarJSON(datosSistema, 'sistema_produccion_completo');
-}
-
-// Importar todo el sistema
-function importarTodo(event) {
-    const archivo = event.target.files[0];
-    if (!archivo) return;
-
-    confirmarAccion('importarTodo', '¿Está seguro que desea importar todos los datos del sistema? Esta acción reemplazará toda la configuración actual.', archivo);
-
-    // Limpiar input file
-    event.target.value = '';
-}
-
-function ejecutarImportarTodo(archivo) {
-    importarJSON(archivo, (datos) => {
-        if (datos && datos.maquinas && datos.registros && datos.configApp) {
-            maquinas = datos.maquinas;
-            registros = datos.registros;
-            configApp = datos.configApp;
-
-            guardarDatos();
-            actualizarInterfaz();
-
-            mostrarAlerta('Sistema importado correctamente', 'success');
-        } else {
-            mostrarAlerta('El archivo no contiene un formato válido para el sistema', 'danger');
-        }
-    });
-}
-
-// Exportar datos a JSON
-function exportarJSON(datos, nombreArchivo) {
-    try {
-        const contenido = JSON.stringify(datos, null, 2);
-        const blob = new Blob([contenido], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-
-        const enlace = document.createElement('a');
-        enlace.href = url;
-        enlace.download = `${nombreArchivo}_${formatearFechaArchivo(new Date())}.json`;
-
-        document.body.appendChild(enlace);
-        enlace.click();
-
-        document.body.removeChild(enlace);
-        URL.revokeObjectURL(url);
-
-        mostrarAlerta('Datos exportados correctamente', 'success');
-    } catch (error) {
-        console.error('Error al exportar datos:', error);
-        mostrarAlerta('Error al exportar datos', 'danger');
-    }
-}
-
-// Importar datos desde JSON
-function importarJSON(archivo, callback) {
-    const reader = new FileReader();
-
-    reader.onload = function (e) {
-        try {
-            const datos = JSON.parse(e.target.result);
-            callback(datos);
-        } catch (error) {
-            console.error('Error al importar datos:', error);
-            mostrarAlerta('Error al importar datos. El archivo no es válido.', 'danger');
-        }
-    };
-
-    reader.onerror = function () {
-        mostrarAlerta('Error al leer el archivo', 'danger');
-    };
-
-    reader.readAsText(archivo);
-}
-
-// FUNCIONES DE UTILIDAD
-
-// Generar ID único
-function generarId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-}
-
-// Formatear fecha para mostrar
-function formatearFecha(fechaISO) {
-    const fecha = new Date(fechaISO);
-    return fecha.toLocaleString('es-ES', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
-}
-
-// Formatear fecha para nombre de archivo
-function formatearFechaArchivo(fecha) {
-    return fecha.toISOString().split('T')[0].replace(/-/g, '');
-}
-
-// Capitalizar primera letra
-function capitalizarPrimeraLetra(texto) {
-    return texto.charAt(0).toUpperCase() + texto.slice(1);
-}
-
-// Mostrar alerta
-function mostrarAlerta(mensaje, tipo) {
-    // Crear alerta
-    const alerta = document.createElement('div');
-    alerta.className = `alert alert-${tipo} alert-dismissible fade show animate-fade-in`;
-    alerta.innerHTML = `
-        ${mensaje}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    `;
-
-    // Crear contenedor si no existe
-    let contenedor = document.querySelector('.alertas-container');
-    if (!contenedor) {
-        contenedor = document.createElement('div');
-        contenedor.className = 'alertas-container position-fixed top-0 end-0 p-3';
-        contenedor.style.zIndex = '1050';
-        document.body.appendChild(contenedor);
-    }
-
-    // Añadir alerta al contenedor
-    contenedor.appendChild(alerta);
-
-    // Auto-cerrar después de 4 segundos
-    setTimeout(() => {
-        alerta.classList.replace('animate-fade-in', 'animate-fade-out');
-        setTimeout(() => {
-            alerta.remove();
-
-            // Eliminar el contenedor si no hay más alertas
-            if (contenedor.children.length === 0) {
-                contenedor.remove();
-            }
-        }, 300);
-    }, 4000);
-}
-
-// Confirmar acción
-function confirmarAccion(accion, mensaje, parametro = null) {
-    accionConfirmacion = { accion, parametro };
-
-    document.getElementById('mensaje-confirmacion').textContent = mensaje;
-
-    // Configurar título y botón según el tipo de acción
-    let titulo = 'Confirmar acción';
-    let claseBoton = 'danger';
-
-    switch (accion) {
-        case 'eliminarMaquina':
-            titulo = 'Eliminar Máquina';
-            break;
-        case 'eliminarRegistro':
-            titulo = 'Eliminar Registro';
-            break;
-        case 'limpiarRegistros':
-            titulo = 'Limpiar Registros';
-            break;
-        case 'resetSistema':
-            titulo = 'Restablecer Sistema';
-            break;
-        case 'importarTodo':
-            titulo = 'Importar Sistema';
-            claseBoton = 'primary';
-            break;
-    }
-
-    document.getElementById('titulo-confirmacion').textContent = titulo;
-    document.getElementById('btn-confirmar').className = `btn btn-${claseBoton}`;
-
-    modalConfirmacion.show();
-}
-
-// Ejecutar acción confirmada
-function ejecutarAccionConfirmada() {
-    if (!accionConfirmacion) return;
-
-    modalConfirmacion.hide();
-
-    switch (accionConfirmacion.accion) {
-        case 'eliminarMaquina':
-            ejecutarEliminarMaquina(accionConfirmacion.parametro);
-            break;
-        case 'eliminarRegistro':
-            ejecutarEliminarRegistro(accionConfirmacion.parametro);
-            break;
-        case 'limpiarRegistros':
-            registros = [];
-            guardarDatos();
-            actualizarTablaRegistros();
-            mostrarAlerta('Todos los registros han sido eliminados', 'success');
-            break;
-        case 'resetSistema':
-            maquinas = [];
-            registros = [];
-            configApp = {
-                titulo: 'Registro de Producción',
-                descripcion: 'Ingrese la información de producción para la máquina seleccionada.'
-            };
-            guardarDatos();
-            actualizarInterfaz();
-            mostrarAlerta('El sistema ha sido restablecido completamente', 'success');
-            break;
-        case 'importarTodo':
-            ejecutarImportarTodo(accionConfirmacion.parametro);
-            break;
-    }
-
-    accionConfirmacion = null;
-}
-
-
-
-
-
-// Añadir al final del archivo, antes del último event listener
-
-// Actualizar categorías para reportes
-function actualizarCategoriasReporte() {
-    const filtroCategoria = document.getElementById('filtro-categoria');
-    filtroCategoria.innerHTML = '<option value="todas" selected>Todas las categorías</option>';
-    
-    // Recopilar todas las categorías únicas
-    const categorias = new Set();
-    
-    // De los campos comunes
-    camposComunes.forEach(campo => {
-        if (campo.categoria) {
-            categorias.add(campo.categoria);
-        }
-    });
-    
-    // De los campos de máquinas
-    maquinas.forEach(maquina => {
-        if (maquina.campos) {
-            maquina.campos.forEach(campo => {
-                if (campo.categoria) {
-                    categorias.add(campo.categoria);
+                saveData();
+                renderAvailableFields();
+                // Si el campo eliminado estaba en el modal de config, actualizarlo
+                if (configureEntityModal.classList.contains('show')) {
+                    const entityId = configEntityIdHidden.value;
+                    renderConfigureEntityModal(entityId);
                 }
-            });
+                 showToast(`Campo "${fieldName}" eliminado.`, "Éxito", "success");
+            }
         }
     });
-    
-    // Agregar opciones
-    categorias.forEach(categoria => {
-        const option = document.createElement('option');
-        option.value = categoria;
-        option.textContent = categoria;
-        filtroCategoria.appendChild(option);
-    });
-}
 
-// Cargar campos para reportes según la categoría seleccionada
-function cargarCamposReporte() {
-    // Obtener todos los selectores de campos
-    const selectores = document.querySelectorAll('.campo-reporte');
-    const categoriaSeleccionada = document.getElementById('filtro-categoria').value;
-    const maquinaSeleccionada = document.getElementById('filtro-maquina').value;
-    
-    selectores.forEach(selector => {
-        const valorActual = selector.value; // Guardar el valor actual
-        selector.innerHTML = '<option value="" selected disabled>Seleccione un campo</option>';
-        
-        // Recopilar campos numéricos filtrados por categoría y máquina
-        const camposDisponibles = [];
-        
-        // Filtrar campos de máquinas
-        maquinas.forEach(maquina => {
-            if (maquinaSeleccionada !== 'todas' && maquina.id !== maquinaSeleccionada) {
-                return; // Saltar si no es la máquina seleccionada
-            }
-            
-            if (maquina.campos) {
-                maquina.campos.forEach(campo => {
-                    // Filtrar por categoría si es necesario
-                    if (categoriaSeleccionada !== 'todas' && campo.categoria !== categoriaSeleccionada) {
-                        return;
-                    }
-                    
-                    // Agregar campos numéricos y otros útiles para reportes
-                    if (campo.tipo === 'numero' || campo.tipo === 'seleccion') {
-                        camposDisponibles.push({
-                            id: campo.id,
-                            nombre: campo.nombre,
-                            tipo: campo.tipo,
-                            maquina: maquina.nombre
-                        });
-                    }
-                });
-            }
-        });
-        
-        // Agregar opciones
-        camposDisponibles.forEach(campo => {
-            const option = document.createElement('option');
-            option.value = JSON.stringify({id: campo.id, tipo: campo.tipo});
-            option.textContent = `${campo.nombre} (${campo.maquina})`;
-            selector.appendChild(option);
-        });
-        
-        // Intentar restaurar el valor anterior
-        if (valorActual) {
-            selector.value = valorActual;
-        }
-    });
-}
+    // Agregar nueva Entidad (Admin)
+    addEntityForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = newEntityName.value.trim();
 
-// Agregar campo a reporte
-function agregarCampoReporte() {
-    const listaCamposReporte = document.getElementById('lista-campos-reporte');
-    const sinCamposReporte = document.getElementById('sin-campos-reporte');
-    
-    const nuevoCampo = document.createElement('div');
-    nuevoCampo.className = 'row mb-2 campo-reporte-item';
-    nuevoCampo.innerHTML = `
-        <div class="col-md-5">
-            <select class="form-select campo-reporte">
-                <option value="" selected disabled>Seleccione un campo</option>
-            </select>
-        </div>
-        <div class="col-md-5">
-            <select class="form-select operacion-reporte">
-                <option value="sum">Suma</option>
-                <option value="avg">Promedio</option>
-                <option value="max">Máximo</option>
-                <option value="min">Mínimo</option>
-                <option value="count">Conteo</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-            <button type="button" class="btn btn-outline-danger w-100 btn-eliminar-campo-reporte">
-                <i class="bi bi-trash"></i>
-            </button>
-        </div>
-    `;
-    
-    listaCamposReporte.appendChild(nuevoCampo);
-    
-    // Agregar evento para eliminar campo
-    nuevoCampo.querySelector('.btn-eliminar-campo-reporte').addEventListener('click', function() {
-        nuevoCampo.remove();
-        
-        // Mostrar mensaje si no hay campos
-        if (document.querySelectorAll('.campo-reporte-item').length === 0) {
-            sinCamposReporte.classList.remove('d-none');
+        // Validar que no exista una entidad con el mismo nombre
+         if (entities.some(ent => ent.name.toLowerCase() === name.toLowerCase())) {
+             showToast(`Ya existe ${config.entityTypeName === 'Máquina' ? 'una' : 'un'} ${config.entityTypeName} con el nombre "${name}".`, "Error", "error");
+             return;
         }
-    });
-    
-    // Cargar opciones del selector
-    cargarCamposReporte();
-    
-    // Ocultar mensaje de sin campos
-    sinCamposReporte.classList.add('d-none');
-}
 
-// Añadir este código a actualizarInterfaz()
-function actualizarInterfaz() {
-    // Código existente...
-    
-    // Actualizar selectores de campos para reportes
-    actualizarSelectoresCamposReporte();
-    
-    // Actualizar categorías para reportes
-    actualizarCategoriasReporte();
-}
-
-
-// Modificar la función generarReporte() para soportar múltiples campos
-function generarReporte() {
-    const maquinaId = document.getElementById('filtro-maquina').value;
-    const desde = document.getElementById('filtro-desde').value ? new Date(document.getElementById('filtro-desde').value) : null;
-    const hasta = document.getElementById('filtro-hasta').value ? new Date(document.getElementById('filtro-hasta').value + 'T23:59:59') : null;
-    const agrupacion = document.getElementById('filtro-agrupacion').value;
-    const categoriaId = document.getElementById('filtro-categoria').value;
-    const tipoGrafico = document.getElementById('filtro-tipo-grafico').value;
-    
-    // Obtener los campos seleccionados para el reporte
-    const camposReporte = [];
-    document.querySelectorAll('.campo-reporte-item').forEach(item => {
-        const campoSelect = item.querySelector('.campo-reporte');
-        const operacionSelect = item.querySelector('.operacion-reporte');
-        
-        if (campoSelect.value) {
-            const campoInfo = JSON.parse(campoSelect.value);
-            camposReporte.push({
-                id: campoInfo.id,
-                tipo: campoInfo.tipo,
-                operacion: operacionSelect.value
-            });
-        }
-    });
-    
-    if (camposReporte.length === 0) {
-        mostrarAlerta('Seleccione al menos un campo para el reporte', 'warning');
-        return;
-    }
-    
-    // Filtrar registros
-    let registrosFiltrados = [...registros];
-    
-    if (maquinaId !== 'todas') {
-        registrosFiltrados = registrosFiltrados.filter(r => r.maquinaId === maquinaId);
-    }
-    
-    if (desde) {
-        registrosFiltrados = registrosFiltrados.filter(r => new Date(r.fecha) >= desde);
-    }
-    
-    if (hasta) {
-        registrosFiltrados = registrosFiltrados.filter(r => new Date(r.fecha) <= hasta);
-    }
-    
-    // Filtrar por categoría si es necesario
-    if (categoriaId !== 'todas') {
-        registrosFiltrados = registrosFiltrados.filter(r => {
-            // Obtener la máquina del registro
-            const maquina = maquinas.find(m => m.id === r.maquinaId);
-            if (!maquina) return false;
-            
-            // Verificar si algún campo del registro tiene la categoría seleccionada
-            return Object.keys(r.valores).some(campoId => {
-                const campoEnMaquina = maquina.campos.find(c => c.id === campoId);
-                return campoEnMaquina && campoEnMaquina.categoria === categoriaId;
-            });
-        });
-    }
-    
-    if (registrosFiltrados.length === 0) {
-        document.getElementById('sin-datos-grafico').classList.remove('d-none');
-        if (chartProduccion) {
-            chartProduccion.destroy();
-            chartProduccion = null;
-        }
-        document.getElementById('estadisticas-contenedor').innerHTML = '<div class="alert alert-info">No hay datos disponibles para los filtros seleccionados.</div>';
-        return;
-    }
-    
-    document.getElementById('sin-datos-grafico').classList.add('d-none');
-    
-    // Generar datos para cada campo seleccionado
-    const datosPorCampo = {};
-    
-    camposReporte.forEach(campoReporte => {
-        datosPorCampo[campoReporte.id] = agruparDatosAvanzados(
-            registrosFiltrados, 
-            agrupacion, 
-            campoReporte.id, 
-            campoReporte.operacion
-        );
-    });
-    
-    // Generar título del gráfico
-    let tituloGrafico = 'Reporte de Producción';
-    
-    if (maquinaId !== 'todas') {
-        const maquina = maquinas.find(m => m.id === maquinaId);
-        if (maquina) {
-            tituloGrafico += ` - ${maquina.nombre}`;
-        }
-    }
-    
-    if (categoriaId !== 'todas') {
-        tituloGrafico += ` - Categoría: ${categoriaId}`;
-    }
-    
-    document.getElementById('titulo-grafico').textContent = tituloGrafico;
-    
-    // Generar gráfico avanzado
-    generarGraficoAvanzado(datosPorCampo, tipoGrafico, camposReporte);
-    
-    // Generar estadísticas avanzadas
-    generarEstadisticasAvanzadas(registrosFiltrados, camposReporte);
-}
-
-// Función para agrupar datos de forma avanzada
-function agruparDatosAvanzados(registros, agrupacion, campoId, operacion) {
-    const datos = {};
-    
-    // Inicializar los grupos para almacenar valores sin procesar
-    const gruposValores = {};
-    
-    registros.forEach(registro => {
-        // Verificar si el registro tiene el campo seleccionado
-        if (registro.valores && registro.valores[campoId]) {
-            let valor;
-            
-            // Manejar diferentes tipos de campos
-            if (registro.valores[campoId].tipo === 'numero') {
-                valor = registro.valores[campoId].valor || 0;
-            } else if (registro.valores[campoId].tipo === 'seleccion') {
-                valor = 1; // Para conteo de selecciones
-            } else {
-                return; // No procesamos otros tipos en gráficos
-            }
-            
-            // Obtener la fecha para agrupar
-            const fecha = new Date(registro.fecha);
-            let clave = '';
-            
-            switch (agrupacion) {
-                case 'dia':
-                    clave = fecha.toISOString().split('T')[0];
-                    break;
-                    
-                case 'semana':
-                    // Obtener el primer día de la semana (lunes)
-                    const primerDia = new Date(fecha);
-                    const diaSemana = fecha.getDay() || 7; // 0 es domingo, convertir a 7
-                    primerDia.setDate(fecha.getDate() - diaSemana + 1);
-                    clave = primerDia.toISOString().split('T')[0];
-                    break;
-                    
-                case 'mes':
-                    clave = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
-                    break;
-            }
-            
-            // Inicializar el grupo si no existe
-            if (!gruposValores[clave]) {
-                gruposValores[clave] = [];
-            }
-            
-            // Añadir el valor al grupo
-            gruposValores[clave].push(valor);
-        }
-    });
-    
-    // Procesar cada grupo según la operación requerida
-    for (const [clave, valores] of Object.entries(gruposValores)) {
-        let resultado;
-        
-        switch (operacion) {
-            case 'sum':
-                resultado = valores.reduce((sum, val) => sum + val, 0);
-                break;
-            case 'avg':
-                resultado = valores.length > 0 ? valores.reduce((sum, val) => sum + val, 0) / valores.length : 0;
-                break;
-            case 'max':
-                resultado = Math.max(...valores);
-                break;
-            case 'min':
-                resultado = Math.min(...valores);
-                break;
-            case 'count':
-                resultado = valores.length;
-                break;
-            default:
-                resultado = valores.reduce((sum, val) => sum + val, 0); // Por defecto suma
-        }
-        
-        datos[clave] = resultado;
-    }
-    
-    // Ordenar por fecha
-    const datosOrdenados = {};
-    Object.keys(datos).sort().forEach(key => {
-        datosOrdenados[key] = datos[key];
-    });
-    
-    return datosOrdenados;
-}
-
-// Generar gráfico avanzado con múltiples campos
-function generarGraficoAvanzado(datosPorCampo, tipo, camposReporte) {
-    // Recopilar todas las etiquetas únicas (fechas)
-    const todasEtiquetas = new Set();
-    
-    Object.values(datosPorCampo).forEach(datos => {
-        Object.keys(datos).forEach(etiqueta => {
-            todasEtiquetas.add(etiqueta);
-        });
-    });
-    
-    // Convertir a array y ordenar
-    const etiquetas = Array.from(todasEtiquetas).sort();
-    
-    // Formatear etiquetas para visualización
-    const etiquetasFormateadas = etiquetas.map(clave => {
-        if (clave.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            // Es una fecha en formato YYYY-MM-DD
-            const fecha = new Date(clave);
-            return fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
-        } else if (clave.match(/^\d{4}-\d{2}$/)) {
-            // Es un mes en formato YYYY-MM
-            const [año, mes] = clave.split('-');
-            const fecha = new Date(parseInt(año), parseInt(mes) - 1, 1);
-            return fecha.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
-        }
-        return clave;
-    });
-    
-    // Preparar datasets
-    const datasets = [];
-    
-    // Colores para diferentes series
-    const colores = [
-        'rgba(54, 162, 235, 0.7)',
-        'rgba(255, 99, 132, 0.7)',
-        'rgba(255, 206, 86, 0.7)',
-        'rgba(75, 192, 192, 0.7)',
-        'rgba(153, 102, 255, 0.7)',
-        'rgba(255, 159, 64, 0.7)'
-    ];
-    
-    // Crear un dataset para cada campo
-    camposReporte.forEach((campoReporte, index) => {
-        const datos = datosPorCampo[campoReporte.id];
-        
-        // Buscar el nombre del campo
-        let nombreCampo = 'Campo';
-        let nombreOperacion = '';
-        
-        // Buscar en todas las máquinas
-        for (const maquina of maquinas) {
-            const campo = maquina.campos.find(c => c.id === campoReporte.id);
-            if (campo) {
-                nombreCampo = campo.nombre;
-                break;
-            }
-        }
-        
-        // Traducir la operación
-        switch (campoReporte.operacion) {
-            case 'sum': nombreOperacion = 'Suma'; break;
-            case 'avg': nombreOperacion = 'Promedio'; break;
-            case 'max': nombreOperacion = 'Máximo'; break;
-            case 'min': nombreOperacion = 'Mínimo'; break;
-            case 'count': nombreOperacion = 'Conteo'; break;
-        }
-        
-        // Preparar valores para todas las etiquetas
-        const valores = etiquetas.map(etiqueta => {
-            return datos[etiqueta] || 0;
-        });
-        
-        // Color para este dataset
-        const color = colores[index % colores.length];
-        
-        datasets.push({
-            label: `${nombreCampo} (${nombreOperacion})`,
-            data: valores,
-            backgroundColor: tipo === 'line' ? color : colores.map(c => c.replace('0.7', `0.${7 - index % 5}`)),
-            borderColor: tipo === 'line' ? color.replace('0.7', '1') : colores.map(c => c.replace('0.7', '1')),
-            borderWidth: 1
-        });
-    });
-    
-    // Configurar el gráfico
-    const ctx = document.getElementById('chart-produccion').getContext('2d');
-    
-    // Destruir gráfico anterior si existe
-    if (chartProduccion) {
-        chartProduccion.destroy();
-    }
-    
-    // Configuración según tipo de gráfico
-    let config = {
-        type: tipo,
-        data: {
-            labels: etiquetasFormateadas,
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true
-                },
-                tooltip: {
-                    enabled: true
-                }
-            }
-        }
-    };
-    
-    // Opciones específicas según tipo de gráfico
-    if (tipo === 'bar' || tipo === 'line') {
-        config.options.scales = {
-            y: {
-                beginAtZero: true
-            }
+        const newEntity = {
+            id: generateId('entity'),
+            name: name,
+            fields: [] // Inicialmente sin campos asignados
         };
-    }
-    
-    // Crear gráfico
-    chartProduccion = new Chart(ctx, config);
-}
 
-// Generar estadísticas avanzadas
-function generarEstadisticasAvanzadas(registros, camposReporte) {
-    const estadisticasContenedor = document.getElementById('estadisticas-contenedor');
-    estadisticasContenedor.innerHTML = '';
-    
-    // Si no hay campos seleccionados, mostrar solo cantidad de registros
-    if (camposReporte.length === 0) {
-        estadisticasContenedor.innerHTML = `
-            <div class="stats-card">
-                <h4>Total de Registros</h4>
-                <div class="value">${registros.length}</div>
-            </div>
-            <div class="alert alert-info">
-                Seleccione campos para ver estadísticas avanzadas.
-            </div>
-        `;
-        return;
-    }
-    
-    // Mostrar total de registros
-    estadisticasContenedor.innerHTML = `
-        <div class="stats-card">
-            <h4>Total de Registros</h4>
-            <div class="value">${registros.length}</div>
-        </div>
-    `;
-    
-    // Procesar cada campo
-    camposReporte.forEach(campoReporte => {
-        // Verificar si hay valores para este campo
-        const valoresCampo = [];
-        
-        registros.forEach(registro => {
-            if (registro.valores && registro.valores[campoReporte.id]) {
-                const valor = registro.valores[campoReporte.id].valor;
-                if (registro.valores[campoReporte.id].tipo === 'numero' && !isNaN(valor)) {
-                    valoresCampo.push(valor);
-                }
-            }
-        });
-        
-        // Buscar nombre del campo
-        let nombreCampo = 'Campo';
-        for (const maquina of maquinas) {
-            const campo = maquina.campos.find(c => c.id === campoReporte.id);
-            if (campo) {
-                nombreCampo = campo.nombre;
-                break;
+        entities.push(newEntity);
+        saveData();
+        renderEntities(); // Actualizar lista y selector
+        addEntityForm.reset();
+         showToast(`${config.entityTypeName} "${name}" agregada.`, "Éxito", "success");
+    });
+
+    // Eliminar Entidad (Admin - Delegación de eventos)
+    entitiesList.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-entity-btn')) {
+            const entityId = e.target.dataset.entityId;
+            const entityName = getEntityName(entityId);
+
+            // Confirmación MUY IMPORTANTE: Eliminar una entidad borrará todos sus logs asociados
+             if (confirm(`¡ADVERTENCIA!\n¿Está seguro de eliminar "${entityName}"?\n\nSe borrarán TODOS los registros de producción asociados a ${config.entityTypeName === 'Máquina' ? 'esta' : 'este'} ${config.entityTypeName}.\n\nEsta acción NO SE PUEDE DESHACER.`)) {
+                entities = entities.filter(e => e.id !== entityId);
+                // Eliminar logs asociados
+                productionLogs = productionLogs.filter(log => log.entityId !== entityId);
+
+                saveData();
+                renderEntities();
+                renderRecentLogs(); // Actualizar logs recientes
+                renderLogForm(); // Resetear formulario si la entidad eliminada estaba seleccionada
+                renderProductionChart(); // Actualizar gráfico
+                showToast(`${config.entityTypeName} "${entityName}" y todos sus registros han sido eliminados.`, "Éxito", "success");
             }
         }
-        
-        if (valoresCampo.length === 0) {
-            const cardElement = document.createElement('div');
-            cardElement.className = 'stats-card';
-            cardElement.innerHTML = `
-                <h4>${nombreCampo}</h4>
-                <div class="alert alert-info mb-0">
-                    No hay datos numéricos disponibles.
-                </div>
-            `;
-            estadisticasContenedor.appendChild(cardElement);
+
+        // Abrir Modal Configurar Entidad
+        if (e.target.classList.contains('configure-entity-btn')) {
+             const entityId = e.target.dataset.entityId;
+             renderConfigureEntityModal(entityId);
+             bsConfigureEntityModal.show();
+        }
+    });
+
+    // --- Lógica del Modal de Configuración de Campos por Entidad ---
+
+    // Función para popular el modal de configuración
+    const renderConfigureEntityModal = (entityId) => {
+        const entity = entities.find(e => e.id === entityId);
+        if (!entity) return;
+
+        configureEntityName.textContent = entity.name;
+        configEntityIdHidden.value = entityId; // Guardar ID para referencia
+
+        // Llenar selector de campos disponibles (que NO estén ya asignados)
+        addFieldToEntitySelector.innerHTML = '<option value="" selected disabled>-- Seleccione un campo --</option>';
+        const assignedFieldIds = new Set((entity.fields || []).map(ef => ef.fieldId));
+        availableFields.forEach(field => {
+            if (!assignedFieldIds.has(field.id)) {
+                const option = document.createElement('option');
+                option.value = field.id;
+                option.textContent = `${field.name} (${field.type})`;
+                addFieldToEntitySelector.appendChild(option);
+            }
+        });
+         // Deshabilitar botón si no hay campos para añadir
+        addFieldToEntityBtn.disabled = addFieldToEntitySelector.options.length <= 1;
+
+
+        // Llenar lista de campos asignados
+        assignedFieldsList.innerHTML = '';
+        if (!entity.fields || entity.fields.length === 0) {
+            assignedFieldsList.innerHTML = `<li class="list-group-item text-muted">No hay campos asignados a esta ${config.entityTypeName}.</li>`;
             return;
         }
-        
-        // Calcular estadísticas
-        const sum = valoresCampo.reduce((a, b) => a + b, 0);
-        const avg = sum / valoresCampo.length;
-        const max = Math.max(...valoresCampo);
-        const min = Math.min(...valoresCampo);
-        
-        // Mostrar estadísticas según la operación seleccionada
-        let estadisticaHTML = '';
-        
-        switch (campoReporte.operacion) {
-            case 'sum':
-                estadisticaHTML = `<div class="value">${sum.toFixed(2)}</div>`;
-                break;
-            case 'avg':
-                estadisticaHTML = `<div class="value">${avg.toFixed(2)}</div>`;
-                break;
-            case 'max':
-                estadisticaHTML = `<div class="value">${max.toFixed(2)}</div>`;
-                break;
-            case 'min':
-                estadisticaHTML = `<div class="value">${min.toFixed(2)}</div>`;
-                break;
-            case 'count':
-                estadisticaHTML = `<div class="value">${valoresCampo.length}</div>`;
-                break;
-            default:
-                estadisticaHTML = `
-                    <div class="row">
-                        <div class="col-6">
-                            <small>Total:</small>
-                            <div class="value">${sum.toFixed(2)}</div>
-                        </div>
-                        <div class="col-6">
-                            <small>Promedio:</small>
-                            <div class="value">${avg.toFixed(2)}</div>
-                        </div>
-                    </div>
-                `;
-        }
-        
-        // Añadir card de estadísticas
-        const cardElement = document.createElement('div');
-        cardElement.className = 'stats-card';
-        cardElement.innerHTML = `
-            <h4>${nombreCampo}</h4>
-            ${estadisticaHTML}
-        `;
-        estadisticasContenedor.appendChild(cardElement);
-    });
-}
 
+        entity.fields.forEach(entityField => {
+            const fieldDefinition = availableFields.find(f => f.id === entityField.fieldId);
+            if (!fieldDefinition) return; // Campo no encontrado
 
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.dataset.fieldId = fieldDefinition.id; // Guardar fieldId en el LI
 
+            const isChecked = entityField.required ? 'checked' : '';
+            const uniqueCheckboxId = `req_${fieldDefinition.id}_${entityId}`;
 
-
-
-
-// FUNCIONES PARA CAMPOS COMUNES Y REPORTES AVANZADOS
-
-// Buscar campos similares
-function buscarCamposSimilares() {
-    const nombreBuscado = document.getElementById('campo-nombre').value.trim().toLowerCase();
-    if (nombreBuscado.length < 2) {
-        mostrarAlerta('Ingrese al menos 2 caracteres para buscar', 'warning');
-        return;
-    }
-    
-    const camposSimilaresContainer = document.getElementById('campos-similares-container');
-    const listaCamposSimilares = document.getElementById('lista-campos-similares');
-    listaCamposSimilares.innerHTML = '';
-    
-    // Buscar en campos comunes
-    const similares = camposComunes.filter(campo => 
-        campo.nombre.toLowerCase().includes(nombreBuscado)
-    );
-    
-    // También buscar en campos de máquinas
-    maquinas.forEach(maquina => {
-        if (maquina.campos) {
-            maquina.campos.forEach(campo => {
-                // Si el campo ya está en similares, lo omitimos
-                if (!similares.some(c => c.id === campo.id) && 
-                    campo.nombre.toLowerCase().includes(nombreBuscado)) {
-                    similares.push({
-                        ...campo,
-                        maquinaNombre: maquina.nombre
-                    });
-                }
-            });
-        }
-    });
-    
-    if (similares.length === 0) {
-        camposSimilaresContainer.classList.add('d-none');
-        return;
-    }
-    
-    // Mostrar resultados
-    similares.forEach(campo => {
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'list-group-item list-group-item-action';
-        item.innerHTML = `
-            <div class="d-flex justify-content-between align-items-center">
+            li.innerHTML = `
+                <span>${fieldDefinition.name} (${fieldDefinition.type})</span>
                 <div>
-                    <strong>${campo.nombre}</strong> 
-                    <span class="badge bg-primary ms-2">${capitalizarPrimeraLetra(campo.tipo)}</span>
-                    ${campo.categoria ? `<span class="badge bg-secondary ms-1">${campo.categoria}</span>` : ''}
-                </div>
-                ${campo.maquinaNombre ? `<small class="text-muted">Usado en: ${campo.maquinaNombre}</small>` : 
-                                       '<small class="text-success">Campo común</small>'}
-            </div>
-        `;
-        
-        item.addEventListener('click', () => aplicarCampoSeleccionado(campo));
-        listaCamposSimilares.appendChild(item);
-    });
-    
-    camposSimilaresContainer.classList.remove('d-none');
-}
-
-// Aplicar campo seleccionado
-function aplicarCampoSeleccionado(campo) {
-    document.getElementById('campo-nombre').value = campo.nombre;
-    document.getElementById('campo-tipo').value = campo.tipo;
-    document.getElementById('campo-obligatorio').checked = campo.obligatorio || false;
-    
-    if (campo.categoria) {
-        document.getElementById('campo-categoria').value = campo.categoria;
-    }
-    
-    // Manejar opciones si es de tipo selección
-    if (campo.tipo === 'seleccion' && campo.opciones) {
-        document.getElementById('opciones-contenedor').classList.remove('d-none');
-        document.getElementById('lista-opciones').innerHTML = '';
-        
-        campo.opciones.forEach(opcion => {
-            agregarOpcionConValor(opcion);
-        });
-    } else {
-        document.getElementById('opciones-contenedor').classList.add('d-none');
-    }
-    
-    // Ocultar la lista después de seleccionar
-    document.getElementById('campos-similares-container').classList.add('d-none');
-}
-
-// Actualizar categorías para reportes
-function actualizarCategoriasReporte() {
-    const filtroCategoria = document.getElementById('filtro-categoria');
-    if (!filtroCategoria) return;
-    
-    filtroCategoria.innerHTML = '<option value="todas" selected>Todas las categorías</option>';
-    
-    // Recopilar todas las categorías únicas
-    const categorias = new Set();
-    
-    // De los campos comunes
-    camposComunes.forEach(campo => {
-        if (campo.categoria) {
-            categorias.add(campo.categoria);
-        }
-    });
-    
-    // De los campos de máquinas
-    maquinas.forEach(maquina => {
-        if (maquina.campos) {
-            maquina.campos.forEach(campo => {
-                if (campo.categoria) {
-                    categorias.add(campo.categoria);
-                }
-            });
-        }
-    });
-    
-    // Agregar opciones
-    categorias.forEach(categoria => {
-        const option = document.createElement('option');
-        option.value = categoria;
-        option.textContent = categoria;
-        filtroCategoria.appendChild(option);
-    });
-}
-
-// Cargar campos para reportes según la categoría seleccionada
-function cargarCamposReporte() {
-    // Obtener todos los selectores de campos
-    const selectores = document.querySelectorAll('.campo-reporte');
-    if (selectores.length === 0) return;
-    
-    const categoriaSeleccionada = document.getElementById('filtro-categoria').value;
-    const maquinaSeleccionada = document.getElementById('filtro-maquina').value;
-    
-    selectores.forEach(selector => {
-        const valorActual = selector.value; // Guardar el valor actual
-        selector.innerHTML = '<option value="" selected disabled>Seleccione un campo</option>';
-        
-        // Recopilar campos numéricos filtrados por categoría y máquina
-        const camposDisponibles = [];
-        
-        // Filtrar campos de máquinas
-        maquinas.forEach(maquina => {
-            if (maquinaSeleccionada !== 'todas' && maquina.id !== maquinaSeleccionada) {
-                return; // Saltar si no es la máquina seleccionada
-            }
-            
-            if (maquina.campos) {
-                maquina.campos.forEach(campo => {
-                    // Filtrar por categoría si es necesario
-                    if (categoriaSeleccionada !== 'todas' && campo.categoria !== categoriaSeleccionada) {
-                        return;
-                    }
-                    
-                    // Agregar campos numéricos y otros útiles para reportes
-                    if (campo.tipo === 'numero' || campo.tipo === 'seleccion') {
-                        camposDisponibles.push({
-                            id: campo.id,
-                            nombre: campo.nombre,
-                            tipo: campo.tipo,
-                            maquina: maquina.nombre
-                        });
-                    }
-                });
-            }
-        });
-        
-        // Agregar opciones
-        camposDisponibles.forEach(campo => {
-            const option = document.createElement('option');
-            option.value = JSON.stringify({id: campo.id, tipo: campo.tipo});
-            option.textContent = `${campo.nombre} (${campo.maquina})`;
-            selector.appendChild(option);
-        });
-        
-        // Intentar restaurar el valor anterior
-        if (valorActual) {
-            selector.value = valorActual;
-        }
-    });
-}
-
-// Agregar campo a reporte
-function agregarCampoReporte() {
-    const listaCamposReporte = document.getElementById('lista-campos-reporte');
-    const sinCamposReporte = document.getElementById('sin-campos-reporte');
-    
-    if (!listaCamposReporte || !sinCamposReporte) return;
-    
-    const nuevoCampo = document.createElement('div');
-    nuevoCampo.className = 'row mb-2 campo-reporte-item';
-    nuevoCampo.innerHTML = `
-        <div class="col-md-5">
-            <select class="form-select campo-reporte">
-                <option value="" selected disabled>Seleccione un campo</option>
-            </select>
-        </div>
-        <div class="col-md-5">
-            <select class="form-select operacion-reporte">
-                <option value="sum">Suma</option>
-                <option value="avg">Promedio</option>
-                <option value="max">Máximo</option>
-                <option value="min">Mínimo</option>
-                <option value="count">Conteo</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-            <button type="button" class="btn btn-outline-danger w-100 btn-eliminar-campo-reporte">
-                <i class="bi bi-trash"></i>
-            </button>
-        </div>
-    `;
-    
-    listaCamposReporte.appendChild(nuevoCampo);
-    
-    // Agregar evento para eliminar campo
-    nuevoCampo.querySelector('.btn-eliminar-campo-reporte').addEventListener('click', function() {
-        nuevoCampo.remove();
-        
-        // Mostrar mensaje si no hay campos
-        if (document.querySelectorAll('.campo-reporte-item').length === 0) {
-            sinCamposReporte.classList.remove('d-none');
-        }
-    });
-    
-    // Cargar opciones del selector
-    cargarCamposReporte();
-    
-    // Ocultar mensaje de sin campos
-    sinCamposReporte.classList.add('d-none');
-}
-
-// Función para generar reporte avanzado
-function generarReporte() {
-    const maquinaId = document.getElementById('filtro-maquina').value;
-    const desde = document.getElementById('filtro-desde').value ? new Date(document.getElementById('filtro-desde').value) : null;
-    const hasta = document.getElementById('filtro-hasta').value ? new Date(document.getElementById('filtro-hasta').value + 'T23:59:59') : null;
-    const agrupacion = document.getElementById('filtro-agrupacion').value;
-    const tipoGrafico = document.getElementById('filtro-tipo-grafico').value;
-    
-    // Verificar si estamos usando reportes avanzados o básicos
-    const usandoReportesAvanzados = document.getElementById('lista-campos-reporte') !== null;
-    
-    if (usandoReportesAvanzados) {
-        const categoriaId = document.getElementById('filtro-categoria').value;
-        
-        // Obtener los campos seleccionados para el reporte
-        const camposReporte = [];
-        document.querySelectorAll('.campo-reporte-item').forEach(item => {
-            const campoSelect = item.querySelector('.campo-reporte');
-            const operacionSelect = item.querySelector('.operacion-reporte');
-            
-            if (campoSelect.value) {
-                const campoInfo = JSON.parse(campoSelect.value);
-                camposReporte.push({
-                    id: campoInfo.id,
-                    tipo: campoInfo.tipo,
-                    operacion: operacionSelect.value
-                });
-            }
-        });
-        
-        if (camposReporte.length === 0) {
-            mostrarAlerta('Seleccione al menos un campo para el reporte', 'warning');
-            return;
-        }
-        
-        // Filtrar registros
-        let registrosFiltrados = [...registros];
-        
-        if (maquinaId !== 'todas') {
-            registrosFiltrados = registrosFiltrados.filter(r => r.maquinaId === maquinaId);
-        }
-        
-        if (desde) {
-            registrosFiltrados = registrosFiltrados.filter(r => new Date(r.fecha) >= desde);
-        }
-        
-        if (hasta) {
-            registrosFiltrados = registrosFiltrados.filter(r => new Date(r.fecha) <= hasta);
-        }
-        
-        // Filtrar por categoría si es necesario
-        if (categoriaId !== 'todas') {
-            registrosFiltrados = registrosFiltrados.filter(r => {
-                // Obtener la máquina del registro
-                const maquina = maquinas.find(m => m.id === r.maquinaId);
-                if (!maquina) return false;
-                
-                // Verificar si algún campo del registro tiene la categoría seleccionada
-                return Object.keys(r.valores).some(campoId => {
-                    const campoEnMaquina = maquina.campos.find(c => c.id === campoId);
-                    return campoEnMaquina && campoEnMaquina.categoria === categoriaId;
-                });
-            });
-        }
-        
-        if (registrosFiltrados.length === 0) {
-            document.getElementById('sin-datos-grafico').classList.remove('d-none');
-            if (chartProduccion) {
-                chartProduccion.destroy();
-                chartProduccion = null;
-            }
-            document.getElementById('estadisticas-contenedor').innerHTML = '<div class="alert alert-info">No hay datos disponibles para los filtros seleccionados.</div>';
-            return;
-        }
-        
-        document.getElementById('sin-datos-grafico').classList.add('d-none');
-        
-        // Generar datos para cada campo seleccionado
-        const datosPorCampo = {};
-        
-        camposReporte.forEach(campoReporte => {
-            datosPorCampo[campoReporte.id] = agruparDatosAvanzados(
-                registrosFiltrados, 
-                agrupacion, 
-                campoReporte.id, 
-                campoReporte.operacion
-            );
-        });
-        
-        // Generar título del gráfico
-        let tituloGrafico = 'Reporte de Producción';
-        
-        if (maquinaId !== 'todas') {
-            const maquina = maquinas.find(m => m.id === maquinaId);
-            if (maquina) {
-                tituloGrafico += ` - ${maquina.nombre}`;
-            }
-        }
-        
-        if (categoriaId !== 'todas') {
-            tituloGrafico += ` - Categoría: ${categoriaId}`;
-        }
-        
-        document.getElementById('titulo-grafico').textContent = tituloGrafico;
-        
-        // Generar gráfico avanzado
-        generarGraficoAvanzado(datosPorCampo, tipoGrafico, camposReporte);
-        
-        // Generar estadísticas avanzadas
-        generarEstadisticasAvanzadas(registrosFiltrados, camposReporte);
-    } else {
-        // Usar el modo de reporte original
-        const campoId = document.getElementById('filtro-campo') ? document.getElementById('filtro-campo').value : null;
-        
-        // Filtrar registros
-        let registrosFiltrados = [...registros];
-        
-        if (maquinaId !== 'todas') {
-            registrosFiltrados = registrosFiltrados.filter(r => r.maquinaId === maquinaId);
-        }
-        
-        if (desde) {
-            registrosFiltrados = registrosFiltrados.filter(r => new Date(r.fecha) >= desde);
-        }
-        
-        if (hasta) {
-            registrosFiltrados = registrosFiltrados.filter(r => new Date(r.fecha) <= hasta);
-        }
-        
-        if (registrosFiltrados.length === 0) {
-            document.getElementById('sin-datos-grafico').classList.remove('d-none');
-            if (chartProduccion) {
-                chartProduccion.destroy();
-                chartProduccion = null;
-            }
-            document.getElementById('estadisticas-contenedor').innerHTML = '<div class="alert alert-info">No hay datos disponibles para los filtros seleccionados.</div>';
-            return;
-        }
-        
-        document.getElementById('sin-datos-grafico').classList.add('d-none');
-        
-        // Agrupar datos para el gráfico
-        const datosAgrupados = agruparDatos(registrosFiltrados, agrupacion, campoId);
-        
-        // Actualizar título del gráfico
-        let tituloGrafico = 'Producción';
-        
-        if (maquinaId !== 'todas') {
-            const maquina = maquinas.find(m => m.id === maquinaId);
-            if (maquina) {
-                tituloGrafico += ` - ${maquina.nombre}`;
-            }
-        }
-        
-        if (campoId) {
-            // Buscar el nombre del campo
-            let nombreCampo = '';
-            for (const maquina of maquinas) {
-                const campo = maquina.campos.find(c => c.id === campoId);
-                if (campo) {
-                    nombreCampo = campo.nombre;
-                    break;
-                }
-            }
-            
-            if (nombreCampo) {
-                tituloGrafico += ` - ${nombreCampo}`;
-            }
-        }
-        
-        document.getElementById('titulo-grafico').textContent = tituloGrafico;
-        
-        // Generar gráfico
-        generarGrafico(datosAgrupados, tipoGrafico);
-        
-        // Generar estadísticas
-        generarEstadisticas(registrosFiltrados, campoId);
-    }
-}
-
-// Función para agrupar datos de forma avanzada
-function agruparDatosAvanzados(registros, agrupacion, campoId, operacion) {
-    const datos = {};
-    
-    // Inicializar los grupos para almacenar valores sin procesar
-    const gruposValores = {};
-    
-    registros.forEach(registro => {
-        // Verificar si el registro tiene el campo seleccionado
-        if (registro.valores && registro.valores[campoId]) {
-            let valor;
-            
-            // Manejar diferentes tipos de campos
-            if (registro.valores[campoId].tipo === 'numero') {
-                valor = registro.valores[campoId].valor || 0;
-            } else if (registro.valores[campoId].tipo === 'seleccion') {
-                valor = 1; // Para conteo de selecciones
-            } else {
-                return; // No procesamos otros tipos en gráficos
-            }
-            
-            // Obtener la fecha para agrupar
-            const fecha = new Date(registro.fecha);
-            let clave = '';
-            
-            switch (agrupacion) {
-                case 'dia':
-                    clave = fecha.toISOString().split('T')[0];
-                    break;
-                    
-                case 'semana':
-                    // Obtener el primer día de la semana (lunes)
-                    const primerDia = new Date(fecha);
-                    const diaSemana = fecha.getDay() || 7; // 0 es domingo, convertir a 7
-                    primerDia.setDate(fecha.getDate() - diaSemana + 1);
-                    clave = primerDia.toISOString().split('T')[0];
-                    break;
-                    
-                case 'mes':
-                    clave = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
-                    break;
-            }
-            
-            // Inicializar el grupo si no existe
-            if (!gruposValores[clave]) {
-                gruposValores[clave] = [];
-            }
-            
-            // Añadir el valor al grupo
-            gruposValores[clave].push(valor);
-        }
-    });
-    
-    // Procesar cada grupo según la operación requerida
-    for (const [clave, valores] of Object.entries(gruposValores)) {
-        let resultado;
-        
-        switch (operacion) {
-            case 'sum':
-                resultado = valores.reduce((sum, val) => sum + val, 0);
-                break;
-            case 'avg':
-                resultado = valores.length > 0 ? valores.reduce((sum, val) => sum + val, 0) / valores.length : 0;
-                break;
-            case 'max':
-                resultado = Math.max(...valores);
-                break;
-            case 'min':
-                resultado = Math.min(...valores);
-                break;
-            case 'count':
-                resultado = valores.length;
-                break;
-            default:
-                resultado = valores.reduce((sum, val) => sum + val, 0); // Por defecto suma
-        }
-        
-        datos[clave] = resultado;
-    }
-    
-    // Ordenar por fecha
-    const datosOrdenados = {};
-    Object.keys(datos).sort().forEach(key => {
-        datosOrdenados[key] = datos[key];
-    });
-    
-    return datosOrdenados;
-}
-
-// Generar gráfico avanzado con múltiples campos
-function generarGraficoAvanzado(datosPorCampo, tipo, camposReporte) {
-    // Recopilar todas las etiquetas únicas (fechas)
-    const todasEtiquetas = new Set();
-    
-    Object.values(datosPorCampo).forEach(datos => {
-        Object.keys(datos).forEach(etiqueta => {
-            todasEtiquetas.add(etiqueta);
-        });
-    });
-    
-    // Convertir a array y ordenar
-    const etiquetas = Array.from(todasEtiquetas).sort();
-    
-    // Formatear etiquetas para visualización
-    const etiquetasFormateadas = etiquetas.map(clave => {
-        if (clave.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            // Es una fecha en formato YYYY-MM-DD
-            const fecha = new Date(clave);
-            return fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
-        } else if (clave.match(/^\d{4}-\d{2}$/)) {
-            // Es un mes en formato YYYY-MM
-            const [año, mes] = clave.split('-');
-            const fecha = new Date(parseInt(año), parseInt(mes) - 1, 1);
-            return fecha.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
-        }
-        return clave;
-    });
-    
-    // Preparar datasets
-    const datasets = [];
-    
-    // Colores para diferentes series
-    const colores = [
-        'rgba(54, 162, 235, 0.7)',
-        'rgba(255, 99, 132, 0.7)',
-        'rgba(255, 206, 86, 0.7)',
-        'rgba(75, 192, 192, 0.7)',
-        'rgba(153, 102, 255, 0.7)',
-        'rgba(255, 159, 64, 0.7)'
-    ];
-    
-    // Crear un dataset para cada campo
-    camposReporte.forEach((campoReporte, index) => {
-        const datos = datosPorCampo[campoReporte.id];
-        
-        // Buscar el nombre del campo
-        let nombreCampo = 'Campo';
-        let nombreOperacion = '';
-        
-        // Buscar en todas las máquinas
-        for (const maquina of maquinas) {
-            const campo = maquina.campos.find(c => c.id === campoReporte.id);
-            if (campo) {
-                nombreCampo = campo.nombre;
-                break;
-            }
-        }
-        
-        // Traducir la operación
-        switch (campoReporte.operacion) {
-            case 'sum': nombreOperacion = 'Suma'; break;
-            case 'avg': nombreOperacion = 'Promedio'; break;
-            case 'max': nombreOperacion = 'Máximo'; break;
-            case 'min': nombreOperacion = 'Mínimo'; break;
-            case 'count': nombreOperacion = 'Conteo'; break;
-        }
-        
-        // Preparar valores para todas las etiquetas
-        const valores = etiquetas.map(etiqueta => {
-            return datos[etiqueta] || 0;
-        });
-        
-        // Color para este dataset
-        const color = colores[index % colores.length];
-        
-        datasets.push({
-            label: `${nombreCampo} (${nombreOperacion})`,
-            data: valores,
-            backgroundColor: tipo === 'line' ? color : colores.map(c => c.replace('0.7', `0.${7 - index % 5}`)),
-            borderColor: tipo === 'line' ? color.replace('0.7', '1') : colores.map(c => c.replace('0.7', '1')),
-            borderWidth: 1
-        });
-    });
-    
-    // Configurar el gráfico
-    const ctx = document.getElementById('chart-produccion').getContext('2d');
-    
-    // Destruir gráfico anterior si existe
-    if (chartProduccion) {
-        chartProduccion.destroy();
-    }
-    
-    // Configuración según tipo de gráfico
-    let config = {
-        type: tipo,
-        data: {
-            labels: etiquetasFormateadas,
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true
-                },
-                tooltip: {
-                    enabled: true
-                }
-            }
-        }
-    };
-    
-    // Opciones específicas según tipo de gráfico
-    if (tipo === 'bar' || tipo === 'line') {
-        config.options.scales = {
-            y: {
-                beginAtZero: true
-            }
-        };
-    }
-    
-    // Crear gráfico
-    chartProduccion = new Chart(ctx, config);
-}
-
-// Añade esta función de utilidad
-function getModal(modalId) {
-    const modalElement = document.getElementById(modalId);
-    const instance = bootstrap.Modal.getInstance(modalElement);
-    if (instance) {
-        return instance;
-    } else {
-        return new bootstrap.Modal(modalElement);
-    }
-}
-
-// Generar estadísticas avanzadas
-function generarEstadisticasAvanzadas(registros, camposReporte) {
-    const estadisticasContenedor = document.getElementById('estadisticas-contenedor');
-    estadisticasContenedor.innerHTML = '';
-    
-    // Si no hay campos seleccionados, mostrar solo cantidad de registros
-    if (camposReporte.length === 0) {
-        estadisticasContenedor.innerHTML = `
-            <div class="stats-card">
-                <h4>Total de Registros</h4>
-                <div class="value">${registros.length}</div>
-            </div>
-            <div class="alert alert-info">
-                Seleccione campos para ver estadísticas avanzadas.
-            </div>
-        `;
-        return;
-    }
-    
-    // Mostrar total de registros
-    estadisticasContenedor.innerHTML = `
-        <div class="stats-card">
-            <h4>Total de Registros</h4>
-            <div class="value">${registros.length}</div>
-        </div>
-    `;
-    
-    // Procesar cada campo
-    camposReporte.forEach(campoReporte => {
-        // Verificar si hay valores para este campo
-        const valoresCampo = [];
-        
-        registros.forEach(registro => {
-            if (registro.valores && registro.valores[campoReporte.id]) {
-                const valor = registro.valores[campoReporte.id].valor;
-                if (registro.valores[campoReporte.id].tipo === 'numero' && !isNaN(valor)) {
-                    valoresCampo.push(valor);
-                }
-            }
-        });
-        
-        // Buscar nombre del campo
-        let nombreCampo = 'Campo';
-        for (const maquina of maquinas) {
-            const campo = maquina.campos.find(c => c.id === campoReporte.id);
-            if (campo) {
-                nombreCampo = campo.nombre;
-                break;
-            }
-        }
-        
-        if (valoresCampo.length === 0) {
-            const cardElement = document.createElement('div');
-            cardElement.className = 'stats-card';
-            cardElement.innerHTML = `
-                <h4>${nombreCampo}</h4>
-                <div class="alert alert-info mb-0">
-                    No hay datos numéricos disponibles.
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input required-checkbox" type="checkbox" id="${uniqueCheckboxId}" data-field-id="${fieldDefinition.id}" ${isChecked}>
+                      <label class="form-check-label small" for="${uniqueCheckboxId}">Obligatorio</label>
+                    </div>
+                    <button class="btn btn-sm btn-danger remove-field-from-entity-btn" data-field-id="${fieldDefinition.id}">Quitar</button>
                 </div>
             `;
-            estadisticasContenedor.appendChild(cardElement);
+            assignedFieldsList.appendChild(li);
+        });
+    };
+
+    // Añadir campo seleccionado a la entidad (Modal)
+    addFieldToEntityBtn.addEventListener('click', () => {
+        const entityId = configEntityIdHidden.value;
+        const fieldIdToAdd = addFieldToEntitySelector.value;
+
+        if (!entityId || !fieldIdToAdd) return;
+
+        const entity = entities.find(e => e.id === entityId);
+        if (!entity) return;
+
+        // Asegurarse de que entity.fields exista
+        if (!entity.fields) {
+            entity.fields = [];
+        }
+
+        // Evitar duplicados (aunque el selector ya debería prevenirlo)
+        if (!entity.fields.some(ef => ef.fieldId === fieldIdToAdd)) {
+            entity.fields.push({ fieldId: fieldIdToAdd, required: false }); // Añadir como no obligatorio por defecto
+            saveData();
+            renderConfigureEntityModal(entityId); // Re-renderizar modal
+             // Si el formulario de log está mostrando esta entidad, actualizarlo también
+            if (entitySelector.value === entityId) {
+                renderLogForm();
+            }
+            showToast("Campo añadido a la configuración.", "Éxito", "success");
+        }
+    });
+
+    // Quitar campo o cambiar obligatoriedad (Modal - Delegación)
+    assignedFieldsList.addEventListener('click', (e) => {
+        const entityId = configEntityIdHidden.value;
+        const entity = entities.find(ent => ent.id === entityId);
+        if (!entity || !entity.fields) return;
+
+        const fieldId = e.target.dataset.fieldId;
+        if (!fieldId) return; // Clic en otro lugar
+
+        // Botón Quitar
+        if (e.target.classList.contains('remove-field-from-entity-btn')) {
+             const fieldName = getFieldName(fieldId);
+             if (confirm(`¿Quitar el campo "${fieldName}" de la configuración de "${entity.name}"?`)) {
+                entity.fields = entity.fields.filter(ef => ef.fieldId !== fieldId);
+                saveData();
+                renderConfigureEntityModal(entityId); // Re-renderizar modal
+                 // Si el formulario de log está mostrando esta entidad, actualizarlo también
+                if (entitySelector.value === entityId) {
+                    renderLogForm();
+                }
+                showToast(`Campo "${fieldName}" quitado de la configuración.`, "Éxito", "success");
+            }
+        }
+
+        // Checkbox Obligatorio
+        if (e.target.classList.contains('required-checkbox')) {
+            const isRequired = e.target.checked;
+            const entityField = entity.fields.find(ef => ef.fieldId === fieldId);
+            if (entityField) {
+                entityField.required = isRequired;
+                saveData();
+                // Re-renderizar solo la etiqueta de obligatorio en el formulario principal si es visible
+                if (entitySelector.value === entityId) {
+                   renderLogForm(); // Más fácil re-renderizar todo el form
+                }
+                 showToast(`Obligatoriedad del campo actualizada.`, "Éxito", "success");
+                // No es necesario re-renderizar todo el modal, solo el checkbox ya cambió visualmente
+            }
+        }
+    });
+
+    // --- Lógica Principal de Registro ---
+
+    // Cambiar entidad seleccionada en el formulario principal
+    entitySelector.addEventListener('change', () => {
+        renderLogForm(); // Renderizar los campos correspondientes
+    });
+
+    // Guardar Registro de Producción
+    logForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const selectedEntityId = entitySelector.value;
+        if (!selectedEntityId) {
+             showToast("Por favor, seleccione primero una "+ config.entityTypeName + ".", "Error", "error");
+             return;
+        }
+
+        const entity = entities.find(ent => ent.id === selectedEntityId);
+        if (!entity) return; // No debería pasar si el selector está bien poblado
+
+        const logData = {};
+        let formIsValid = true;
+
+        // Recoger datos de los campos dinámicos
+        const inputFields = dynamicFieldsContainer.querySelectorAll('input, select');
+        inputFields.forEach(input => {
+            const fieldId = input.dataset.fieldId;
+            if (fieldId) {
+                const value = input.value.trim();
+                 // Validación de obligatorios (HTML5 'required' ya ayuda, pero doble check)
+                const entityFieldConf = entity.fields.find(ef => ef.fieldId === fieldId);
+                if (entityFieldConf?.required && value === '') {
+                    formIsValid = false;
+                    // Podríamos marcar el campo inválido visualmente aquí si 'required' no es suficiente
+                     input.classList.add('is-invalid'); // Bootstrap class
+                } else {
+                     input.classList.remove('is-invalid');
+                }
+
+                // Conversión a número si es necesario (y si hay valor)
+                const fieldDef = availableFields.find(f => f.id === fieldId);
+                if (fieldDef?.type === 'number' && value !== '') {
+                    const numValue = parseFloat(value);
+                    if (isNaN(numValue)) {
+                        formIsValid = false;
+                         input.classList.add('is-invalid');
+                         showToast(`El valor para "${fieldDef.name}" debe ser un número válido.`, "Error", "error");
+                    } else {
+                        logData[fieldId] = numValue; // Guardar como número
+                    }
+                } else if (value !== '') { // Guardar solo si no está vacío (a menos que sea obligatorio)
+                    logData[fieldId] = value;
+                } else if (entityFieldConf?.required) {
+                     logData[fieldId] = ''; // Guardar vacío si es obligatorio y se dejó vacío (debería haber sido bloqueado por 'required')
+                }
+                // No guardar campos opcionales vacíos
+            }
+        });
+
+        if (!formIsValid) {
+            showToast("Por favor, complete todos los campos obligatorios (*) correctamente.", "Error", "error");
             return;
         }
-        
-        // Calcular estadísticas
-        const sum = valoresCampo.reduce((a, b) => a + b, 0);
-        const avg = sum / valoresCampo.length;
-        const max = Math.max(...valoresCampo);
-        const min = Math.min(...valoresCampo);
-        
-        // Mostrar estadísticas según la operación seleccionada
-        let estadisticaHTML = '';
-        
-        switch (campoReporte.operacion) {
-            case 'sum':
-                estadisticaHTML = `<div class="value">${sum.toFixed(2)}</div>`;
-                break;
-            case 'avg':
-                estadisticaHTML = `<div class="value">${avg.toFixed(2)}</div>`;
-                break;
-            case 'max':
-                estadisticaHTML = `<div class="value">${max.toFixed(2)}</div>`;
-                break;
-            case 'min':
-                estadisticaHTML = `<div class="value">${min.toFixed(2)}</div>`;
-                break;
-            case 'count':
-                estadisticaHTML = `<div class="value">${valoresCampo.length}</div>`;
-                break;
-            default:
-                estadisticaHTML = `
-                    <div class="row">
-                        <div class="col-6">
-                            <small>Total:</small>
-                            <div class="value">${sum.toFixed(2)}</div>
-                        </div>
-                        <div class="col-6">
-                            <small>Promedio:</small>
-                            <div class="value">${avg.toFixed(2)}</div>
-                        </div>
-                    </div>
-                `;
-        }
-        
-        // Añadir card de estadísticas
-        const cardElement = document.createElement('div');
-        cardElement.className = 'stats-card';
-        cardElement.innerHTML = `
-            <h4>${nombreCampo}</h4>
-            ${estadisticaHTML}
-        `;
-        estadisticasContenedor.appendChild(cardElement);
-    });
-}
 
+        // Crear el nuevo registro
+        const newLog = {
+            id: generateId('log'),
+            entityId: selectedEntityId,
+            timestamp: Date.now(), // Guardar como timestamp numérico
+            data: logData
+        };
 
+        productionLogs.push(newLog);
+        saveData();
 
+        // Actualizar UI
+        renderRecentLogs();
+        renderProductionChart(); // El gráfico podría cambiar con nuevos datos
 
-
-
-
-
-
-// Evento de carga inicial
-// Evento de carga inicial (reemplaza el último event listener)
-document.addEventListener('DOMContentLoaded', function() {
-    // Añadir evento para nueva máquina en la tabla de administración
-    const btnNuevaMaquina = document.querySelector('.card-header .btn-primary');
-    if (btnNuevaMaquina) {
-        btnNuevaMaquina.addEventListener('click', mostrarModalMaquina);
-    }
-    
-    // Iniciar en la sección de registro
-    cambiarSeccion('registro');
-    
-    // Inicializar objetos de Bootstrap
-    const modalMaquinaEl = document.getElementById('modalMaquina');
-    if (modalMaquinaEl) {
-        window.modalMaquina = new bootstrap.Modal(modalMaquinaEl);
-    }
-    
-    const modalCampoEl = document.getElementById('modalCampo');
-    if (modalCampoEl) {
-        window.modalCampo = new bootstrap.Modal(modalCampoEl);
-    }
-    
-    const modalVerRegistroEl = document.getElementById('modalVerRegistro');
-    if (modalVerRegistroEl) {
-        window.modalVerRegistro = new bootstrap.Modal(modalVerRegistroEl);
-    }
-    
-    const modalConfirmacionEl = document.getElementById('modalConfirmacion');
-    if (modalConfirmacionEl) {
-        window.modalConfirmacion = new bootstrap.Modal(modalConfirmacionEl);
-    }
-}
-);
-
-// Inicializar modales correctamente al cargar la página
-document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar todos los modales de Bootstrap
-    document.querySelectorAll('.modal').forEach(modalElement => {
-        new bootstrap.Modal(modalElement);
-    });
-    
-    // Asegurar que el botón de guardar máquina funcione
-    const btnGuardarMaquina = document.getElementById('btn-guardar-maquina');
-    if (btnGuardarMaquina) {
-        btnGuardarMaquina.addEventListener('click', guardarMaquina);
-    }
-    
-    // Asegurar que el botón de reset sistema funcione
-    const btnResetSistema = document.getElementById('btn-reset-sistema');
-    if (btnResetSistema) {
-        btnResetSistema.addEventListener('click', function() {
-            confirmarAccion('resetSistema', '¿Está seguro que desea restablecer todo el sistema? Esta acción eliminará todas las máquinas, campos y registros.');
+        // Limpiar formulario (manteniendo la entidad seleccionada)
+        inputFields.forEach(input => {
+             input.value = '';
+             input.classList.remove('is-invalid');
+             if(input.tagName === 'SELECT') input.selectedIndex = 0; // Resetear select
         });
-    }
+
+        showToast("Registro de producción guardado.", "Éxito", "success");
+    });
+
+    // Eliminar Registro (Delegación de eventos)
+    recentLogsContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-log-btn')) {
+            const logId = e.target.dataset.logId;
+             if (confirm("¿Está seguro de eliminar este registro de producción?")) {
+                productionLogs = productionLogs.filter(log => log.id !== logId);
+                saveData();
+                renderRecentLogs();
+                renderProductionChart(); // Actualizar gráfico
+                showToast("Registro eliminado.", "Éxito", "success");
+            }
+        }
+    });
+
+    // --- Exportar / Importar Datos ---
+
+    exportDataBtn.addEventListener('click', () => {
+        try {
+            const dataStr = JSON.stringify({ config, availableFields, entities, productionLogs }, null, 2); // Pretty print JSON
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+            a.href = url;
+            a.download = `produccion_backup_${timestamp}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("Datos exportados correctamente.", "Éxito", "success");
+        } catch (error) {
+             console.error("Error al exportar datos:", error);
+             showToast("Error al exportar los datos.", "Error", "error");
+        }
+    });
+
+    importDataInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (!confirm("IMPORTANTE: Importar datos reemplazará TODA la configuración y registros actuales. ¿Desea continuar?")) {
+            importDataInput.value = ''; // Resetear input file
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const importedData = JSON.parse(e.target.result);
+
+                // Validaciones básicas de la estructura importada
+                if (typeof importedData !== 'object' || importedData === null ||
+                    !importedData.hasOwnProperty('config') ||
+                    !Array.isArray(importedData.availableFields) ||
+                    !Array.isArray(importedData.entities) ||
+                    !Array.isArray(importedData.productionLogs)) {
+                    throw new Error("El archivo JSON no tiene la estructura esperada.");
+                }
+
+                // Reemplazar datos actuales con los importados
+                config = importedData.config;
+                availableFields = importedData.availableFields;
+                entities = importedData.entities;
+                productionLogs = importedData.productionLogs;
+
+                saveData(); // Guardar los nuevos datos importados
+
+                // Re-renderizar toda la aplicación
+                renderGlobalConfig();
+                renderAvailableFields();
+                renderEntities();
+                renderLogForm(); // Resetear formulario
+                renderRecentLogs();
+                renderProductionChart();
+
+                showToast("Datos importados y aplicados correctamente.", "Éxito", "success");
+
+            } catch (error) {
+                console.error("Error al importar datos:", error);
+                showToast(`Error al importar el archivo: ${error.message}`, "Error", "error");
+            } finally {
+                 importDataInput.value = ''; // Resetear input file siempre
+            }
+        };
+        reader.onerror = () => {
+            showToast("Error al leer el archivo seleccionado.", "Error", "error");
+            importDataInput.value = ''; // Resetear input file
+        };
+        reader.readAsText(file);
+    });
+
+
+    // --- Reportes ---
+    generateReportBtn.addEventListener('click', renderProductionChart);
+    reportFieldSelector.addEventListener('change', renderProductionChart); // Opcional: actualizar al cambiar campo
+    reportTypeSelector.addEventListener('change', renderProductionChart); // Actualizar al cambiar tipo
+
+
+    // --- INICIALIZACIÓN ---
+    const initApp = () => {
+        loadData(); // Cargar datos primero
+        renderGlobalConfig(); // Aplicar configuración general a la UI
+        renderAvailableFields(); // Llenar lista de campos en admin
+        renderEntities(); // Llenar lista de entidades en admin y selector principal
+        renderLogForm(); // Renderizar formulario (inicialmente vacío o con la primera entidad si existe)
+        renderRecentLogs(); // Mostrar logs guardados
+        renderProductionChart(); // Intentar renderizar gráfico inicial (puede estar vacío)
+        console.log("Aplicación inicializada.");
+    };
+
+    initApp(); // Ejecutar inicialización
 });

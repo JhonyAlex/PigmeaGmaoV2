@@ -1,42 +1,55 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Registro de Producción</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
-    <link href="styles.css" rel="stylesheet">
+    <title id="appTitle">Sistema de Registro de Producción</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Estilos rápidos para mejor visualización */
+        .section-title { margin-top: 2rem; margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
+        .live-clock { font-size: 0.9em; color: #6c757d; }
+        .list-group-item span { margin-right: 10px; }
+        .required-label::after { content: ' *'; color: red; }
+    </style>
 </head>
-
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
-        <div class="container">
-            <a class="navbar-brand" href="#">
-                <i class="bi bi-gear-fill me-2"></i>Sistema de Registro de Producción
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#" id="navAppTitle">Registro Producción</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#" id="nav-registro">Registro</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" id="nav-admin">Administración</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" id="nav-reportes">Reportes</a>
-                    </li>
-                </ul>
                 <ul class="navbar-nav ms-auto">
+                     <li class="nav-item">
+                        <span class="navbar-text live-clock me-3" id="liveClock">--:--:--</span>
+                    </li>
                     <li class="nav-item">
-                        <div class="nav-link text-white" id="fecha-hora-actual">
-                            <i class="bi bi-clock me-1"></i>
-                            <span id="datetime-display"></span>
-                        </div>
+                        <button class="btn btn-sm btn-info me-2" data-bs-toggle="modal" data-bs-target="#adminModal">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear-fill" viewBox="0 0 16 16">
+                                <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311a1.464 1.464 0 0 1-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413-1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.858 2.929 2.929 0 0 1 0 5.858z"/>
+                            </svg> Administración
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                         <button class="btn btn-sm btn-success me-2" id="exportDataBtn">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
+                                 <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                 <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                             </svg> Exportar Datos
+                         </button>
+                    </li>
+                    <li class="nav-item">
+                        <label for="importDataInput" class="btn btn-sm btn-warning">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-upload" viewBox="0 0 16 16">
+                                <path d="M.5 9.9a.5.5 0 0 1 .5-.5h2.5a.5.5 0 0 1 0 1H1v1.5a.5.5 0 0 1-1 0V10z"/>
+                                <path d="M.5 2.5A.5.5 0 0 1 1 2h14a.5.5 0 0 1 0 1H1a.5.5 0 0 1-.5-.5zm14.854 4.854a.5.5 0 0 0-.708-.708L13 8.293V1.5a.5.5 0 0 0-1 0v6.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 2a.5.5 0 0 0 .708 0l2-2z"/>
+                                <path d="M3.5 10a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5z"/>
+                            </svg> Importar Datos
+                        </label>
+                        <input type="file" id="importDataInput" accept=".json" style="display: none;">
                     </li>
                 </ul>
             </div>
@@ -44,431 +57,154 @@
     </nav>
 
     <div class="container mt-4">
-        <!-- Sección de Registro -->
-        <div id="seccion-registro" class="seccion">
-            <div class="card shadow mb-4">
-                <div class="card-header bg-light">
-                    <h2 id="titulo-formulario">Registro de Producción</h2>
-                    <p id="descripcion-formulario" class="text-muted">Ingrese la información de producción para la
-                        máquina seleccionada.</p>
-                </div>
-                <div class="card-body">
-                    <form id="form-registro" class="needs-validation" novalidate>
-                        <div class="mb-3">
-                            <label for="seleccionMaquina" class="form-label">Seleccione una Máquina</label>
-                            <select class="form-select" id="seleccionMaquina" required>
-                                <option value="" selected disabled>-- Seleccione una máquina --</option>
+        <h1 id="mainTitle">Sistema de Registro de Producción</h1>
+        <p class="lead" id="mainDescription">Registre aquí la producción diaria.</p>
+        <hr>
+
+        <div class="row">
+            <div class="col-md-6">
+                <h2 class="section-title">Registrar Producción</h2>
+                <form id="logForm">
+                    <div class="mb-3">
+                        <label for="entitySelector" class="form-label" id="entitySelectorLabel">Seleccionar Máquina:</label>
+                        <select class="form-select" id="entitySelector" required>
+                            <option value="" selected disabled>-- Elija una opción --</option>
                             </select>
-                            <div class="invalid-feedback">
-                                Por favor seleccione una máquina.
-                            </div>
+                    </div>
+
+                    <div id="dynamicFieldsContainer">
                         </div>
-                        <div id="campos-dinamicos">
-                            <!-- Aquí se generarán los campos dinámicos -->
-                        </div>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-save me-1"></i> Guardar Registro
-                        </button>
-                    </form>
-                </div>
+
+                    <button type="submit" class="btn btn-primary">Guardar Registro</button>
+                    <span class="ms-2 live-clock" id="currentLogTime"></span>
+                </form>
             </div>
 
-            <div class="card shadow mb-4">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h3>Últimos Registros</h3>
-                    <div>
-                        <button id="btn-exportar-registros" class="btn btn-sm btn-outline-secondary me-1">
-                            <i class="bi bi-download me-1"></i>Exportar
-                        </button>
-                        <button id="btn-importar-registros" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-upload me-1"></i>Importar
-                        </button>
-                        <input type="file" id="importar-registros-file" accept=".json" class="d-none">
-                    </div>
+            <div class="col-md-6">
+                <h2 class="section-title">Últimos Registros</h2>
+                <div id="recentLogsContainer" class="list-group" style="max-height: 400px; overflow-y: auto;">
+                    <p class="text-muted" id="noRecentLogs">No hay registros recientes.</p>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Fecha y Hora</th>
-                                    <th>Máquina</th>
-                                    <th>Detalles</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-registros">
-                                <!-- Aquí se generan las filas dinámicamente -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div id="sin-registros" class="alert alert-info d-none">
-                        No hay registros disponibles.
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <h2 class="section-title">Reportes de Producción</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Comparativa por <span id="reportEntityName">Máquina</span></h5>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="reportFieldSelector" class="form-label">Campo a Comparar/Sumar (Numérico):</label>
+                                <select id="reportFieldSelector" class="form-select">
+                                    <option value="" selected disabled>-- Seleccione un campo --</option>
+                                    </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="reportTypeSelector" class="form-label">Tipo de Gráfico:</label>
+                                <select id="reportTypeSelector" class="form-select">
+                                    <option value="bar" selected>Barras</option>
+                                    <option value="pie">Pastel</option>
+                                    <option value="line">Línea</option>
+                                </select>
+                            </div>
+                             <div class="col-md-4 align-self-end">
+                                <button id="generateReportBtn" class="btn btn-secondary">Generar/Actualizar Reporte</button>
+                            </div>
+                        </div>
+                         <div style="max-width: 800px; margin: auto;">
+                            <canvas id="productionChart"></canvas>
+                        </div>
+                         <div id="reportSummary" class="mt-3 fw-bold">
+                             </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Sección de Administración -->
-        <div id="seccion-admin" class="seccion d-none">
-            <div class="row">
-                <div class="col-md-6 mb-4">
-                    <div class="card shadow h-100">
-                        <div class="card-header bg-light">
-                            <h3>Configuración General</h3>
+    </div> <div class="modal fade" id="adminModal" tabindex="-1" aria-labelledby="adminModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="adminModalLabel">Administración del Sistema</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>Configuración General</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="adminSystemTitle" class="form-label">Título Principal del Sistema:</label>
+                            <input type="text" class="form-control" id="adminSystemTitle">
                         </div>
-                        <div class="card-body">
-                            <form id="form-config-general">
-                                <div class="mb-3">
-                                    <label for="titulo-app" class="form-label">Título del Formulario</label>
-                                    <input type="text" class="form-control" id="titulo-app" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="descripcion-app" class="form-label">Descripción del Formulario</label>
-                                    <textarea class="form-control" id="descripcion-app" rows="2"></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-save me-1"></i> Guardar Configuración
-                                </button>
-                            </form>
+                         <div class="col-md-6">
+                            <label for="adminSystemDesc" class="form-label">Descripción Principal:</label>
+                            <input type="text" class="form-control" id="adminSystemDesc">
                         </div>
                     </div>
-                </div>
-                <div class="col-md-6 mb-4">
-                    <div class="card shadow h-100">
-                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                            <h3>Gestión de Datos</h3>
+                     <div class="row mb-4">
+                         <div class="col-md-6">
+                            <label for="adminEntityName" class="form-label">Nombre del Elemento Principal (Ej: Máquina, Línea, Proyecto):</label>
+                            <input type="text" class="form-control" id="adminEntityName">
+                        </div>
+                        <div class="col-md-6 align-self-end">
+                             <button class="btn btn-sm btn-success" id="saveGeneralSettingsBtn">Guardar Configuración General</button>
+                        </div>
+                    </div>
+                    <hr>
+
+                    <h6>Gestión de Campos Disponibles</h6>
+                     <form id="addFieldForm" class="row g-3 mb-3 align-items-end">
+                        <div class="col-md-3">
+                            <label for="newFieldName" class="form-label">Nombre del Campo:</label>
+                            <input type="text" class="form-control" id="newFieldName" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="newFieldType" class="form-label">Tipo de Campo:</label>
+                            <select id="newFieldType" class="form-select" required>
+                                <option value="text">Texto</option>
+                                <option value="number">Número</option>
+                                <option value="select">Selección</option>
+                            </select>
+                        </div>
+                         <div class="col-md-4" id="newFieldOptionsContainer" style="display: none;">
+                            <label for="newFieldOptions" class="form-label">Opciones (separadas por coma):</label>
+                            <input type="text" class="form-control" id="newFieldOptions" placeholder="Opcion1,Opcion2,Opcion3">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary">Agregar Campo</button>
+                        </div>
+                    </form>
+                    <ul class="list-group mb-4" id="availableFieldsList">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Nombre Campo (Tipo)
+                            <button class="btn btn-sm btn-danger">Eliminar</button>
+                        </li>
+                    </ul>
+                    <hr>
+
+                    <h6 id="entityListTitle">Gestión de Máquinas</h6>
+                     <form id="addEntityForm" class="row g-3 mb-3 align-items-end">
+                         <div class="col-md-5">
+                            <label for="newEntityName" class="form-label">Nombre <span class="entity-type-label">Máquina</span>:</label>
+                            <input type="text" class="form-control" id="newEntityName" required>
+                        </div>
+                        <div class="col-md-5">
+                            </div>
+                         <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary">Agregar <span class="entity-type-label">Máquina</span></button>
+                        </div>
+                    </form>
+                    <ul class="list-group" id="entitiesList">
+                         <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Nombre Máquina
                             <div>
-                                <button id="btn-exportar-todo" class="btn btn-sm btn-outline-secondary me-1">
-                                    <i class="bi bi-download me-1"></i>Exportar Todo
-                                </button>
-                                <button id="btn-importar-todo" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-upload me-1"></i>Importar Todo
-                                </button>
-                                <input type="file" id="importar-todo-file" accept=".json" class="d-none">
+                                <button class="btn btn-sm btn-warning me-2" data-bs-toggle="modal" data-bs-target="#configureEntityModal" data-entity-id="ENTITY_ID">Configurar Campos</button>
+                                <button class="btn btn-sm btn-danger" data-entity-id="ENTITY_ID">Eliminar</button>
                             </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="d-grid gap-2">
-                                <button id="btn-limpiar-registros" class="btn btn-warning">
-                                    <i class="bi bi-trash me-1"></i> Limpiar Registros de Producción
-                                </button>
-                                <button id="btn-reset-sistema" class="btn btn-danger">
-                                    <i class="bi bi-exclamation-triangle me-1"></i> Restablecer Sistema
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                        </li>
+                    </ul>
 
-            <div class="card shadow mb-4">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h3>Máquinas</h3>
-                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalMaquina">
-                        <i class="bi bi-plus-circle me-1"></i> Nueva Máquina
-                    </button>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th>Descripción</th>
-                                    <th>Cantidad de Campos</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-maquinas">
-                                <!-- Aquí se generan las filas dinámicamente -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div id="sin-maquinas" class="alert alert-info d-none">
-                        No hay máquinas configuradas. Añada una nueva máquina para comenzar.
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Sección de Reportes -->
-        <div id="seccion-reportes" class="seccion d-none">
-            <!-- Reemplazar la sección de filtros en reportes (dentro de seccion-reportes) -->
-            <div class="card shadow mb-4">
-                <div class="card-header bg-light">
-                    <h3>Filtros de Reporte</h3>
-                </div>
-                <div class="card-body">
-                    <form id="form-filtros" class="row g-3">
-                        <div class="col-md-4">
-                            <label for="filtro-maquina" class="form-label">Máquina</label>
-                            <select class="form-select" id="filtro-maquina">
-                                <option value="todas" selected>Todas las máquinas</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="filtro-desde" class="form-label">Desde</label>
-                            <input type="date" class="form-control" id="filtro-desde">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="filtro-hasta" class="form-label">Hasta</label>
-                            <input type="date" class="form-control" id="filtro-hasta">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="filtro-agrupacion" class="form-label">Agrupar por</label>
-                            <select class="form-select" id="filtro-agrupacion">
-                                <option value="dia">Día</option>
-                                <option value="semana">Semana</option>
-                                <option value="mes">Mes</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="filtro-categoria" class="form-label">Categoría</label>
-                            <select class="form-select" id="filtro-categoria">
-                                <option value="todas" selected>Todas las categorías</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="filtro-tipo-grafico" class="form-label">Tipo de Gráfico</label>
-                            <select class="form-select" id="filtro-tipo-grafico">
-                                <option value="bar">Barras</option>
-                                <option value="line">Líneas</option>
-                                <option value="pie">Circular</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-12">
-                            <div class="card border-light mb-3">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <span>Campos para el reporte</span>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-agregar-campo-reporte">
-                                        <i class="bi bi-plus-circle me-1"></i> Agregar Campo
-                                    </button>
-                                </div>
-                                <div class="card-body">
-                                    <div id="lista-campos-reporte">
-                                        <!-- Aquí se generarán los campos de reporte -->
-                                    </div>
-                                    <div id="sin-campos-reporte" class="alert alert-info">
-                                        Agregue al menos un campo para generar el reporte.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-12">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-search me-1"></i> Generar Reporte
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-8">
-                    <div class="card shadow mb-4">
-                        <div class="card-header bg-light">
-                            <h3 id="titulo-grafico">Gráfico de Producción</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="chart-container" style="position: relative; height:400px;">
-                                <canvas id="chart-produccion"></canvas>
-                            </div>
-                            <div id="sin-datos-grafico" class="alert alert-info mt-3 d-none">
-                                No hay datos disponibles para mostrar en el gráfico.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card shadow mb-4">
-                        <div class="card-header bg-light">
-                            <h3>Estadísticas</h3>
-                        </div>
-                        <div class="card-body">
-                            <div id="estadisticas-contenedor">
-                                <div class="alert alert-info">
-                                    Seleccione filtros y genere un reporte para ver estadísticas.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Máquinas -->
-    <div class="modal fade" id="modalMaquina" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="tituloModalMaquina">Nueva Máquina</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <!-- Reemplaza la parte inicial del formulario en el modal de campo (modalCampo) -->
-                <div class="modal-body">
-                    <form id="form-campo">
-                        <input type="hidden" id="campo-id">
-                        <div class="mb-3">
-                            <label for="campo-nombre" class="form-label">Nombre</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="campo-nombre" required>
-                                <button class="btn btn-outline-secondary" type="button"
-                                    id="btn-buscar-campos-similares">
-                                    <i class="bi bi-search"></i> Buscar similares
-                                </button>
-                            </div>
-                        </div>
-                        <div id="campos-similares-container" class="mb-3 d-none">
-                            <label class="form-label">Campos similares existentes</label>
-                            <div class="list-group" id="lista-campos-similares">
-                                <!-- Aquí se mostrarán campos similares -->
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="campo-tipo" class="form-label">Tipo</label>
-                            <select class="form-select" id="campo-tipo" required>
-                                <option value="" selected disabled>Seleccione un tipo</option>
-                                <option value="texto">Texto</option>
-                                <option value="numero">Número</option>
-                                <option value="seleccion">Selección</option>
-                            </select>
-                        </div>
-                        <div class="mb-3 d-none" id="opciones-contenedor">
-                            <label class="form-label">Opciones</label>
-                            <div id="lista-opciones">
-                                <div class="input-group mb-2">
-                                    <input type="text" class="form-control opcion-valor" placeholder="Valor">
-                                    <button class="btn btn-outline-danger btn-eliminar-opcion" type="button">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-agregar-opcion">
-                                <i class="bi bi-plus-circle me-1"></i> Agregar Opción
-                            </button>
-                        </div>
-                        <div class="mb-3">
-                            <label for="campo-categoria" class="form-label">Categoría para reportes</label>
-                            <input type="text" class="form-control" id="campo-categoria"
-                                placeholder="Ej: Producción, Calidad, etc.">
-                            <small class="form-text text-muted">Ayuda a agrupar campos relacionados en reportes</small>
-                        </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="campo-obligatorio">
-                            <label class="form-check-label" for="campo-obligatorio">
-                                Campo obligatorio
-                            </label>
-                        </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="campo-comun">
-                            <label class="form-check-label" for="campo-comun">
-                                Guardar como campo común reutilizable
-                            </label>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btn-guardar-maquina">Guardar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Campo -->
-    <div class="modal fade" id="modalCampo" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="tituloModalCampo">Nuevo Campo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="form-campo">
-                        <input type="hidden" id="campo-id">
-                        <div class="mb-3">
-                            <label for="campo-nombre" class="form-label">Nombre</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="campo-nombre" required>
-                                <button class="btn btn-outline-secondary" type="button"
-                                    id="btn-buscar-campos-similares">
-                                    <i class="bi bi-search"></i> Buscar similares
-                                </button>
-                            </div>
-                        </div>
-                        <div id="campos-similares-container" class="mb-3 d-none">
-                            <label class="form-label">Campos similares existentes</label>
-                            <div class="list-group" id="lista-campos-similares">
-                                <!-- Aquí se mostrarán campos similares -->
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="campo-tipo" class="form-label">Tipo</label>
-                            <select class="form-select" id="campo-tipo" required>
-                                <option value="" selected disabled>Seleccione un tipo</option>
-                                <option value="texto">Texto</option>
-                                <option value="numero">Número</option>
-                                <option value="seleccion">Selección</option>
-                            </select>
-                        </div>
-                        <div class="mb-3 d-none" id="opciones-contenedor">
-                            <label class="form-label">Opciones</label>
-                            <div id="lista-opciones">
-                                <div class="input-group mb-2">
-                                    <input type="text" class="form-control opcion-valor" placeholder="Valor">
-                                    <button class="btn btn-outline-danger btn-eliminar-opcion" type="button">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-agregar-opcion">
-                                <i class="bi bi-plus-circle me-1"></i> Agregar Opción
-                            </button>
-                        </div>
-                        <div class="mb-3">
-                            <label for="campo-categoria" class="form-label">Categoría para reportes</label>
-                            <input type="text" class="form-control" id="campo-categoria"
-                                placeholder="Ej: Producción, Calidad, etc.">
-                            <small class="form-text text-muted">Ayuda a agrupar campos relacionados en reportes</small>
-                        </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="campo-obligatorio">
-                            <label class="form-check-label" for="campo-obligatorio">
-                                Campo obligatorio
-                            </label>
-                        </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="campo-comun">
-                            <label class="form-check-label" for="campo-comun">
-                                Guardar como campo común reutilizable
-                            </label>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btn-guardar-campo">Guardar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Visualizar Registro -->
-    <div class="modal fade" id="modalVerRegistro" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Detalles del Registro</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <dl class="row" id="detalles-registro">
-                        <!-- Aquí se generan los detalles dinámicamente -->
-                    </dl>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -477,86 +213,59 @@
         </div>
     </div>
 
-    <!-- Modal de Confirmación -->
-    <div class="modal fade" id="modalConfirmacion" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+    <div class="modal fade" id="configureEntityModal" tabindex="-1" aria-labelledby="configureEntityModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="titulo-confirmacion">Confirmar acción</h5>
+                    <h5 class="modal-title" id="configureEntityModalLabel">Configurar Campos para: <span id="configureEntityName"></span></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p id="mensaje-confirmacion">¿Está seguro de realizar esta acción?</p>
+                    <input type="hidden" id="configEntityIdHidden">
+                    <h6>Campos Disponibles para Añadir:</h6>
+                    <div class="mb-3">
+                        <select id="addFieldToEntitySelector" class="form-select">
+                           <option value="" selected disabled>-- Seleccione un campo disponible --</option>
+                           </select>
+                        <button id="addFieldToEntityBtn" class="btn btn-sm btn-success mt-2">Añadir Campo Seleccionado</button>
+                    </div>
+                    <hr>
+                    <h6>Campos Asignados a esta <span class="entity-type-label">Máquina</span>:</h6>
+                    <ul class="list-group" id="assignedFieldsList">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Nombre Campo (Tipo)</span>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                  <input class="form-check-input required-checkbox" type="checkbox" id="req_FIELD_ID_ENTITY_ID" data-field-id="FIELD_ID">
+                                  <label class="form-check-label" for="req_FIELD_ID_ENTITY_ID">Obligatorio</label>
+                                </div>
+                                <button class="btn btn-sm btn-danger remove-field-from-entity-btn" data-field-id="FIELD_ID">Quitar</button>
+                            </div>
+                        </li>
+                    </ul>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger" id="btn-confirmar">Confirmar</button>
-                </div>
+                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                     </div>
             </div>
         </div>
     </div>
 
-    <footer class="bg-dark text-white text-center p-3 mt-5">
-        <div class="container">
-            <p class="mb-0">Sistema de Registro de Producción &copy; 2025 - Desarrollado para JhonyAlex</p>
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+      <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+          <strong class="me-auto" id="toastTitle">Notificación</strong>
+          <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
-    </footer>
+        <div class="toast-body" id="toastBody">
+          Mensaje de la notificación.
+        </div>
+      </div>
+    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="script.js"></script>
-    <script>
-        // Código de emergencia para restaurar la navegación básica
-        document.addEventListener('DOMContentLoaded', function () {
-            // Funciones básicas de navegación
-            const navRegistro = document.getElementById('nav-registro');
-            const navAdmin = document.getElementById('nav-admin');
-            const navReportes = document.getElementById('nav-reportes');
 
-            const secRegistro = document.getElementById('seccion-registro');
-            const secAdmin = document.getElementById('seccion-admin');
-            const secReportes = document.getElementById('seccion-reportes');
-
-            if (navRegistro) {
-                navRegistro.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    secRegistro.classList.remove('d-none');
-                    secAdmin.classList.add('d-none');
-                    secReportes.classList.add('d-none');
-
-                    navRegistro.classList.add('active');
-                    navAdmin.classList.remove('active');
-                    navReportes.classList.remove('active');
-                });
-            }
-
-            if (navAdmin) {
-                navAdmin.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    secRegistro.classList.add('d-none');
-                    secAdmin.classList.remove('d-none');
-                    secReportes.classList.add('d-none');
-
-                    navRegistro.classList.remove('active');
-                    navAdmin.classList.add('active');
-                    navReportes.classList.remove('active');
-                });
-            }
-
-            if (navReportes) {
-                navReportes.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    secRegistro.classList.add('d-none');
-                    secAdmin.classList.add('d-none');
-                    secReportes.classList.remove('d-none');
-
-                    navRegistro.classList.remove('active');
-                    navAdmin.classList.remove('active');
-                    navReportes.classList.add('active');
-                });
-            }
-        });
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="app.js"></script>
 </body>
-
 </html>
