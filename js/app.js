@@ -1,137 +1,60 @@
-// js/app.js
-(function() {
-    // --- Inicialización ---
-    function init() {
-        console.log('App Initializing...');
-        setupNavigation();
-        setupImportExport();
-
-        // Renderizar sección inicial (Registro por defecto)
-        UI.renderRegisterSection();
-        UI.showSection('register'); // Mostrar sección de registro
-
-        // Inicializar módulos de secciones (para que sus listeners estén listos)
-        Admin.init();
-        Register.init();
-        Reports.init();
-
-        // Renderizar secciones admin y reportes en segundo plano (para que estén listas al navegar)
-        // Se renderizarán completamente al mostrarse si es necesario
-        UI.renderAdminSection();
-        UI.renderReportsSection();
-
-        // Mostrar sección inicial correcta (puede ser otra si se guarda el estado)
-        // Por defecto, empezamos en 'register'
-        navigateTo('register');
-
-
-        console.log('App Ready.');
-    }
-
-    // --- Navegación SPA ---
-    function setupNavigation() {
-        const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
-        navLinks.forEach(link => {
-            link.addEventListener('click', (event) => {
-                event.preventDefault();
-                const sectionId = link.dataset.section;
-                navigateTo(sectionId);
-            });
+/**
+ * Punto de entrada principal de la aplicación
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    // Inicializar almacenamiento
+    StorageService.initializeStorage();
+    
+    // Inicializar enrutador
+    Router.init();
+    
+    // Configurar exportación de datos
+    document.getElementById('export-data-btn').addEventListener('click', () => {
+        ExportUtils.exportToFile();
+    });
+    
+    // Configurar importación de datos
+    document.getElementById('import-btn').addEventListener('click', () => {
+        document.getElementById('import-file').click();
+    });
+    
+    document.getElementById('import-file').addEventListener('change', (e) => {
+        if (e.target.files.length === 0) return;
+        
+        const file = e.target.files[0];
+        
+        // Confirmar importación
+        const confirmModal = UIUtils.initModal('confirmModal');
+        const confirmMessage = document.getElementById('confirm-message');
+        const confirmActionBtn = document.getElementById('confirmActionBtn');
+        
+        confirmMessage.textContent = `¿Está seguro de importar los datos desde "${file.name}"? Esta acción sobrescribirá todos los datos existentes.`;
+        
+        // Eliminar listeners anteriores
+        const newConfirmBtn = confirmActionBtn.cloneNode(true);
+        confirmActionBtn.parentNode.replaceChild(newConfirmBtn, confirmActionBtn);
+        
+        // Agregar nuevo listener
+        newConfirmBtn.addEventListener('click', () => {
+            ExportUtils.importFromFile(file)
+                .then(message => {
+                    bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+                    UIUtils.showAlert('Datos importados correctamente. La página se recargará.', 'success');
+                    
+                    // Recargar la página después de 2 segundos
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                })
+                .catch(error => {
+                    bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+                    UIUtils.showAlert('Error al importar datos: ' + error.message, 'danger');
+                });
         });
-    }
-
-    function navigateTo(sectionId) {
-         console.log('Navigating to:', sectionId);
-         // Asegurar que la sección está renderizada/actualizada antes de mostrarla
-         switch(sectionId) {
-             case 'admin':
-                 // Renderizar siempre por si hay cambios
-                 UI.renderAdminSection();
-                 break;
-             case 'register':
-                 // Renderizar siempre por si settings cambiaron
-                 UI.renderRegisterSection();
-                 // Restaurar estado si es necesario (ej. entidad seleccionada)
-                 // Esto ya lo maneja el propio módulo Register con refreshIfNeeded si es necesario
-                 break;
-              case 'reports':
-                  // Renderizar siempre para actualizar filtros y estructura
-                  UI.renderReportsSection();
-                   // Aplicar filtros guardados si los hay
-                  Reports.refreshIfNeeded();
-                  break;
-         }
-        UI.showSection(sectionId);
-    }
-
-
-    // --- Import/Export ---
-    function setupImportExport() {
-        const exportButton = document.getElementById('export-button');
-        const importFileElement = document.getElementById('import-file');
-
-        exportButton.addEventListener('click', handleExport);
-        importFileElement.addEventListener('change', handleImport);
-    }
-
-    function handleExport() {
-        try {
-            const allData = Storage.getAllData();
-            const jsonData = JSON.stringify(allData, null, 2); // Pretty print JSON
-            const blob = new Blob([jsonData], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            const timestamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
-            a.href = url;
-            a.download = `generic-logger-backup-${timestamp}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            console.log('Data exported successfully.');
-        } catch (e) {
-            console.error('Error exporting data:', e);
-            alert('Error al exportar los datos.');
-        }
-    }
-
-    function handleImport(event) {
-        const file = event.target.files[0];
-        if (!file) {
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const jsonData = e.target.result;
-            // Preguntar al usuario (simple confirm por ahora)
-            if (confirm('¿Importar datos? Esto SOBRESCRIBIRÁ todos los datos existentes.')) {
-                const success = Storage.importAllData(jsonData, true); // true = overwrite
-                if (success) {
-                    alert('Datos importados con éxito. La aplicación se recargará para aplicar los cambios.');
-                    // Forzar recarga o re-inicialización completa
-                    location.reload(); // La forma más simple de asegurar que todo se refresca
-                    // Alternativamente, llamar a init() de nuevo y navegar a la sección por defecto,
-                    // pero reload es más robusto tras un import completo.
-                } else {
-                    // El error ya se mostró en Storage.importAllData
-                    // Resetear el input de archivo para permitir reintentar con el mismo archivo
-                     event.target.value = null;
-                }
-            } else {
-                // Resetear el input de archivo si el usuario cancela
-                 event.target.value = null;
-            }
-        };
-        reader.onerror = (e) => {
-             console.error('Error reading file:', e);
-             alert('Error al leer el archivo.');
-             event.target.value = null;
-        };
-        reader.readAsText(file);
-    }
-
-    // --- Iniciar la aplicación cuando el DOM esté listo ---
-    document.addEventListener('DOMContentLoaded', init);
-
-})(); // IIFE para encapsular
+        
+        confirmModal.show();
+        
+        // Resetear input file
+        e.target.value = '';
+    });
+});
