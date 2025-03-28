@@ -1,74 +1,50 @@
 /**
  * Servicio de almacenamiento que gestiona todas las operaciones con localStorage
  */
-// import { getDatabase, ref, set, get, update, remove } from "firebase/database";
-// import { initializeApp } from 'firebase/app'; // Asegúrate de que initializeApp esté importado
+// Eliminamos estas líneas que están causando problemas
+// const { getDatabase, ref, set, get, update, remove } = firebase.database;
+// const { initializeApp } = firebase.app;
 
-const { getDatabase, ref, set, get, update, remove } = firebase.database;
-const { initializeApp } = firebase.app;
-
-const firebaseConfig = {
-    // ... tu configuración de Firebase aquí
-    apiKey: "AIzaSyCiWtDTVTG3VTs6JfupUsFmL8S4JqpqCXA",
-    authDomain: "pigmeaproduccion.firebaseapp.com",
-    databaseURL: "https://pigmeaproduccion-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "pigmeaproduccion",
-    storageBucket: "pigmeaproduccion.firebasestorage.app",
-    messagingSenderId: "70067446729",
-    appId: "1:70067446729:web:ef03131d039073dc49fe18"
-};
-
-const app = initializeApp(firebaseConfig);
+// Eliminamos la inicialización que está fallando
+// const app = initializeApp(firebaseConfig);
 
 export class StorageService {
     constructor() {
         // Configuración de Firebase
         this.firebaseConfig = {
-            // Aquí va tu configuración de Firebase
-            apiKey: "TU_API_KEY",
-            authDomain: "tu-proyecto.firebaseapp.com",
-            databaseURL: "https://tu-proyecto.firebaseio.com",
-            projectId: "tu-proyecto",
-            storageBucket: "tu-proyecto.appspot.com",
-            messagingSenderId: "tu-message-sender-id",
-            appId: "tu-app-id"
+            // Tu configuración de Firebase
+            apiKey: "AIzaSyCiWtDTVTG3VTs6JfupUsFmL8S4JqpqCXA",
+            authDomain: "pigmeaproduccion.firebaseapp.com",
+            databaseURL: "https://pigmeaproduccion-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "pigmeaproduccion",
+            storageBucket: "pigmeaproduccion.firebasestorage.app",
+            messagingSenderId: "70067446729",
+            appId: "1:70067446729:web:ef03131d039073dc49fe18"
         };
         
         // Inicializar Firebase utilizando la versión compatible
-        if (!firebase.apps.length) {
+        if (!firebase.apps) {
+            firebase.initializeApp(this.firebaseConfig);
+        } else if (firebase.apps.length === 0) {
             firebase.initializeApp(this.firebaseConfig);
         }
+        
         this.database = firebase.database();
+        this.db = this.database; // Para mantener compatibilidad con el código existente
     }
 
     // Métodos para interactuar con la base de datos
     // ...
 
     STORAGE_KEY = 'flexibleDataApp';
-    db = getDatabase(); //  <---  Añade esto
 
     /**
      * Inicializa el almacenamiento con datos predeterminados si no existe
      */
     initializeStorage() {
-        // Comentamos la inicialización de localStorage
-        // if (!localStorage.getItem(this.STORAGE_KEY)) {
-        //  const initialData = {
-        //      config: {
-        //          title: "Sistema de Registro de Datos",
-        //          description: "Registre sus datos de manera flexible y personalizada"
-        //      },
-        //      entities: [],
-        //      fields: [],
-        //      records: []
-        //  };
-        //  localStorage.setItem(this.STORAGE_KEY, JSON.stringify(initialData));
-        // }
-    
         // Inicializar la base de datos con datos predeterminados si no existen
-        // (Esto es solo un ejemplo, puedes adaptarlo a tus necesidades)
-        const dbRef = ref(this.db, 'appData');
-        get(dbRef).then((snapshot) => {
+        const dbRef = this.database.ref('appData');
+        dbRef.get().then((snapshot) => {
             if (!snapshot.exists()) {
                 const initialData = {
                     config: {
@@ -79,7 +55,7 @@ export class StorageService {
                     fields: [],
                     records: []
                 };
-                set(dbRef, initialData);
+                dbRef.set(initialData);
             }
         }).catch((error) => {
             console.error("Error al inicializar la base de datos:", error);
@@ -92,8 +68,8 @@ export class StorageService {
      */
     getData() {
         // Modificamos para obtener datos de Realtime Database
-        const dbRef = ref(this.db, 'appData');
-        return get(dbRef)
+        const dbRef = this.database.ref('appData');
+        return dbRef.get()
             .then((snapshot) => {
                 if (snapshot.exists()) {
                     return snapshot.val();
@@ -121,8 +97,8 @@ export class StorageService {
      */
     saveData(data) {
         // Modificamos para guardar datos en Realtime Database
-        const dbRef = ref(this.db, 'appData');
-        return set(dbRef, data)
+        const dbRef = this.database.ref('appData');
+        return dbRef.set(data)
             .then(() => {
                 return true; // Indica éxito al guardar
             })
