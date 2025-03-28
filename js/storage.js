@@ -1,6 +1,6 @@
-import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, set, get } from 'firebase/database';
-import { getStorage } from 'firebase/storage';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+import { getDatabase, ref, set, get } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
+import { getStorage } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyCiWtDTVTG3VTs6JfupUsFmL8S4JqpqCXA",
