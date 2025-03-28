@@ -778,4 +778,23 @@ const AdminView = {
             UIUtils.showAlert('Error al asignar campos', 'danger', document.querySelector('.container'));
         }
     }
-};  
+};
+
+// Exportar la función principal como una función nombrada, no como default
+export function renderAdminView() {
+    // Contenido de la función
+    const mainContent = document.getElementById('main-content');
+    mainContent.innerHTML = `
+        <div class="container mt-4">
+            <h2>Administración del Sistema</h2>
+            <!-- Resto del contenido -->
+        </div>
+    `;
+    
+    // Inicialización de eventos y otras funcionalidades
+}
+
+// Exportar otras funciones si es necesario
+export function otherFunction() {
+    // ...
+}

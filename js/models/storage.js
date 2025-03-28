@@ -20,9 +20,32 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-const StorageService = {
-    STORAGE_KEY: 'flexibleDataApp',
-    db: getDatabase(), //  <---  Añade esto
+export class StorageService {
+    constructor() {
+        // Configuración de Firebase
+        this.firebaseConfig = {
+            // Aquí va tu configuración de Firebase
+            apiKey: "TU_API_KEY",
+            authDomain: "tu-proyecto.firebaseapp.com",
+            databaseURL: "https://tu-proyecto.firebaseio.com",
+            projectId: "tu-proyecto",
+            storageBucket: "tu-proyecto.appspot.com",
+            messagingSenderId: "tu-message-sender-id",
+            appId: "tu-app-id"
+        };
+        
+        // Inicializar Firebase utilizando la versión compatible
+        if (!firebase.apps.length) {
+            firebase.initializeApp(this.firebaseConfig);
+        }
+        this.database = firebase.database();
+    }
+
+    // Métodos para interactuar con la base de datos
+    // ...
+
+    STORAGE_KEY = 'flexibleDataApp';
+    db = getDatabase(); //  <---  Añade esto
 
     /**
      * Inicializa el almacenamiento con datos predeterminados si no existe
@@ -61,7 +84,7 @@ const StorageService = {
         }).catch((error) => {
             console.error("Error al inicializar la base de datos:", error);
         });
-    },
+    }
 
     /**
      * Obtiene todos los datos del almacenamiento
@@ -90,7 +113,7 @@ const StorageService = {
                 console.error("Error al obtener los datos:", error);
                 return null; // O una estructura de datos vacía, según tu lógica
             });
-    },
+    }
 
     /**
      * Guarda los datos en el almacenamiento
@@ -107,7 +130,7 @@ const StorageService = {
                 console.error("Error al guardar los datos:", error);
                 return false; // Indica fallo al guardar
             });
-    },
+    }
 
     /**
      * Actualiza la configuración general
@@ -122,7 +145,7 @@ const StorageService = {
                 this.saveData(resolve);
             }
         })
-    },
+    }
 
     /**
      * Obtiene la configuración actual
@@ -135,7 +158,7 @@ const StorageService = {
                 return resolve.config;
             }
         });
-    },
+    }
 
     // Métodos de exportación e importación
     
@@ -150,7 +173,7 @@ const StorageService = {
                 return JSON.stringify(resolve, null, 2);
             }
         });
-    },
+    }
 
     /**
      * Importa datos desde una cadena JSON
@@ -175,6 +198,6 @@ const StorageService = {
             return false;
         }
     }
-};
+}
 
 export default StorageService;
