@@ -5,7 +5,8 @@
 // import { initializeApp } from 'firebase/app'; // Asegúrate de que initializeApp esté importado
 
 const { getDatabase, ref, set, get, update, remove } = firebase.database;
-const { initializeApp } = firebase.app;
+// Eliminar esta línea que causa el error
+// const { initializeApp } = firebase.app;
 
 const firebaseConfig = {
     // ... tu configuración de Firebase aquí
@@ -18,26 +19,13 @@ const firebaseConfig = {
     appId: "1:70067446729:web:ef03131d039073dc49fe18"
 };
 
-const app = initializeApp(firebaseConfig);
+// Modificar la inicialización de Firebase
+firebase.initializeApp(firebaseConfig);
+const app = firebase.app();
 
 export class StorageService {
     constructor() {
-        // Configuración de Firebase
-        this.firebaseConfig = {
-            // Aquí va tu configuración de Firebase
-            apiKey: "TU_API_KEY",
-            authDomain: "tu-proyecto.firebaseapp.com",
-            databaseURL: "https://tu-proyecto.firebaseio.com",
-            projectId: "tu-proyecto",
-            storageBucket: "tu-proyecto.appspot.com",
-            messagingSenderId: "tu-message-sender-id",
-            appId: "tu-app-id"
-        };
-        
-        // Inicializar Firebase utilizando la versión compatible
-        if (!firebase.apps.length) {
-            firebase.initializeApp(this.firebaseConfig);
-        }
+        // Eliminar la configuración duplicada y la inicialización
         this.database = firebase.database();
     }
 
