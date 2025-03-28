@@ -8,6 +8,7 @@
 // Eliminamos la inicialización que está fallando
 // const app = initializeApp(firebaseConfig);
 
+<<<<<<< HEAD
 export class StorageService {
     constructor() {
         // Configuración de Firebase
@@ -37,6 +38,11 @@ export class StorageService {
     // ...
 
     STORAGE_KEY = 'flexibleDataApp';
+=======
+const StorageService = {
+    STORAGE_KEY: 'flexibleDataApp',
+    db: getDatabase(), //  <---  Añade esto
+>>>>>>> parent of 0978792 (Cambios de copilot github)
 
     /**
      * Inicializa el almacenamiento con datos predeterminados si no existe
@@ -60,7 +66,7 @@ export class StorageService {
         }).catch((error) => {
             console.error("Error al inicializar la base de datos:", error);
         });
-    }
+    },
 
     /**
      * Obtiene todos los datos del almacenamiento
@@ -89,7 +95,7 @@ export class StorageService {
                 console.error("Error al obtener los datos:", error);
                 return null; // O una estructura de datos vacía, según tu lógica
             });
-    }
+    },
 
     /**
      * Guarda los datos en el almacenamiento
@@ -106,7 +112,7 @@ export class StorageService {
                 console.error("Error al guardar los datos:", error);
                 return false; // Indica fallo al guardar
             });
-    }
+    },
 
     /**
      * Actualiza la configuración general
@@ -121,7 +127,7 @@ export class StorageService {
                 this.saveData(resolve);
             }
         })
-    }
+    },
 
     /**
      * Obtiene la configuración actual
@@ -134,7 +140,7 @@ export class StorageService {
                 return resolve.config;
             }
         });
-    }
+    },
 
     // Métodos de exportación e importación
     
@@ -149,7 +155,7 @@ export class StorageService {
                 return JSON.stringify(resolve, null, 2);
             }
         });
-    }
+    },
 
     /**
      * Importa datos desde una cadena JSON
@@ -174,6 +180,6 @@ export class StorageService {
             return false;
         }
     }
-}
+};
 
 export default StorageService;
