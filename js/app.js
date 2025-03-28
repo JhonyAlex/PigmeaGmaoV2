@@ -1,7 +1,10 @@
+import { StorageService } from './storage.js';
+
 /**
  * Punto de entrada principal de la aplicación
  */
 document.addEventListener('DOMContentLoaded', () => {
+    const storage = new StorageService();
     // Inicializar almacenamiento
     StorageService.initializeStorage();
     

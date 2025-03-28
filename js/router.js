@@ -5,7 +5,7 @@
 // Importar las vistas aquí
 import RegisterView from './views/register.js';
 import ReportsView from './views/reports.js';
-import AdminView from './views/admin.js';
+import Admin from './views/admin.js';
 
 const Router = {
     /**
@@ -19,7 +19,7 @@ const Router = {
     routes: {
         'register': RegisterView,
         'reports': ReportsView,
-        'admin': AdminView
+        'admin': Admin
     },
     
     /**
