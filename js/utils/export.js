@@ -1,7 +1,7 @@
 /**
  * Utilidades para importación y exportación de datos
  */
-const ExportUtils = {
+export const ExportUtils = {
     /**
      * Exporta los datos de la aplicación a un archivo JSON
      */
@@ -67,3 +67,5 @@ const ExportUtils = {
         });
     }
 };
+
+export default ExportUtils;

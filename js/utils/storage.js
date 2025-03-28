@@ -1,6 +1,7 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
-import { getDatabase, ref, set, get } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
-import { getStorage } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js';
+// Eliminar estas importaciones ya que usamos la versión compat
+// import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+// import { getDatabase, ref, set, get } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
+// import { getStorage } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyCiWtDTVTG3VTs6JfupUsFmL8S4JqpqCXA",
@@ -12,21 +13,20 @@ const firebaseConfig = {
     appId: "1:70067446729:web:ef03131d039073dc49fe18"
 };
 
-const app = initializeApp(firebaseConfig);
-const storage = getStorage(app); // Inicializa Firebase Storage
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
 
 export class StorageService {
     constructor() {
-        this.database = getDatabase(app); // Utiliza la instancia de app para el database
-        this.storage = storage; // Almacena la instancia de storage
+        this.database = firebase.database();
+        this.db = this.database;
     }
 
-    STORAGE_KEY = 'flexibleDataApp';
-    db = this.database; // Utiliza la instancia de la base de datos de la inicialización
-
-    initializeStorage() {
-        const dbRef = ref(this.db, 'appData');
-        get(dbRef).then((snapshot) => {
+    static initializeStorage() {
+        const db = firebase.database();
+        const dbRef = db.ref('appData');
+        
+        return dbRef.get().then((snapshot) => {
             if (!snapshot.exists()) {
                 const initialData = {
                     config: {
@@ -37,7 +37,7 @@ export class StorageService {
                     fields: [],
                     records: []
                 };
-                set(dbRef, initialData);
+                return dbRef.set(initialData);
             }
         }).catch((error) => {
             console.error("Error al inicializar la base de datos:", error);
@@ -45,8 +45,8 @@ export class StorageService {
     }
 
     getData() {
-        const dbRef = ref(this.db, 'appData');
-        return get(dbRef)
+        const dbRef = this.database.ref('appData');
+        return dbRef.get()
             .then((snapshot) => {
                 if (snapshot.exists()) {
                     return snapshot.val();
@@ -69,8 +69,8 @@ export class StorageService {
     }
 
     saveData(data) {
-        const dbRef = ref(this.db, 'appData');
-        return set(dbRef, data)
+        const dbRef = this.database.ref('appData');
+        return dbRef.set(data)
             .then(() => {
                 return true;
             })
