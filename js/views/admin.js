@@ -778,8 +778,4 @@ const AdminView = {
             UIUtils.showAlert('Error al asignar campos', 'danger', document.querySelector('.container'));
         }
     }
-};
-
-export default function Admin() {
-    // Tu código existente aquí
-}
+};  

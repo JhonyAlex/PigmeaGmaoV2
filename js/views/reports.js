@@ -1,363 +1,359 @@
 /**
- * Vista de reportes para visualizar estadísticas y gráficas
+ * Vista de reportes para visualizar datos
  */
-
-// Exportamos la función de renderizado
-export function renderReportsView() {
-    const mainContent = document.getElementById('main-content');
-    mainContent.innerHTML = `
-        <div class="container mt-4">
-            <h2>Reportes y Estadísticas</h2>
-            
-            <!-- Selector de entidad -->
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Seleccione la Entidad a Analizar</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <select class="form-select" id="report-entity-selector">
-                                <option value="">-- Seleccione una entidad --</option>
-                                <!-- Las entidades se cargarán dinámicamente -->
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d-flex justify-content-end">
-                                <button id="generate-report-btn" class="btn btn-primary">
-                                    Generar Reporte
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Contenido del reporte (aparece al generar) -->
-            <div id="report-content" style="display: none;">
-                <!-- Resumen general -->
+const ReportsView = {
+    /**
+     * Inicializa la vista de reportes
+     */
+    init() {
+        this.render();
+        this.setupEventListeners();
+    },
+    
+    /**
+     * Renderiza el contenido de la vista
+     */
+    render() {
+        const mainContent = document.getElementById('main-content');
+        const entities = EntityModel.getAll();
+        const sharedNumericFields = FieldModel.getSharedNumericFields();
+        
+        // Formatear fecha actual para los inputs de fecha
+        const today = new Date().toISOString().split('T')[0];
+        const lastMonth = new Date();
+        lastMonth.setMonth(lastMonth.getMonth() - 1);
+        const lastMonthStr = lastMonth.toISOString().split('T')[0];
+        
+        const template = `
+            <div class="container mt-4">
+                <h2>Reportes y Análisis</h2>
+                
+                <!-- Filtros -->
                 <div class="card mb-4">
                     <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Resumen General</h5>
+                        <h5 class="mb-0">Filtros</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row" id="summary-stats">
-                            <!-- Estadísticas de resumen -->
-                        </div>
+                        <form id="filter-form" class="row g-3">
+                            <div class="col-md-4">
+                                <label for="filter-entity" class="form-label">Entidad</label>
+                                <select class="form-select" id="filter-entity">
+                                    <option value="">Todas las entidades</option>
+                                    ${entities.map(entity => 
+                                        `<option value="${entity.id}">${entity.name}</option>`
+                                    ).join('')}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="filter-from-date" class="form-label">Desde</label>
+                                <input type="date" class="form-control" id="filter-from-date" value="${lastMonthStr}">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="filter-to-date" class="form-label">Hasta</label>
+                                <input type="date" class="form-control" id="filter-to-date" value="${today}">
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
                 
-                <!-- Gráficas -->
+                <!-- Tabla de Registros -->
                 <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Visualización de Datos</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-4">
-                                <div class="chart-container">
-                                    <canvas id="chart1"></canvas>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-4">
-                                <div class="chart-container">
-                                    <canvas id="chart2"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Tabla de datos -->
-                <div class="card">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Datos Detallados</h5>
-                        <button id="export-report-btn" class="btn btn-light btn-sm">
-                            <i class="bi bi-download"></i> Exportar a Excel
-                        </button>
+                        <h5 class="mb-0">Registros</h5>
+                        <span id="records-count" class="badge bg-light text-dark">0 registros</span>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-striped table-hover" id="report-table">
-                                <!-- La tabla se generará dinámicamente -->
+                            <table class="table table-hover mb-0" id="records-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Entidad</th>
+                                        <th>Fecha y Hora</th>
+                                        <th>Datos</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="records-list">
+                                    <!-- Los registros se cargarán dinámicamente -->
+                                </tbody>
                             </table>
                         </div>
+                        <div id="no-filtered-records" class="text-center py-4">
+                            <p class="text-muted">No hay registros que coincidan con los filtros.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Reportes Comparativos -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Reportes Comparativos</h5>
+                    </div>
+                    <div class="card-body">
+                        ${sharedNumericFields.length === 0 ? `
+                            <div class="alert alert-info">
+                                No hay campos numéricos compartidos entre entidades para generar reportes comparativos.
+                                <hr>
+                                <p class="mb-0">Para generar reportes comparativos, debe crear campos numéricos y asignarlos a múltiples entidades.</p>
+                            </div>
+                        ` : `
+                            <form id="report-form" class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label for="report-field" class="form-label">Campo a Comparar</label>
+                                    <select class="form-select" id="report-field" required>
+                                        <option value="">Seleccione un campo</option>
+                                        ${sharedNumericFields.map(field => 
+                                            `<option value="${field.id}">${field.name}</option>`
+                                        ).join('')}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="report-aggregation" class="form-label">Tipo de Agregación</label>
+                                    <select class="form-select" id="report-aggregation">
+                                        <option value="sum">Suma</option>
+                                        <option value="average">Promedio</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">Generar Reporte</button>
+                                </div>
+                            </form>
+                            
+                            <div id="report-container" style="display: none;">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="chart-container">
+                                            <canvas id="report-chart"></canvas>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div id="report-summary"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        `}
                     </div>
                 </div>
             </div>
-        </div>
-    `;
-    
-    // Inicializar la vista
-    initializeReportsView();
-}
-
-// Función para inicializar la vista de reportes
-function initializeReportsView() {
-    // Cargar entidades en el selector
-    loadReportEntities();
-    
-    // Configurar eventos
-    setupReportEventListeners();
-}
-
-// Función para cargar las entidades en el selector
-function loadReportEntities() {
-    // Aquí deberías cargar las entidades desde tu sistema de almacenamiento
-    // Este es solo un ejemplo, ajústalo según tus necesidades
-    
-    const entitySelector = document.getElementById('report-entity-selector');
-    
-    // Obtener entidades
-    const entities = []; // Reemplaza esto con tu lógica para obtener entidades
-    
-    // Limpiar selector
-    entitySelector.innerHTML = '<option value="">-- Seleccione una entidad --</option>';
-    
-    // Agregar las entidades al selector
-    entities.forEach(entity => {
-        const option = document.createElement('option');
-        option.value = entity.id;
-        option.textContent = entity.name;
-        entitySelector.appendChild(option);
-    });
-}
-
-// Configurar event listeners para reportes
-function setupReportEventListeners() {
-    const generateReportBtn = document.getElementById('generate-report-btn');
-    
-    generateReportBtn.addEventListener('click', () => {
-        const entityId = document.getElementById('report-entity-selector').value;
+        `;
         
-        if (!entityId) {
-            alert('Por favor, seleccione una entidad para generar el reporte.');
+        mainContent.innerHTML = template;
+        
+        // Cargar datos iniciales con los filtros predeterminados
+        this.applyFilters();
+    },
+    
+    /**
+     * Establece los event listeners para la vista
+     */
+    setupEventListeners() {
+        // Aplicar filtros
+        document.getElementById('filter-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.applyFilters();
+        });
+        
+        // Generar reporte comparativo
+        const reportForm = document.getElementById('report-form');
+        if (reportForm) {
+            reportForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.generateReport();
+            });
+        }
+    },
+    
+    /**
+     * Aplica los filtros y muestra los registros filtrados
+     */
+    applyFilters() {
+        const entityFilter = document.getElementById('filter-entity').value;
+        const fromDateFilter = document.getElementById('filter-from-date').value;
+        const toDateFilter = document.getElementById('filter-to-date').value;
+        
+        const filters = {
+            entityId: entityFilter || undefined,
+            fromDate: fromDateFilter || undefined,
+            toDate: toDateFilter || undefined
+        };
+        
+        // Obtener registros filtrados
+        const filteredRecords = RecordModel.filter(filters);
+        
+        // Actualizar contador
+        document.getElementById('records-count').textContent = `${filteredRecords.length} registros`;
+        
+        // Mostrar registros
+        this.displayFilteredRecords(filteredRecords);
+    },
+    
+    /**
+     * Muestra los registros filtrados en la tabla
+     * @param {Array} records Registros a mostrar
+     */
+    displayFilteredRecords(records) {
+        const recordsList = document.getElementById('records-list');
+        const noFilteredRecords = document.getElementById('no-filtered-records');
+        const recordsTable = document.getElementById('records-table');
+        
+        // Mostrar mensaje si no hay registros
+        if (records.length === 0) {
+            noFilteredRecords.style.display = 'block';
+            recordsTable.style.display = 'none';
             return;
         }
         
-        generateReport(entityId);
-    });
-    
-    // Botón para exportar reporte
-    const exportReportBtn = document.getElementById('export-report-btn');
-    
-    if (exportReportBtn) {
-        exportReportBtn.addEventListener('click', () => {
-            exportReport();
+        // Mostrar tabla si hay registros
+        noFilteredRecords.style.display = 'none';
+        recordsTable.style.display = 'table';
+        
+        // Limpiar lista
+        recordsList.innerHTML = '';
+        
+        // Ordenar registros por fecha (más reciente primero)
+        const sortedRecords = [...records].sort((a, b) => 
+            new Date(b.timestamp) - new Date(a.timestamp)
+        );
+        
+        // Renderizar cada registro
+        sortedRecords.forEach(record => {
+            const entity = EntityModel.getById(record.entityId) || { name: 'Desconocido' };
+            const fields = FieldModel.getByIds(Object.keys(record.data));
+            
+            // Preparar datos para mostrar
+            const dataFields = [];
+            for (const fieldId in record.data) {
+                const field = fields.find(f => f.id === fieldId);
+                if (field) {
+                    dataFields.push(`${field.name}: ${record.data[fieldId]}`);
+                }
+            }
+            
+            // Limitar a 3 campos y agregar elipsis si hay más
+            let displayData = dataFields.slice(0, 3).join(', ');
+            if (dataFields.length > 3) {
+                displayData += '...';
+            }
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${entity.name}</td>
+                <td>${UIUtils.formatDate(record.timestamp)}</td>
+                <td>${displayData}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary view-record" data-record-id="${record.id}">
+                        Ver
+                    </button>
+                </td>
+            `;
+            
+            recordsList.appendChild(row);
         });
+        
+        // Configurar event listeners para ver detalles
+        recordsList.querySelectorAll('.view-record').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const recordId = e.target.getAttribute('data-record-id');
+                this.showRecordDetails(recordId);
+            });
+        });
+    },
+    
+    /**
+     * Muestra los detalles de un registro
+     * @param {string} recordId ID del registro
+     */
+    showRecordDetails(recordId) {
+        const record = RecordModel.getById(recordId);
+        if (!record) return;
+        
+        const entity = EntityModel.getById(record.entityId) || { name: 'Desconocido' };
+        const fields = FieldModel.getByIds(Object.keys(record.data));
+        
+        const modal = UIUtils.initModal('viewRecordModal');
+        const recordDetails = document.getElementById('record-details');
+        
+        // Preparar contenido del modal
+        const detailsHTML = `
+            <div class="mb-3">
+                <strong>Entidad:</strong> ${entity.name}
+            </div>
+            <div class="mb-3">
+                <strong>Fecha y Hora:</strong> ${UIUtils.formatDate(record.timestamp)}
+            </div>
+            <div class="mb-3">
+                <strong>Datos:</strong>
+                <table class="table table-sm table-bordered mt-2">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Campo</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${Object.entries(record.data).map(([fieldId, value]) => {
+                            const field = fields.find(f => f.id === fieldId) || { name: fieldId };
+                            return `
+                                <tr>
+                                    <td>${field.name}</td>
+                                    <td>${value}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        recordDetails.innerHTML = detailsHTML;
+        modal.show();
+    },
+    
+    /**
+     * Genera y muestra un reporte comparativo
+     */
+    generateReport() {
+        const fieldId = document.getElementById('report-field').value;
+        const aggregation = document.getElementById('report-aggregation').value;
+        
+        if (!fieldId) {
+            UIUtils.showAlert('Seleccione un campo para generar el reporte', 'warning', document.querySelector('.card-body'));
+            return;
+        }
+        
+        // Obtener filtros actuales
+        const entityFilter = document.getElementById('filter-entity').value;
+        const fromDateFilter = document.getElementById('filter-from-date').value;
+        const toDateFilter = document.getElementById('filter-to-date').value;
+        
+        const filters = {
+            fromDate: fromDateFilter || undefined,
+            toDate: toDateFilter || undefined
+        };
+        
+        // Generar datos del reporte
+        const reportData = RecordModel.generateReport(fieldId, aggregation, filters);
+        
+        if (reportData.error) {
+            UIUtils.showAlert(reportData.error, 'danger', document.querySelector('.card-body'));
+            return;
+        }
+        
+        // Mostrar contenedor del reporte
+        const reportContainer = document.getElementById('report-container');
+        reportContainer.style.display = 'block';
+        
+        // Crear gráfico
+        ChartUtils.createBarChart('report-chart', reportData);
+        
+        // Crear tabla resumen
+        const reportSummary = document.getElementById('report-summary');
+        reportSummary.innerHTML = `
+            <h6 class="mb-3">Resumen del Reporte</h6>
+            ${ChartUtils.createSummaryTable(reportData)}
+        `;
     }
-}
-
-// Función para generar el reporte
-function generateReport(entityId) {
-    // Mostrar contenido del reporte
-    document.getElementById('report-content').style.display = 'block';
-    
-    // Aquí deberías obtener los datos necesarios para el reporte
-    // Este es solo un ejemplo, ajústalo según tus necesidades
-    
-    // Obtener entidad, campos y registros
-    const entity = {}; // Reemplaza esto con tu lógica para obtener la entidad
-    const fields = []; // Reemplaza esto con tu lógica para obtener los campos
-    const records = []; // Reemplaza esto con tu lógica para obtener los registros
-    
-    // Generar resumen
-    generateSummary(records, fields);
-    
-    // Generar gráficas
-    generateCharts(records, fields);
-    
-    // Generar tabla detallada
-    generateDetailTable(records, fields);
-}
-
-// Generar estadísticas de resumen
-function generateSummary(records, fields) {
-    const summaryStats = document.getElementById('summary-stats');
-    
-    // Limpiar contenedor
-    summaryStats.innerHTML = '';
-    
-    // Agregar estadísticas
-    
-    // Total de registros
-    const totalCard = document.createElement('div');
-    totalCard.className = 'col-md-4 mb-3';
-    totalCard.innerHTML = `
-        <div class="card bg-light">
-            <div class="card-body text-center">
-                <h3>${records.length}</h3>
-                <p class="mb-0">Total de Registros</p>
-            </div>
-        </div>
-    `;
-    summaryStats.appendChild(totalCard);
-    
-    // Otras estadísticas que puedas necesitar
-    // Por ejemplo, promedios, valores máximos, etc.
-    
-    // Estadística adicional 1
-    const stat1Card = document.createElement('div');
-    stat1Card.className = 'col-md-4 mb-3';
-    stat1Card.innerHTML = `
-        <div class="card bg-light">
-            <div class="card-body text-center">
-                <h3>--</h3>
-                <p class="mb-0">Estadística 1</p>
-            </div>
-        </div>
-    `;
-    summaryStats.appendChild(stat1Card);
-    
-    // Estadística adicional 2
-    const stat2Card = document.createElement('div');
-    stat2Card.className = 'col-md-4 mb-3';
-    stat2Card.innerHTML = `
-        <div class="card bg-light">
-            <div class="card-body text-center">
-                <h3>--</h3>
-                <p class="mb-0">Estadística 2</p>
-            </div>
-        </div>
-    `;
-    summaryStats.appendChild(stat2Card);
-}
-
-// Generar gráficas
-function generateCharts(records, fields) {
-    // Obtener los contextos de los canvas
-    const ctx1 = document.getElementById('chart1').getContext('2d');
-    const ctx2 = document.getElementById('chart2').getContext('2d');
-    
-    // Destruir gráficas anteriores si existen
-    if (window.chart1) window.chart1.destroy();
-    if (window.chart2) window.chart2.destroy();
-    
-    // Aquí deberías procesar tus datos para las gráficas
-    // Este es solo un ejemplo con datos ficticios
-    
-    // Gráfica 1 - Ejemplo de gráfica de barras
-    window.chart1 = new Chart(ctx1, {
-        type: 'bar',
-        data: {
-            labels: ['Categoría 1', 'Categoría 2', 'Categoría 3', 'Categoría 4', 'Categoría 5'],
-            datasets: [{
-                label: 'Ejemplo de Datos',
-                data: [12, 19, 3, 5, 2],
-                backgroundColor: [
-                    'rgba(54, 162, 235, 0.5)',
-                    'rgba(255, 99, 132, 0.5)',
-                    'rgba(255, 206, 86, 0.5)',
-                    'rgba(75, 192, 192, 0.5)',
-                    'rgba(153, 102, 255, 0.5)'
-                ],
-                borderColor: [
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(255, 206, 86, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(153, 102, 255, 1)'
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Distribución por Categoría'
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-    
-    // Gráfica 2 - Ejemplo de gráfica circular
-    window.chart2 = new Chart(ctx2, {
-        type: 'pie',
-        data: {
-            labels: ['Grupo A', 'Grupo B', 'Grupo C'],
-            datasets: [{
-                label: 'Ejemplo de Datos',
-                data: [300, 50, 100],
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.5)',
-                    'rgba(54, 162, 235, 0.5)',
-                    'rgba(255, 206, 86, 0.5)'
-                ],
-                borderColor: [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 206, 86, 1)'
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Distribución por Grupo'
-                }
-            }
-        }
-    });
-}
-
-// Generar tabla detallada
-function generateDetailTable(records, fields) {
-    const table = document.getElementById('report-table');
-    
-    // Limpiar tabla
-    table.innerHTML = '';
-    
-    // Crear cabecera
-    const thead = document.createElement('thead');
-    const headerRow = document.createElement('tr');
-    
-    // Agregar encabezados de columnas
-    fields.forEach(field => {
-        const th = document.createElement('th');
-        th.textContent = field.name;
-        headerRow.appendChild(th);
-    });
-    
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
-    
-    // Crear cuerpo
-    const tbody = document.createElement('tbody');
-    
-    // Agregar filas con datos
-    records.forEach(record => {
-        const row = document.createElement('tr');
-        
-        fields.forEach(field => {
-            const td = document.createElement('td');
-            td.textContent = record.data[field.id] || '';
-            row.appendChild(td);
-        });
-        
-        tbody.appendChild(row);
-    });
-    
-    table.appendChild(tbody);
-}
-
-// Exportar datos del reporte
-function exportReport() {
-    // Aquí puedes implementar lógica para exportar la tabla a Excel
-    // Por ejemplo, usando una biblioteca como SheetJS
-    alert('Funcionalidad de exportación a implementar');
-}
-
-// Exportar para su uso en el router
-export default {
-    init: renderReportsView
 };

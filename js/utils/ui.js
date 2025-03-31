@@ -1,7 +1,7 @@
 /**
  * Utilidades para la interfaz de usuario
  */
-export const UIUtils = {
+const UIUtils = {
     /**
      * Muestra un mensaje de alerta temporal
      * @param {string} message Mensaje a mostrar
@@ -111,5 +111,3 @@ export const UIUtils = {
         }, 2000);
     }
 };
-
-export default UIUtils;

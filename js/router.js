@@ -1,12 +1,6 @@
 /**
  * Enrutador para la aplicación SPA
  */
-
-// Importar las vistas aquí
-import RegisterView from './views/register.js';
-import ReportsView from './views/reports.js';
-import Admin from './views/admin.js';
-
 const Router = {
     /**
      * Ruta actual
@@ -19,7 +13,7 @@ const Router = {
     routes: {
         'register': RegisterView,
         'reports': ReportsView,
-        'admin': Admin
+        'admin': AdminView
     },
     
     /**
@@ -101,5 +95,3 @@ const Router = {
         }
     }
 };
-
-export default Router;
