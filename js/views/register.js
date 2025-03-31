@@ -31,13 +31,13 @@ const RegisterView = {
                                 
                                 <form id="register-form">
                                     <div class="mb-3">
-                                        <label for="entity-selector" class="form-label">Seleccione ${entities.length > 0 ? 'una Entidad' : 'la Entidad'}</label>
-                                        <select class="form-select" id="entity-selector" required>
-                                            <option value="">-- Seleccione --</option>
+                                        <label class="form-label">Seleccione ${entities.length > 0 ? 'una Entidad' : 'la Entidad'}</label>
+                                        <div id="entity-selector" class="d-flex flex-wrap gap-2">
                                             ${entities.map(entity => 
-                                                `<option value="${entity.id}">${entity.name}</option>`
+                                                `<button type="button" class="btn btn-outline-primary entity-btn" data-entity-id="${entity.id}">${entity.name}</button>`
                                             ).join('')}
-                                        </select>
+                                        </div>
+                                        <input type="hidden" id="selected-entity-id" name="entity-id" required>
                                     </div>
                                     
                                     <div id="dynamic-fields-container">
@@ -94,9 +94,26 @@ const RegisterView = {
      * Establece los event listeners para la vista
      */
     setupEventListeners() {
-        // Cambio de entidad
-        document.getElementById('entity-selector').addEventListener('change', (e) => {
-            this.loadDynamicFields(e.target.value);
+        // Botones de entidad
+        document.querySelectorAll('.entity-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                // Quitar clase activa de todos los botones
+                document.querySelectorAll('.entity-btn').forEach(btn => {
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-outline-primary');
+                });
+                
+                // Agregar clase activa al botón seleccionado
+                e.target.classList.remove('btn-outline-primary');
+                e.target.classList.add('btn-primary');
+                
+                // Guardar ID de entidad seleccionada
+                const entityId = e.target.getAttribute('data-entity-id');
+                document.getElementById('selected-entity-id').value = entityId;
+                
+                // Cargar campos dinámicos
+                this.loadDynamicFields(entityId);
+            });
         });
         
         // Envío del formulario
@@ -147,7 +164,7 @@ const RegisterView = {
      */
     saveRecord() {
         const form = document.getElementById('register-form');
-        const entityId = document.getElementById('entity-selector').value;
+        const entityId = document.getElementById('selected-entity-id').value;
         
         if (!entityId) {
             UIUtils.showAlert('Debe seleccionar una entidad', 'warning', document.querySelector('.card-body'));
@@ -175,6 +192,12 @@ const RegisterView = {
             // Limpiar formulario
             form.reset();
             document.getElementById('dynamic-fields-container').innerHTML = '';
+            
+            // Desactivar el botón de la entidad seleccionada
+            document.querySelectorAll('.entity-btn').forEach(btn => {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline-primary');
+            });
             
             // Recargar registros recientes
             this.loadRecentRecords();
