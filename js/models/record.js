@@ -4,30 +4,32 @@
 const RecordModel = {
     /**
      * Obtiene todos los registros
-     * @returns {Array} Lista de registros
+     * @returns {Promise<Array>} Promesa que se resuelve con la lista de registros
      */
-    getAll() {
-        return StorageService.getData().records;
+    async getAll() {
+        await StorageService.initializeStorage();
+        return StorageService.getAllFromStore('records');
     },
     
     /**
      * Obtiene un registro por su ID
      * @param {string} id ID del registro
-     * @returns {Object|null} Registro encontrado o null
+     * @returns {Promise<Object|null>} Promesa que se resuelve con el registro encontrado o null
      */
-    getById(id) {
-        const records = this.getAll();
-        return records.find(record => record.id === id) || null;
+    async getById(id) {
+        await StorageService.initializeStorage();
+        const record = await StorageService.getFromStore('records', id);
+        return record || null;
     },
     
     /**
      * Crea un nuevo registro
      * @param {string} entityId ID de la entidad
      * @param {Object} formData Datos del formulario
-     * @returns {Object} Registro creado
+     * @returns {Promise<Object>} Promesa que se resuelve con el registro creado
      */
-    create(entityId, formData) {
-        const data = StorageService.getData();
+    async create(entityId, formData) {
+        await StorageService.initializeStorage();
         const newRecord = {
             id: 'record_' + Date.now(),
             entityId: entityId,
@@ -35,19 +37,17 @@ const RecordModel = {
             data: { ...formData }
         };
         
-        data.records.push(newRecord);
-        StorageService.saveData(data);
-        
-        return newRecord;
+        return StorageService.saveToStore('records', newRecord);
     },
     
     /**
      * Filtra registros según criterios (una sola entidad)
      * @param {Object} filters Criterios de filtrado
-     * @returns {Array} Registros filtrados
+     * @returns {Promise<Array>} Promesa que se resuelve con los registros filtrados
      */
-    filter(filters = {}) {
-        let records = this.getAll();
+    async filter(filters = {}) {
+        await StorageService.initializeStorage();
+        let records = await this.getAll();
         
         // Filtrar por entidad
         if (filters.entityId) {
@@ -72,10 +72,11 @@ const RecordModel = {
     /**
      * Filtra registros según criterios (múltiples entidades)
      * @param {Object} filters Criterios de filtrado con entityIds como array
-     * @returns {Array} Registros filtrados
+     * @returns {Promise<Array>} Promesa que se resuelve con los registros filtrados
      */
-    filterMultiple(filters = {}) {
-        let records = this.getAll();
+    async filterMultiple(filters = {}) {
+        await StorageService.initializeStorage();
+        let records = await this.getAll();
         
         // Filtrar por entidades (múltiples)
         if (filters.entityIds && filters.entityIds.length > 0) {
@@ -100,10 +101,12 @@ const RecordModel = {
     /**
      * Obtiene los últimos N registros
      * @param {number} limit Número de registros a retornar
-     * @returns {Array} Últimos registros
+     * @returns {Promise<Array>} Promesa que se resuelve con los últimos registros
      */
-    getRecent(limit = 10) {
-        const records = this.getAll();
+    async getRecent(limit = 10) {
+        await StorageService.initializeStorage();
+        const records = await this.getAll();
+        
         // Ordenar por fecha (más reciente primero)
         return [...records]
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
@@ -116,19 +119,20 @@ const RecordModel = {
      * @param {string} aggregation Tipo de agregación ('sum' o 'average')
      * @param {Object} filters Filtros adicionales (puede incluir entityIds como array)
      * @param {string} horizontalFieldId ID del campo para el eje horizontal (opcional)
-     * @returns {Object} Datos para el reporte
+     * @returns {Promise<Object>} Promesa que se resuelve con los datos para el reporte
      */
-    generateReportMultiple(fieldId, aggregation = 'sum', filters = {}, horizontalFieldId = '') {
+    async generateReportMultiple(fieldId, aggregation = 'sum', filters = {}, horizontalFieldId = '') {
+        await StorageService.initializeStorage();
+        
         // Obtenemos el campo para asegurarnos que es numérico
-        const field = FieldModel.getById(fieldId);
+        const field = await FieldModel.getById(fieldId);
         if (!field || field.type !== 'number') {
             return { error: 'El campo debe ser numérico' };
         }
         
-        // Obtenemos las entidades que usan este campo
-        let entities = EntityModel.getAll().filter(entity => 
-            entity.fields.includes(fieldId)
-        );
+        // Obtenemos las entidades y filtramos las que usan este campo
+        let entities = await EntityModel.getAll();
+        entities = entities.filter(entity => entity.fields.includes(fieldId));
         
         // Si hay un filtro de entidades específicas, filtramos aún más
         if (filters.entityIds && filters.entityIds.length > 0) {
@@ -141,11 +145,11 @@ const RecordModel = {
         }
         
         // Filtramos los registros
-        const filteredRecords = this.filterMultiple(filters);
+        const filteredRecords = await this.filterMultiple(filters);
         
         // Si se proporciona un campo para el eje horizontal, lo usamos
         if (horizontalFieldId) {
-            const horizontalField = FieldModel.getById(horizontalFieldId);
+            const horizontalField = await FieldModel.getById(horizontalFieldId);
             if (!horizontalField) {
                 return { error: 'El campo seleccionado para el eje horizontal no existe' };
             }
@@ -216,7 +220,7 @@ const RecordModel = {
         };
         
         // Para cada entidad (ya filtradas si hay filtro de entidad), calculamos los valores
-        entities.forEach(entity => {
+        for (const entity of entities) {
             // Filtrar registros para esta entidad
             const entityRecords = filteredRecords.filter(record => 
                 record.entityId === entity.id && 
@@ -230,7 +234,7 @@ const RecordModel = {
                     value: 0,
                     count: 0
                 });
-                return;
+                continue;
             }
             
             // Convertir valores a números
@@ -252,7 +256,7 @@ const RecordModel = {
                 value: value,
                 count: entityRecords.length
             });
-        });
+        }
         
         return reportData;
     }

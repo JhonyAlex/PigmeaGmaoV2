@@ -5,8 +5,8 @@ const ExportUtils = {
     /**
      * Exporta los datos de la aplicación a un archivo JSON
      */
-    exportToFile() {
-        const data = StorageService.exportData();
+    async exportToFile() {
+        const data = await StorageService.exportData();
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         
@@ -27,15 +27,15 @@ const ExportUtils = {
      * Exporta los registros filtrados a un archivo CSV
      * @param {Array} records Registros a exportar
      */
-    exportToCSV(records) {
+    async exportToCSV(records) {
         if (!records || records.length === 0) {
             UIUtils.showAlert('No hay registros para exportar', 'warning');
             return;
         }
         
         // Obtener las entidades y los campos para cada registro
-        const entities = EntityModel.getAll();
-        const allFields = FieldModel.getAll();
+        const entities = await EntityModel.getAll();
+        const allFields = await FieldModel.getAll();
         
         // Crear un Set para almacenar todos los IDs de campos utilizados en los registros
         const allFieldIds = new Set();
@@ -46,9 +46,9 @@ const ExportUtils = {
         });
         
         // Convertir el Set a un array y filtrar para obtener solo los campos que existen
-        const usedFields = Array.from(allFieldIds)
-            .map(fieldId => FieldModel.getById(fieldId))
-            .filter(field => field !== null);
+        const fieldsPromises = Array.from(allFieldIds).map(fieldId => FieldModel.getById(fieldId));
+        const fieldsResults = await Promise.all(fieldsPromises);
+        const usedFields = fieldsResults.filter(field => field !== null);
         
         // Crear cabeceras: primero la entidad, luego fecha y hora, después todos los campos personalizados
         let headers = ['Entidad', 'Fecha_y_Hora'];
@@ -113,7 +113,7 @@ const ExportUtils = {
             
             const reader = new FileReader();
             
-            reader.onload = function(event) {
+            reader.onload = async function(event) {
                 try {
                     const jsonData = event.target.result;
                     const parsedData = JSON.parse(jsonData);
@@ -125,7 +125,8 @@ const ExportUtils = {
                     }
                     
                     // Realizar la importación
-                    if (StorageService.importData(jsonData)) {
+                    const success = await StorageService.importData(jsonData);
+                    if (success) {
                         resolve('Datos importados correctamente');
                     } else {
                         reject(new Error('Error al importar los datos'));
