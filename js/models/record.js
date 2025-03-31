@@ -42,7 +42,7 @@ const RecordModel = {
     },
     
     /**
-     * Filtra registros según criterios
+     * Filtra registros según criterios (una sola entidad)
      * @param {Object} filters Criterios de filtrado
      * @returns {Array} Registros filtrados
      */
@@ -52,6 +52,34 @@ const RecordModel = {
         // Filtrar por entidad
         if (filters.entityId) {
             records = records.filter(record => record.entityId === filters.entityId);
+        }
+        
+        // Filtrar por fecha
+        if (filters.fromDate) {
+            const fromDate = new Date(filters.fromDate);
+            records = records.filter(record => new Date(record.timestamp) >= fromDate);
+        }
+        
+        if (filters.toDate) {
+            const toDate = new Date(filters.toDate);
+            toDate.setHours(23, 59, 59); // Final del día
+            records = records.filter(record => new Date(record.timestamp) <= toDate);
+        }
+        
+        return records;
+    },
+    
+    /**
+     * Filtra registros según criterios (múltiples entidades)
+     * @param {Object} filters Criterios de filtrado con entityIds como array
+     * @returns {Array} Registros filtrados
+     */
+    filterMultiple(filters = {}) {
+        let records = this.getAll();
+        
+        // Filtrar por entidades (múltiples)
+        if (filters.entityIds && filters.entityIds.length > 0) {
+            records = records.filter(record => filters.entityIds.includes(record.entityId));
         }
         
         // Filtrar por fecha
@@ -83,14 +111,14 @@ const RecordModel = {
     },
     
     /**
-     * Genera datos para reportes comparativos
+     * Genera datos para reportes comparativos (compatible con múltiples entidades)
      * @param {string} fieldId ID del campo a comparar
      * @param {string} aggregation Tipo de agregación ('sum' o 'average')
-     * @param {Object} filters Filtros adicionales
+     * @param {Object} filters Filtros adicionales (puede incluir entityIds como array)
      * @param {string} horizontalFieldId ID del campo para el eje horizontal (opcional)
      * @returns {Object} Datos para el reporte
      */
-    generateReport(fieldId, aggregation = 'sum', filters = {}, horizontalFieldId = '') {
+    generateReportMultiple(fieldId, aggregation = 'sum', filters = {}, horizontalFieldId = '') {
         // Obtenemos el campo para asegurarnos que es numérico
         const field = FieldModel.getById(fieldId);
         if (!field || field.type !== 'number') {
@@ -102,9 +130,9 @@ const RecordModel = {
             entity.fields.includes(fieldId)
         );
         
-        // Si hay un filtro de entidad específico, filtramos aún más
-        if (filters.entityId) {
-            entities = entities.filter(entity => entity.id === filters.entityId);
+        // Si hay un filtro de entidades específicas, filtramos aún más
+        if (filters.entityIds && filters.entityIds.length > 0) {
+            entities = entities.filter(entity => filters.entityIds.includes(entity.id));
         }
         
         // Si no hay entidades, no podemos generar el reporte
@@ -113,7 +141,7 @@ const RecordModel = {
         }
         
         // Filtramos los registros
-        const filteredRecords = this.filter(filters);
+        const filteredRecords = this.filterMultiple(filters);
         
         // Si se proporciona un campo para el eje horizontal, lo usamos
         if (horizontalFieldId) {

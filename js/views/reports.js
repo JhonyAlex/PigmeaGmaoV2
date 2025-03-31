@@ -37,13 +37,14 @@ const ReportsView = {
                     <div class="card-body">
                         <form id="filter-form" class="row g-3">
                             <div class="col-md-4">
-                                <label for="filter-entity" class="form-label">Entidad</label>
-                                <select class="form-select" id="filter-entity">
+                                <label for="filter-entity" class="form-label">Entidad(es)</label>
+                                <select class="form-select" id="filter-entity" multiple size="4">
                                     <option value="">Todas las entidades</option>
                                     ${entities.map(entity => 
                                         `<option value="${entity.id}">${entity.name}</option>`
                                     ).join('')}
                                 </select>
+                                <div class="form-text">Mantenga presionado Ctrl (⌘ en Mac) para seleccionar múltiples entidades</div>
                             </div>
                             <div class="col-md-4">
                                 <label for="filter-from-date" class="form-label">Desde</label>
@@ -186,18 +187,25 @@ const ReportsView = {
      * Aplica los filtros y muestra los registros filtrados
      */
     applyFilters() {
-        const entityFilter = document.getElementById('filter-entity').value;
+        const entityFilterSelect = document.getElementById('filter-entity');
+        const selectedEntities = Array.from(entityFilterSelect.selectedOptions).map(option => option.value);
+        
+        // Si se selecciona "Todas las entidades" o no se selecciona ninguna, no aplicamos filtro de entidad
+        const entityFilter = selectedEntities.includes('') || selectedEntities.length === 0 
+            ? [] 
+            : selectedEntities;
+            
         const fromDateFilter = document.getElementById('filter-from-date').value;
         const toDateFilter = document.getElementById('filter-to-date').value;
         
         const filters = {
-            entityId: entityFilter || undefined,
+            entityIds: entityFilter.length > 0 ? entityFilter : undefined,
             fromDate: fromDateFilter || undefined,
             toDate: toDateFilter || undefined
         };
         
         // Obtener registros filtrados
-        const filteredRecords = RecordModel.filter(filters);
+        const filteredRecords = RecordModel.filterMultiple(filters);
         
         // Actualizar contador
         document.getElementById('records-count').textContent = `${filteredRecords.length} registros`;
@@ -342,18 +350,25 @@ const ReportsView = {
         }
         
         // Obtener filtros actuales
-        const entityFilter = document.getElementById('filter-entity').value;
+        const entityFilterSelect = document.getElementById('filter-entity');
+        const selectedEntities = Array.from(entityFilterSelect.selectedOptions).map(option => option.value);
+        
+        // Si se selecciona "Todas las entidades" o no se selecciona ninguna, no aplicamos filtro de entidad
+        const entityFilter = selectedEntities.includes('') || selectedEntities.length === 0 
+            ? [] 
+            : selectedEntities;
+            
         const fromDateFilter = document.getElementById('filter-from-date').value;
         const toDateFilter = document.getElementById('filter-to-date').value;
         
         const filters = {
-            entityId: entityFilter || undefined, // Aplicar el filtro de entidad al reporte
+            entityIds: entityFilter.length > 0 ? entityFilter : undefined,
             fromDate: fromDateFilter || undefined,
             toDate: toDateFilter || undefined
         };
         
         // Generar datos del reporte
-        const reportData = RecordModel.generateReport(fieldId, aggregation, filters, horizontalFieldId);
+        const reportData = RecordModel.generateReportMultiple(fieldId, aggregation, filters, horizontalFieldId);
         
         if (reportData.error) {
             UIUtils.showAlert(reportData.error, 'danger', document.querySelector('.card-body'));
