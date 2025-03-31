@@ -65,12 +65,7 @@ const ReportsView = {
                 <div class="card mb-4">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Registros</h5>
-                        <div>
-                            <button id="export-csv-btn" class="btn btn-outline-light btn-sm me-2">
-                                <i class="bi bi-file-earmark-spreadsheet"></i> Exportar a CSV
-                            </button>
-                            <span id="records-count" class="badge bg-light text-dark">0 registros</span>
-                        </div>
+                        <span id="records-count" class="badge bg-light text-dark">0 registros</span>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -165,63 +160,28 @@ const ReportsView = {
     /**
      * Establece los event listeners para la vista
      */
-    // Modificar setupEventListeners para incluir el evento del botón de exportar a CSV
-setupEventListeners() {
-    // Aplicar filtros
-    document.getElementById('filter-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        this.applyFilters();
-        
-        // Si hay un reporte generado, actualizarlo con los nuevos filtros
-        const reportContainer = document.getElementById('report-container');
-        if (reportContainer && reportContainer.style.display === 'block') {
-            this.generateReport();
-        }
-    });
-    
-    // Generar reporte comparativo
-    const reportForm = document.getElementById('report-form');
-    if (reportForm) {
-        reportForm.addEventListener('submit', (e) => {
+    setupEventListeners() {
+        // Aplicar filtros
+        document.getElementById('filter-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            this.generateReport();
+            this.applyFilters();
+            
+            // Si hay un reporte generado, actualizarlo con los nuevos filtros
+            const reportContainer = document.getElementById('report-container');
+            if (reportContainer && reportContainer.style.display === 'block') {
+                this.generateReport();
+            }
         });
-    }
-    
-    // Exportar a CSV
-    const exportCsvBtn = document.getElementById('export-csv-btn');
-    if (exportCsvBtn) {
-        exportCsvBtn.addEventListener('click', () => {
-            // Obtener los registros filtrados actuales
-            const entityFilterSelect = document.getElementById('filter-entity');
-            const selectedEntities = Array.from(entityFilterSelect.selectedOptions).map(option => option.value);
-            
-            const entityFilter = selectedEntities.includes('') || selectedEntities.length === 0 
-                ? [] 
-                : selectedEntities;
-            
-            const fromDateFilter = document.getElementById('filter-from-date').value;
-            const toDateFilter = document.getElementById('filter-to-date').value;
-            
-            const filters = {
-                entityIds: entityFilter.length > 0 ? entityFilter : undefined,
-                fromDate: fromDateFilter || undefined,
-                toDate: toDateFilter || undefined
-            };
-            
-            // Obtener registros filtrados
-            const filteredRecords = RecordModel.filterMultiple(filters);
-            
-            // Ordenar por fecha (más reciente primero)
-            const sortedRecords = [...filteredRecords].sort((a, b) => 
-                new Date(b.timestamp) - new Date(a.timestamp)
-            );
-            
-            // Exportar a CSV
-            ExportUtils.exportToCSV(sortedRecords);
-        });
-    }
-},
+        
+        // Generar reporte comparativo
+        const reportForm = document.getElementById('report-form');
+        if (reportForm) {
+            reportForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.generateReport();
+            });
+        }
+    },
     
     /**
      * Aplica los filtros y muestra los registros filtrados

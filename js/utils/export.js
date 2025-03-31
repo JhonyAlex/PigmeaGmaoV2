@@ -24,6 +24,7 @@ const ExportUtils = {
     },
     
     /**
+<<<<<<< HEAD
      * Exporta los registros filtrados a un archivo CSV
      * @param {Array} records Registros a exportar
      */
@@ -100,6 +101,8 @@ const ExportUtils = {
     },
     
     /**
+=======
+>>>>>>> parent of 6ef5360 (Añadir eliminar y exportar csv)
      * Importa datos desde un archivo JSON seleccionado
      * @param {File} file Archivo a importar
      * @returns {Promise} Promesa con el resultado de la operación
