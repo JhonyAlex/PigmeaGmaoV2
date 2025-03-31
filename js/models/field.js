@@ -4,42 +4,39 @@
 const FieldModel = {
     /**
      * Obtiene todos los campos
-     * @returns {Promise<Array>} Promesa que se resuelve con la lista de campos
+     * @returns {Array} Lista de campos
      */
-    async getAll() {
-        await StorageService.initializeStorage();
-        return StorageService.getAllFromStore('fields');
+    getAll() {
+        return StorageService.getData().fields;
     },
     
     /**
      * Obtiene un campo por su ID
      * @param {string} id ID del campo
-     * @returns {Promise<Object|null>} Promesa que se resuelve con el campo encontrado o null
+     * @returns {Object|null} Campo encontrado o null
      */
-    async getById(id) {
-        await StorageService.initializeStorage();
-        const field = await StorageService.getFromStore('fields', id);
-        return field || null;
+    getById(id) {
+        const fields = this.getAll();
+        return fields.find(field => field.id === id) || null;
     },
     
     /**
      * Obtiene campos por IDs
      * @param {Array} ids Lista de IDs de campos
-     * @returns {Promise<Array>} Promesa que se resuelve con la lista de campos encontrados
+     * @returns {Array} Lista de campos encontrados
      */
-    async getByIds(ids) {
-        await StorageService.initializeStorage();
-        const fields = await this.getAll();
+    getByIds(ids) {
+        const fields = this.getAll();
         return fields.filter(field => ids.includes(field.id));
     },
     
     /**
      * Crea un nuevo campo
      * @param {Object} fieldData Datos del campo
-     * @returns {Promise<Object>} Promesa que se resuelve con el campo creado
+     * @returns {Object} Campo creado
      */
-    async create(fieldData) {
-        await StorageService.initializeStorage();
+    create(fieldData) {
+        const data = StorageService.getData();
         const newField = {
             id: 'field_' + Date.now(),
             name: fieldData.name,
@@ -48,66 +45,69 @@ const FieldModel = {
             options: fieldData.type === 'select' ? (fieldData.options || []) : []
         };
         
-        return StorageService.saveToStore('fields', newField);
+        data.fields.push(newField);
+        StorageService.saveData(data);
+        
+        return newField;
     },
     
     /**
      * Actualiza un campo existente
      * @param {string} id ID del campo
      * @param {Object} fieldData Nuevos datos del campo
-     * @returns {Promise<Object|null>} Promesa que se resuelve con el campo actualizado o null
+     * @returns {Object|null} Campo actualizado o null
      */
-    async update(id, fieldData) {
-        await StorageService.initializeStorage();
-        const field = await this.getById(id);
+    update(id, fieldData) {
+        const data = StorageService.getData();
+        const fieldIndex = data.fields.findIndex(field => field.id === id);
         
-        if (!field) return null;
+        if (fieldIndex === -1) return null;
         
-        field.name = fieldData.name;
-        field.type = fieldData.type;
-        field.required = !!fieldData.required;
-        field.options = fieldData.type === 'select' ? (fieldData.options || []) : [];
+        data.fields[fieldIndex] = {
+            ...data.fields[fieldIndex],
+            name: fieldData.name,
+            type: fieldData.type,
+            required: !!fieldData.required,
+            options: fieldData.type === 'select' ? (fieldData.options || []) : []
+        };
         
-        return StorageService.saveToStore('fields', field);
+        StorageService.saveData(data);
+        
+        return data.fields[fieldIndex];
     },
     
     /**
      * Elimina un campo
      * @param {string} id ID del campo
-     * @returns {Promise<boolean>} Promesa que se resuelve con true si se eliminó correctamente
+     * @returns {boolean} Éxito de la eliminación
      */
-    async delete(id) {
-        await StorageService.initializeStorage();
+    delete(id) {
+        const data = StorageService.getData();
+        const initialLength = data.fields.length;
         
-        // Eliminar el campo
-        await StorageService.deleteFromStore('fields', id);
+        data.fields = data.fields.filter(field => field.id !== id);
         
-        // Eliminar el campo de todas las entidades que lo tengan asignado
-        const entities = await EntityModel.getAll();
-        for (const entity of entities) {
-            if (entity.fields.includes(id)) {
-                entity.fields = entity.fields.filter(fieldId => fieldId !== id);
-                await StorageService.saveToStore('entities', entity);
-            }
-        }
+        // Eliminamos el campo de todas las entidades que lo tengan asignado
+        data.entities.forEach(entity => {
+            entity.fields = entity.fields.filter(fieldId => fieldId !== id);
+        });
         
-        return true;
+        StorageService.saveData(data);
+        
+        return data.fields.length < initialLength;
     },
     
     /**
      * Obtiene los campos numéricos compartidos entre entidades
-     * @returns {Promise<Array>} Promesa que se resuelve con la lista de campos numéricos compartidos
+     * @returns {Array} Lista de campos numéricos compartidos
      */
-    async getSharedNumericFields() {
-        await StorageService.initializeStorage();
-        const fields = await this.getAll();
-        const numericFields = fields.filter(field => field.type === 'number');
-        
-        const entities = await EntityModel.getAll();
+    getSharedNumericFields() {
+        const data = StorageService.getData();
+        const numericFields = data.fields.filter(field => field.type === 'number');
         const fieldUsage = {};
         
         // Contar las entidades que usan cada campo
-        entities.forEach(entity => {
+        data.entities.forEach(entity => {
             entity.fields.forEach(fieldId => {
                 if (!fieldUsage[fieldId]) {
                     fieldUsage[fieldId] = 0;

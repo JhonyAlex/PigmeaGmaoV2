@@ -164,8 +164,8 @@ const AdminView = {
     /**
      * Carga y muestra las entidades
      */
-    async loadEntities() {
-        const entities = await EntityModel.getAll();
+    loadEntities() {
+        const entities = EntityModel.getAll();
         const entitiesContainer = document.getElementById('entities-container');
         const noEntitiesMessage = document.getElementById('no-entities-message');
         const entitiesTableContainer = document.getElementById('entities-table-container');

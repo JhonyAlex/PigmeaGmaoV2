@@ -4,92 +4,93 @@
 const EntityModel = {
     /**
      * Obtiene todas las entidades
-     * @returns {Promise<Array>} Promesa que se resuelve con la lista de entidades
+     * @returns {Array} Lista de entidades
      */
-    async getAll() {
-        await StorageService.initializeStorage();
-        const entities = await StorageService.getAllFromStore('entities');
-        return entities || [];
+    getAll() {
+        return StorageService.getData().entities;
     },
     
     /**
      * Obtiene una entidad por su ID
      * @param {string} id ID de la entidad
-     * @returns {Promise<Object|null>} Promesa que se resuelve con la entidad encontrada o null
+     * @returns {Object|null} Entidad encontrada o null
      */
-    async getById(id) {
-        await StorageService.initializeStorage();
-        const entity = await StorageService.getFromStore('entities', id);
-        return entity || null;
+    getById(id) {
+        const entities = this.getAll();
+        return entities.find(entity => entity.id === id) || null;
     },
     
     /**
      * Crea una nueva entidad
      * @param {string} name Nombre de la entidad
-     * @returns {Promise<Object>} Promesa que se resuelve con la entidad creada
+     * @returns {Object} Entidad creada
      */
-    async create(name) {
-        await StorageService.initializeStorage();
+    create(name) {
+        const data = StorageService.getData();
         const newEntity = {
             id: 'entity_' + Date.now(),
             name: name,
             fields: [] // IDs de campos asignados
         };
         
-        return StorageService.saveToStore('entities', newEntity);
+        data.entities.push(newEntity);
+        StorageService.saveData(data);
+        
+        return newEntity;
     },
     
     /**
      * Actualiza una entidad existente
      * @param {string} id ID de la entidad
      * @param {string} name Nuevo nombre
-     * @returns {Promise<Object|null>} Promesa que se resuelve con la entidad actualizada o null
+     * @returns {Object|null} Entidad actualizada o null
      */
-    async update(id, name) {
-        await StorageService.initializeStorage();
-        const entity = await this.getById(id);
+    update(id, name) {
+        const data = StorageService.getData();
+        const entityIndex = data.entities.findIndex(entity => entity.id === id);
         
-        if (!entity) return null;
+        if (entityIndex === -1) return null;
         
-        entity.name = name;
-        return StorageService.saveToStore('entities', entity);
+        data.entities[entityIndex].name = name;
+        StorageService.saveData(data);
+        
+        return data.entities[entityIndex];
     },
     
     /**
      * Elimina una entidad
      * @param {string} id ID de la entidad
-     * @returns {Promise<boolean>} Promesa que se resuelve con true si se eliminó correctamente
+     * @returns {boolean} Éxito de la eliminación
      */
-    async delete(id) {
-        await StorageService.initializeStorage();
+    delete(id) {
+        const data = StorageService.getData();
+        const initialLength = data.entities.length;
         
-        // Eliminar la entidad
-        await StorageService.deleteFromStore('entities', id);
+        data.entities = data.entities.filter(entity => entity.id !== id);
         
-        // Eliminar registros asociados
-        const records = await RecordModel.getAll();
-        const recordsToDelete = records.filter(record => record.entityId === id);
+        // También eliminamos los registros asociados
+        data.records = data.records.filter(record => record.entityId !== id);
         
-        for (const record of recordsToDelete) {
-            await StorageService.deleteFromStore('records', record.id);
-        }
+        StorageService.saveData(data);
         
-        return true;
+        return data.entities.length < initialLength;
     },
     
     /**
      * Asigna campos a una entidad
      * @param {string} entityId ID de la entidad
      * @param {Array} fieldIds IDs de los campos a asignar
-     * @returns {Promise<Object|null>} Promesa que se resuelve con la entidad actualizada o null
+     * @returns {Object|null} Entidad actualizada o null
      */
-    async assignFields(entityId, fieldIds) {
-        await StorageService.initializeStorage();
-        const entity = await this.getById(entityId);
+    assignFields(entityId, fieldIds) {
+        const data = StorageService.getData();
+        const entityIndex = data.entities.findIndex(entity => entity.id === entityId);
         
-        if (!entity) return null;
+        if (entityIndex === -1) return null;
         
-        entity.fields = fieldIds;
-        return StorageService.saveToStore('entities', entity);
+        data.entities[entityIndex].fields = fieldIds;
+        StorageService.saveData(data);
+        
+        return data.entities[entityIndex];
     }
 };

@@ -5,8 +5,8 @@ const ExportUtils = {
     /**
      * Exporta los datos de la aplicación a un archivo JSON
      */
-    async exportToFile() {
-        const data = await StorageService.exportData();
+    exportToFile() {
+        const data = StorageService.exportData();
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         
@@ -24,19 +24,18 @@ const ExportUtils = {
     },
     
     /**
-<<<<<<< HEAD
      * Exporta los registros filtrados a un archivo CSV
      * @param {Array} records Registros a exportar
      */
-    async exportToCSV(records) {
+    exportToCSV(records) {
         if (!records || records.length === 0) {
             UIUtils.showAlert('No hay registros para exportar', 'warning');
             return;
         }
         
         // Obtener las entidades y los campos para cada registro
-        const entities = await EntityModel.getAll();
-        const allFields = await FieldModel.getAll();
+        const entities = EntityModel.getAll();
+        const allFields = FieldModel.getAll();
         
         // Crear un Set para almacenar todos los IDs de campos utilizados en los registros
         const allFieldIds = new Set();
@@ -47,9 +46,9 @@ const ExportUtils = {
         });
         
         // Convertir el Set a un array y filtrar para obtener solo los campos que existen
-        const fieldsPromises = Array.from(allFieldIds).map(fieldId => FieldModel.getById(fieldId));
-        const fieldsResults = await Promise.all(fieldsPromises);
-        const usedFields = fieldsResults.filter(field => field !== null);
+        const usedFields = Array.from(allFieldIds)
+            .map(fieldId => FieldModel.getById(fieldId))
+            .filter(field => field !== null);
         
         // Crear cabeceras: primero la entidad, luego fecha y hora, después todos los campos personalizados
         let headers = ['Entidad', 'Fecha_y_Hora'];
@@ -101,8 +100,6 @@ const ExportUtils = {
     },
     
     /**
-=======
->>>>>>> parent of 6ef5360 (Añadir eliminar y exportar csv)
      * Importa datos desde un archivo JSON seleccionado
      * @param {File} file Archivo a importar
      * @returns {Promise} Promesa con el resultado de la operación
@@ -116,7 +113,7 @@ const ExportUtils = {
             
             const reader = new FileReader();
             
-            reader.onload = async function(event) {
+            reader.onload = function(event) {
                 try {
                     const jsonData = event.target.result;
                     const parsedData = JSON.parse(jsonData);
@@ -128,8 +125,7 @@ const ExportUtils = {
                     }
                     
                     // Realizar la importación
-                    const success = await StorageService.importData(jsonData);
-                    if (success) {
+                    if (StorageService.importData(jsonData)) {
                         resolve('Datos importados correctamente');
                     } else {
                         reject(new Error('Error al importar los datos'));
