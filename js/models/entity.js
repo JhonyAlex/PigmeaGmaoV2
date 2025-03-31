@@ -8,7 +8,8 @@ const EntityModel = {
      */
     async getAll() {
         await StorageService.initializeStorage();
-        return StorageService.getAllFromStore('entities');
+        const entities = await StorageService.getAllFromStore('entities');
+        return entities || [];
     },
     
     /**
