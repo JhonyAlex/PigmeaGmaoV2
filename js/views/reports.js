@@ -164,6 +164,12 @@ const ReportsView = {
         document.getElementById('filter-form').addEventListener('submit', (e) => {
             e.preventDefault();
             this.applyFilters();
+            
+            // Si hay un reporte generado, actualizarlo con los nuevos filtros
+            const reportContainer = document.getElementById('report-container');
+            if (reportContainer && reportContainer.style.display === 'block') {
+                this.generateReport();
+            }
         });
         
         // Generar reporte comparativo
@@ -341,6 +347,7 @@ const ReportsView = {
         const toDateFilter = document.getElementById('filter-to-date').value;
         
         const filters = {
+            entityId: entityFilter || undefined, // Aplicar el filtro de entidad al reporte
             fromDate: fromDateFilter || undefined,
             toDate: toDateFilter || undefined
         };

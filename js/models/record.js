@@ -98,13 +98,18 @@ const RecordModel = {
         }
         
         // Obtenemos las entidades que usan este campo
-        const entities = EntityModel.getAll().filter(entity => 
+        let entities = EntityModel.getAll().filter(entity => 
             entity.fields.includes(fieldId)
         );
         
+        // Si hay un filtro de entidad específico, filtramos aún más
+        if (filters.entityId) {
+            entities = entities.filter(entity => entity.id === filters.entityId);
+        }
+        
         // Si no hay entidades, no podemos generar el reporte
         if (entities.length === 0) {
-            return { error: 'No hay entidades que usen este campo' };
+            return { error: 'No hay entidades que coincidan con los filtros y usen este campo' };
         }
         
         // Filtramos los registros
@@ -182,7 +187,7 @@ const RecordModel = {
             entities: []
         };
         
-        // Para cada entidad, calculamos los valores
+        // Para cada entidad (ya filtradas si hay filtro de entidad), calculamos los valores
         entities.forEach(entity => {
             // Filtrar registros para esta entidad
             const entityRecords = filteredRecords.filter(record => 
