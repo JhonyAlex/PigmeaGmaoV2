@@ -36,10 +36,11 @@ const ChartUtils = {
         const labels = reportData.entities.map(entity => entity.name);
         const values = reportData.entities.map(entity => entity.value);
         
-        // Título según el tipo de agregación
+        // Título según el tipo de agregación y campos
+        const horizontalFieldName = reportData.horizontalField ? reportData.horizontalField : 'Entidad';
         const title = reportData.aggregation === 'sum' 
-            ? `Suma total de ${reportData.field}`
-            : `Promedio de ${reportData.field}`;
+            ? `Suma total de ${reportData.field} por ${horizontalFieldName}`
+            : `Promedio de ${reportData.field} por ${horizontalFieldName}`;
         
         // Crear el gráfico
         const chart = new Chart(canvas, {
@@ -108,11 +109,14 @@ const ChartUtils = {
         const totalValue = reportData.entities.reduce((sum, entity) => sum + entity.value, 0).toFixed(2);
         const totalCount = reportData.entities.reduce((sum, entity) => sum + entity.count, 0);
         
+        // Determinar el título de la primera columna
+        const entityHeaderTitle = reportData.horizontalField ? reportData.horizontalField : 'Entidad';
+        
         return `
             <table class="table table-sm table-striped">
                 <thead>
                     <tr>
-                        <th>Entidad</th>
+                        <th>${entityHeaderTitle}</th>
                         <th class="text-end">${reportData.aggregation === 'sum' ? 'Total' : 'Promedio'}</th>
                         <th class="text-end">Registros</th>
                     </tr>

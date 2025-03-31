@@ -87,9 +87,10 @@ const RecordModel = {
      * @param {string} fieldId ID del campo a comparar
      * @param {string} aggregation Tipo de agregación ('sum' o 'average')
      * @param {Object} filters Filtros adicionales
+     * @param {string} horizontalFieldId ID del campo para el eje horizontal (opcional)
      * @returns {Object} Datos para el reporte
      */
-    generateReport(fieldId, aggregation = 'sum', filters = {}) {
+    generateReport(fieldId, aggregation = 'sum', filters = {}, horizontalFieldId = '') {
         // Obtenemos el campo para asegurarnos que es numérico
         const field = FieldModel.getById(fieldId);
         if (!field || field.type !== 'number') {
@@ -109,7 +110,72 @@ const RecordModel = {
         // Filtramos los registros
         const filteredRecords = this.filter(filters);
         
-        // Preparamos los datos
+        // Si se proporciona un campo para el eje horizontal, lo usamos
+        if (horizontalFieldId) {
+            const horizontalField = FieldModel.getById(horizontalFieldId);
+            if (!horizontalField) {
+                return { error: 'El campo seleccionado para el eje horizontal no existe' };
+            }
+            
+            // Agrupar por el valor del campo horizontal
+            const reportData = {
+                field: field.name,
+                horizontalField: horizontalField.name,
+                aggregation: aggregation,
+                entities: []
+            };
+            
+            // Obtener valores únicos del campo horizontal
+            const uniqueValues = new Set();
+            filteredRecords.forEach(record => {
+                if (record.data[horizontalFieldId] !== undefined) {
+                    uniqueValues.add(record.data[horizontalFieldId]);
+                }
+            });
+            
+            // Para cada valor único, calcular la agregación
+            Array.from(uniqueValues).forEach(value => {
+                // Filtrar registros para este valor
+                const valueRecords = filteredRecords.filter(record => 
+                    record.data[horizontalFieldId] === value && 
+                    record.data[fieldId] !== undefined
+                );
+                
+                if (valueRecords.length === 0) {
+                    reportData.entities.push({
+                        id: value,
+                        name: value,
+                        value: 0,
+                        count: 0
+                    });
+                    return;
+                }
+                
+                // Convertir valores a números
+                const values = valueRecords.map(record => 
+                    parseFloat(record.data[fieldId]) || 0
+                );
+                
+                // Calcular valor según agregación
+                let aggregatedValue = 0;
+                if (aggregation === 'sum') {
+                    aggregatedValue = values.reduce((sum, val) => sum + val, 0);
+                } else if (aggregation === 'average') {
+                    aggregatedValue = values.reduce((sum, val) => sum + val, 0) / values.length;
+                }
+                
+                reportData.entities.push({
+                    id: value,
+                    name: value,
+                    value: aggregatedValue,
+                    count: valueRecords.length
+                });
+            });
+            
+            return reportData;
+        }
+        
+        // Si no hay campo horizontal, usamos las entidades como siempre
         const reportData = {
             field: field.name,
             aggregation: aggregation,

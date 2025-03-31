@@ -17,6 +17,7 @@ const ReportsView = {
         const mainContent = document.getElementById('main-content');
         const entities = EntityModel.getAll();
         const sharedNumericFields = FieldModel.getSharedNumericFields();
+        const sharedFields = FieldModel.getAll(); // Todos los campos para el eje horizontal
         
         // Formatear fecha actual para los inputs de fecha
         const today = new Date().toISOString().split('T')[0];
@@ -101,7 +102,7 @@ const ReportsView = {
                             </div>
                         ` : `
                             <form id="report-form" class="row g-3 mb-4">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label for="report-field" class="form-label">Campo a Comparar</label>
                                     <select class="form-select" id="report-field" required>
                                         <option value="">Seleccione un campo</option>
@@ -110,7 +111,16 @@ const ReportsView = {
                                         ).join('')}
                                     </select>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
+                                    <label for="report-horizontal-field" class="form-label">Eje Horizontal</label>
+                                    <select class="form-select" id="report-horizontal-field">
+                                        <option value="">Identidad Principal</option>
+                                        ${sharedFields.map(field => 
+                                            `<option value="${field.id}">${field.name}</option>`
+                                        ).join('')}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
                                     <label for="report-aggregation" class="form-label">Tipo de Agregación</label>
                                     <select class="form-select" id="report-aggregation">
                                         <option value="sum">Suma</option>
@@ -317,6 +327,7 @@ const ReportsView = {
      */
     generateReport() {
         const fieldId = document.getElementById('report-field').value;
+        const horizontalFieldId = document.getElementById('report-horizontal-field').value;
         const aggregation = document.getElementById('report-aggregation').value;
         
         if (!fieldId) {
@@ -335,7 +346,7 @@ const ReportsView = {
         };
         
         // Generar datos del reporte
-        const reportData = RecordModel.generateReport(fieldId, aggregation, filters);
+        const reportData = RecordModel.generateReport(fieldId, aggregation, filters, horizontalFieldId);
         
         if (reportData.error) {
             UIUtils.showAlert(reportData.error, 'danger', document.querySelector('.card-body'));
