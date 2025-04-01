@@ -12,7 +12,9 @@ const StorageService = {
             const initialData = {
                 config: {
                     title: "Sistema de Registro de Datos",
-                    description: "Registre sus datos de manera flexible y personalizada"
+                    description: "Registre sus datos de manera flexible y personalizada",
+                    entityName: "Entidad",
+                    navbarTitle: "Sistema de Registro Flexible"
                 },
                 entities: [],
                 fields: [],

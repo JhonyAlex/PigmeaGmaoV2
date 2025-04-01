@@ -36,7 +36,17 @@ const AdminView = {
                                 <label for="app-description" class="form-label">Descripción</label>
                                 <textarea class="form-control" id="app-description" rows="2">${config.description}</textarea>
                             </div>
-                            <button type="submit" class="btn btn-primary">Guardar Configuración</button>
+                            <div class="mb-3">
+                            <label for="entity-name-config" class="form-label">Nombre de Entidad</label>
+                            <input type="text" class="form-control" id="entity-name-config" value="${config.entityName || 'Entidad'}" required>
+                            <small class="text-muted">Este nombre reemplazará la palabra "Entidad" en todo el sistema</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="navbar-title" class="form-label">Título del Sistema</label>
+                                <input type="text" class="form-control" id="navbar-title" value="${config.navbarTitle || 'Sistema de Registro Flexible'}" required>
+                                <small class="text-muted">Este título aparecerá en la barra de navegación</small>
+                            </div>
+                                <button type="submit" class="btn btn-primary">Guardar Configuración</button>
                         </form>
                     </div>
                 </div>
@@ -319,14 +329,24 @@ const AdminView = {
     saveConfig() {
         const title = document.getElementById('app-title').value;
         const description = document.getElementById('app-description').value;
+        const entityName = document.getElementById('entity-name-config').value;
+        const navbarTitle = document.getElementById('navbar-title').value;
         
         const config = {
             title: title,
-            description: description
+            description: description,
+            entityName: entityName,
+            navbarTitle: navbarTitle
         };
         
         StorageService.updateConfig(config);
         UIUtils.showAlert('Configuración guardada correctamente', 'success', document.querySelector('.container'));
+        
+        // Actualizar navbar-brand inmediatamente
+        document.querySelector('.navbar-brand').textContent = navbarTitle;
+        
+        // Actualizar menciones de "Entidad" visibles en la página actual
+        this.updateEntityNameReferences(entityName);
     },
     
     /**
@@ -777,5 +797,32 @@ const AdminView = {
         } else {
             UIUtils.showAlert('Error al asignar campos', 'danger', document.querySelector('.container'));
         }
+    },
+    /**
+ * Actualiza las referencias visibles a "Entidad" con el nuevo nombre
+ * @param {string} newEntityName El nuevo nombre para "Entidad"
+ */
+updateEntityNameReferences(newEntityName) {
+    // Actualizar títulos de entidades en la página actual
+    const entityHeaders = document.querySelectorAll('h5:contains("Entidades")');
+    entityHeaders.forEach(header => {
+        header.textContent = header.textContent.replace("Entidades", newEntityName + "s");
+    });
+
+    // Actualizar botones y otros elementos en la página actual si es necesario
+    const addEntityBtn = document.getElementById('add-entity-btn');
+    if (addEntityBtn) {
+        addEntityBtn.innerHTML = addEntityBtn.innerHTML.replace("Agregar Entidad", "Agregar " + newEntityName);
     }
+
+    // Actualizar títulos de modales
+    const entityModalTitle = document.getElementById('entityModalTitle');
+    if (entityModalTitle && entityModalTitle.textContent.includes("Entidad")) {
+        if (entityModalTitle.textContent.includes("Nueva")) {
+            entityModalTitle.textContent = "Nueva " + newEntityName + " Principal";
+        } else if (entityModalTitle.textContent.includes("Editar")) {
+            entityModalTitle.textContent = "Editar " + newEntityName + " Principal";
+        }
+    }
+}
 };  

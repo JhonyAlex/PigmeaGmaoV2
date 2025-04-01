@@ -4,6 +4,12 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Inicializar almacenamiento
     StorageService.initializeStorage();
+
+    // Aplicar configuración personalizada
+    const config = StorageService.getConfig();
+    if (config.navbarTitle) {
+        document.querySelector('.navbar-brand').textContent = config.navbarTitle;
+    }
     
     // Inicializar enrutador
     Router.init();
