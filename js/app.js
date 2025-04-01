@@ -76,35 +76,29 @@ document.addEventListener('DOMContentLoaded', () => {
  * Actualiza todas las referencias a "Entidad" en la página inicial
  /** @param {string} newEntityName El nuevo nombre para "Entidad"
  */
-function updateGlobalEntityReferences(newEntityName) {
-    // Actualizar títulos de modales
+ function updateGlobalEntityReferences(newEntityName) {
+    console.log("Actualizando referencias globales a Entidad con:", newEntityName);
+    
+    // Actualizar modal de entidad
     const entityModalTitle = document.getElementById('entityModalTitle');
-    if (entityModalTitle && entityModalTitle.textContent.includes("Entidad")) {
-        entityModalTitle.textContent = entityModalTitle.textContent.replace("Entidad", newEntityName);
+    if (entityModalTitle) {
+        if (entityModalTitle.textContent === "Entidad Principal") {
+            entityModalTitle.textContent = newEntityName + " Principal";
+        }
     }
     
     // Actualizar texto en el título del modal de asignación de campos
     const assignModalTitle = document.querySelector('#assignFieldsModal .modal-title');
     if (assignModalTitle) {
+        // Mantener el texto "Asignar Campos a " pero no modificar el span
         const titleText = assignModalTitle.textContent;
-        if (titleText.includes("Asignar Campos a")) {
-            // Obtener solo la parte "Asignar Campos a" sin afectar al span
-            const parts = titleText.split(/\s+/);
-            if (parts.length >= 3) {
-                assignModalTitle.firstChild.textContent = "Asignar Campos a ";
+        if (titleText.startsWith("Asignar Campos a")) {
+            const spanElement = assignModalTitle.querySelector('span');
+            if (spanElement) {
+                const spanContent = spanElement.textContent;
+                assignModalTitle.textContent = "Asignar Campos a ";
+                assignModalTitle.appendChild(spanElement);
             }
         }
     }
-    
-    // Otros elementos estáticos que puedan contener la palabra "Entidad"
-    document.querySelectorAll('button, h5, p, label, div').forEach(el => {
-        if (el.childNodes && el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
-            // Nodo de texto directo
-            if (el.textContent.includes("Entidad")) {
-                el.textContent = el.textContent.replace(/Entidad/g, newEntityName);
-            } else if (el.textContent.includes("entidad")) {
-                el.textContent = el.textContent.replace(/entidad/g, newEntityName.toLowerCase());
-            }
-        }
-    });
 }

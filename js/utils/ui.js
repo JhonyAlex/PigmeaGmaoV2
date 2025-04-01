@@ -109,7 +109,7 @@ const UIUtils = {
         const config = StorageService.getConfig();
         const entityName = config.entityName || 'Entidad';
         return lowercase ? entityName.toLowerCase() : entityName;
-    },,
+    },
     
     /**
      * Agrega efecto de animación a un elemento recién creado

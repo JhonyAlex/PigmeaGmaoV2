@@ -128,47 +128,78 @@ const AdminView = {
      * Establece los event listeners para la vista
      */
     setupEventListeners() {
-        // Configuración
-        document.getElementById('config-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.saveConfig();
-        });
-        
+        const configForm = document.getElementById('config-form');
+        const addEntityBtn = document.getElementById('add-entity-btn');
+        const addFieldBtn = document.getElementById('add-field-btn');
+        const saveEntityBtn = document.getElementById('saveEntityBtn');
+        const saveFieldBtn = document.getElementById('saveFieldBtn');
+        const fieldType = document.getElementById('field-type');
+        const addOptionBtn = document.getElementById('add-option-btn');
+        const saveAssignFieldsBtn = document.getElementById('saveAssignFieldsBtn');
+        const optionsContainer = document.getElementById('options-container');
+    
+        // Configuración del formulario
+        if (configForm) {
+            console.log("Configurando listener para el formulario de configuración");
+            configForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                console.log("Formulario de configuración enviado");
+                this.saveConfig();
+            });
+        } else {
+            console.error("Formulario de configuración no encontrado");
+        }
+    
         // Entidades
-        document.getElementById('add-entity-btn').addEventListener('click', () => {
-            this.showEntityModal();
-        });
-        
+        if (addEntityBtn) {
+            addEntityBtn.addEventListener('click', () => {
+                this.showEntityModal();
+            });
+        }
+    
         // Campos
-        document.getElementById('add-field-btn').addEventListener('click', () => {
-            this.showFieldModal();
-        });
-        
+        if (addFieldBtn) {
+            addFieldBtn.addEventListener('click', () => {
+                this.showFieldModal();
+            });
+        }
+    
         // Modal de entidad
-        document.getElementById('saveEntityBtn').addEventListener('click', () => {
-            this.saveEntity();
-        });
-        
+        if (saveEntityBtn) {
+            saveEntityBtn.addEventListener('click', () => {
+                this.saveEntity();
+            });
+        }
+    
         // Modal de campo
-        document.getElementById('saveFieldBtn').addEventListener('click', () => {
-            this.saveField();
-        });
-        
+        if (saveFieldBtn) {
+            saveFieldBtn.addEventListener('click', () => {
+                this.saveField();
+            });
+        }
+    
         // Mostrar/ocultar opciones al cambiar tipo de campo
-        document.getElementById('field-type').addEventListener('change', (e) => {
-            const optionsContainer = document.getElementById('options-container');
-            optionsContainer.style.display = e.target.value === 'select' ? 'block' : 'none';
-        });
-        
+        if (fieldType) {
+            fieldType.addEventListener('change', (e) => {
+                if (optionsContainer) {
+                    optionsContainer.style.display = e.target.value === 'select' ? 'block' : 'none';
+                }
+            });
+        }
+    
         // Agregar opción
-        document.getElementById('add-option-btn').addEventListener('click', () => {
-            this.addOptionInput();
-        });
-        
+        if (addOptionBtn) {
+            addOptionBtn.addEventListener('click', () => {
+                this.addOptionInput();
+            });
+        }
+    
         // Modal de asignación de campos
-        document.getElementById('saveAssignFieldsBtn').addEventListener('click', () => {
-            this.saveAssignedFields();
-        });
+        if (saveAssignFieldsBtn) {
+            saveAssignFieldsBtn.addEventListener('click', () => {
+                this.saveAssignedFields();
+            });
+        }
     },
     
     /**
@@ -327,6 +358,7 @@ const AdminView = {
      * Guarda la configuración general
      */
     saveConfig() {
+        console.log("Guardando configuración...");
         const title = document.getElementById('app-title').value;
         const description = document.getElementById('app-description').value;
         const entityName = document.getElementById('entity-name-config').value;
@@ -347,6 +379,8 @@ const AdminView = {
         
         // Actualizar menciones de "Entidad" visibles en la página actual
         this.updateEntityNameReferences(entityName);
+        
+        console.log("Configuración guardada:", config);
     },
     
     /**
@@ -428,16 +462,16 @@ const AdminView = {
      */
     confirmDeleteEntity(entityId) {
         const entity = EntityModel.getById(entityId);
-        if (!entity) return;
-        
-        const config = StorageService.getConfig();
-        const entityTypeName = config.entityName || 'Entidad';
-        
-        const confirmModal = UIUtils.initModal('confirmModal');
-        const confirmMessage = document.getElementById('confirm-message');
-        const confirmActionBtn = document.getElementById('confirmActionBtn');
-        
-        confirmMessage.textContent = `¿Está seguro de eliminar la ${entityTypeName.toLowerCase()} "${entity.name}"? Esta acción no se puede deshacer y eliminará todos los registros asociados.`;
+    if (!entity) return;
+    
+    const config = StorageService.getConfig();
+    const entityName = config.entityName || 'Entidad';
+    
+    const confirmModal = UIUtils.initModal('confirmModal');
+    const confirmMessage = document.getElementById('confirm-message');
+    const confirmActionBtn = document.getElementById('confirmActionBtn');
+    
+    confirmMessage.textContent = `¿Está seguro de eliminar la ${entityName.toLowerCase()} "${entity.name}"? Esta acción no se puede deshacer y eliminará todos los registros asociados.`;
         
         // Eliminar listeners anteriores
         const newConfirmBtn = confirmActionBtn.cloneNode(true);
@@ -816,36 +850,23 @@ const AdminView = {
  * @param {string} newEntityName El nuevo nombre para "Entidad"
  */
 updateEntityNameReferences(newEntityName) {
-    // Actualizar títulos de encabezados con la palabra "Entidades"
-    const allHeaders = document.querySelectorAll('h5');
-    allHeaders.forEach(header => {
-        if (header.textContent.includes("Entidades")) {
-            header.textContent = header.textContent.replace("Entidades", newEntityName + "s");
-        }
-    });
-
+    console.log("Actualizando referencias a Entidad con:", newEntityName);
+    
+    // Actualizar encabezado "Entidades Principales"
+    const entitiesHeader = document.querySelector('.card-header h5');
+    if (entitiesHeader && entitiesHeader.textContent.includes("Entidades")) {
+        entitiesHeader.textContent = entitiesHeader.textContent.replace("Entidades", newEntityName + "s");
+    }
+    
     // Actualizar botón "Agregar Entidad"
     const addEntityBtn = document.getElementById('add-entity-btn');
     if (addEntityBtn) {
-        const btnContent = addEntityBtn.innerHTML;
-        if (btnContent.includes("Agregar Entidad")) {
-            addEntityBtn.innerHTML = btnContent.replace("Agregar Entidad", "Agregar " + newEntityName);
+        const btnHTML = addEntityBtn.innerHTML;
+        if (btnHTML.includes("Agregar Entidad")) {
+            addEntityBtn.innerHTML = btnHTML.replace("Agregar Entidad", "Agregar " + newEntityName);
         }
     }
-
-    // Actualizar títulos de modales
-    const entityModalTitle = document.getElementById('entityModalTitle');
-    if (entityModalTitle) {
-        const titleText = entityModalTitle.textContent;
-        if (titleText.includes("Nueva Entidad")) {
-            entityModalTitle.textContent = "Nueva " + newEntityName + " Principal";
-        } else if (titleText.includes("Editar Entidad")) {
-            entityModalTitle.textContent = "Editar " + newEntityName + " Principal";
-        } else if (titleText === "Entidad Principal") {
-            entityModalTitle.textContent = newEntityName + " Principal";
-        }
-    }
-
+    
     // Actualizar mensaje "No hay entidades registradas"
     const noEntitiesMessage = document.getElementById('no-entities-message');
     if (noEntitiesMessage) {
@@ -854,6 +875,18 @@ updateEntityNameReferences(newEntityName) {
             messageText.textContent = messageText.textContent
                 .replace("entidades", newEntityName.toLowerCase() + "s")
                 .replace("nueva entidad", "nueva " + newEntityName.toLowerCase());
+        }
+    }
+    
+    // Actualizar modal de entidad
+    const entityModalTitle = document.getElementById('entityModalTitle');
+    if (entityModalTitle) {
+        if (entityModalTitle.textContent === "Entidad Principal") {
+            entityModalTitle.textContent = newEntityName + " Principal";
+        } else if (entityModalTitle.textContent === "Nueva Entidad Principal") {
+            entityModalTitle.textContent = "Nueva " + newEntityName + " Principal";
+        } else if (entityModalTitle.textContent === "Editar Entidad Principal") {
+            entityModalTitle.textContent = "Editar " + newEntityName + " Principal";
         }
     }
 }
