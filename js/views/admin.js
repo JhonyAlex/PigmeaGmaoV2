@@ -392,6 +392,10 @@ const AdminView = {
         const entityId = document.getElementById('entity-id').value;
         const entityName = document.getElementById('entity-name').value;
         
+        // Obtener el nombre personalizado para entidad
+        const config = StorageService.getConfig();
+        const entityTypeName = config.entityName || 'Entidad';
+        
         let result;
         if (entityId) {
             // Actualizar entidad existente
@@ -408,11 +412,13 @@ const AdminView = {
             // Recargar lista
             this.loadEntities();
             
-            // Mostrar mensaje
-            const message = entityId ? 'Entidad actualizada correctamente' : 'Entidad creada correctamente';
+            // Mostrar mensaje con el nombre personalizado
+            const message = entityId ? 
+                entityTypeName + ' actualizada correctamente' : 
+                entityTypeName + ' creada correctamente';
             UIUtils.showAlert(message, 'success', document.querySelector('.container'));
         } else {
-            UIUtils.showAlert('Error al guardar la entidad', 'danger', document.querySelector('.container'));
+            UIUtils.showAlert('Error al guardar la ' + entityTypeName.toLowerCase(), 'danger', document.querySelector('.container'));
         }
     },
     
@@ -425,13 +431,13 @@ const AdminView = {
         if (!entity) return;
         
         const config = StorageService.getConfig();
-        const entityName = config.entityName || 'Entidad';
+        const entityTypeName = config.entityName || 'Entidad';
         
         const confirmModal = UIUtils.initModal('confirmModal');
         const confirmMessage = document.getElementById('confirm-message');
         const confirmActionBtn = document.getElementById('confirmActionBtn');
         
-        confirmMessage.textContent = `¿Está seguro de eliminar la entidad "${entity.name}"? Esta acción no se puede deshacer y eliminará todos los registros asociados.`;
+        confirmMessage.textContent = `¿Está seguro de eliminar la ${entityTypeName.toLowerCase()} "${entity.name}"? Esta acción no se puede deshacer y eliminará todos los registros asociados.`;
         
         // Eliminar listeners anteriores
         const newConfirmBtn = confirmActionBtn.cloneNode(true);
@@ -449,9 +455,9 @@ const AdminView = {
                 this.loadEntities();
                 
                 // Mostrar mensaje
-                UIUtils.showAlert('Entidad eliminada correctamente', 'success', document.querySelector('.container'));
+                UIUtils.showAlert(entityTypeName + ' eliminada correctamente', 'success', document.querySelector('.container'));
             } else {
-                UIUtils.showAlert('Error al eliminar la entidad', 'danger', document.querySelector('.container'));
+                UIUtils.showAlert('Error al eliminar la ' + entityTypeName.toLowerCase(), 'danger', document.querySelector('.container'));
             }
         });
         
@@ -847,7 +853,7 @@ updateEntityNameReferences(newEntityName) {
         if (messageText && messageText.textContent.includes("entidades")) {
             messageText.textContent = messageText.textContent
                 .replace("entidades", newEntityName.toLowerCase() + "s")
-                .replace("nueva entidad", "nuevo " + newEntityName.toLowerCase());
+                .replace("nueva entidad", "nueva " + newEntityName.toLowerCase());
         }
     }
 }

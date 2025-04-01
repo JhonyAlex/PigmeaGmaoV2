@@ -74,19 +74,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /**
  * Actualiza todas las referencias a "Entidad" en la página inicial
- * @param {string} newEntityName El nuevo nombre para "Entidad"
+ /** @param {string} newEntityName El nuevo nombre para "Entidad"
  */
 function updateGlobalEntityReferences(newEntityName) {
     // Actualizar títulos de modales
     const entityModalTitle = document.getElementById('entityModalTitle');
-    if (entityModalTitle && entityModalTitle.textContent === "Entidad Principal") {
-        entityModalTitle.textContent = newEntityName + " Principal";
+    if (entityModalTitle && entityModalTitle.textContent.includes("Entidad")) {
+        entityModalTitle.textContent = entityModalTitle.textContent.replace("Entidad", newEntityName);
     }
-
+    
     // Actualizar texto en el título del modal de asignación de campos
     const assignModalTitle = document.querySelector('#assignFieldsModal .modal-title');
-    if (assignModalTitle && assignModalTitle.textContent.includes("Asignar Campos a")) {
-        // No modificamos el span interno que contiene el nombre específico de la entidad
-        assignModalTitle.childNodes[0].textContent = "Asignar Campos a ";
+    if (assignModalTitle) {
+        const titleText = assignModalTitle.textContent;
+        if (titleText.includes("Asignar Campos a")) {
+            // Obtener solo la parte "Asignar Campos a" sin afectar al span
+            const parts = titleText.split(/\s+/);
+            if (parts.length >= 3) {
+                assignModalTitle.firstChild.textContent = "Asignar Campos a ";
+            }
+        }
     }
+    
+    // Otros elementos estáticos que puedan contener la palabra "Entidad"
+    document.querySelectorAll('button, h5, p, label, div').forEach(el => {
+        if (el.childNodes && el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
+            // Nodo de texto directo
+            if (el.textContent.includes("Entidad")) {
+                el.textContent = el.textContent.replace(/Entidad/g, newEntityName);
+            } else if (el.textContent.includes("entidad")) {
+                el.textContent = el.textContent.replace(/entidad/g, newEntityName.toLowerCase());
+            }
+        }
+    });
 }
