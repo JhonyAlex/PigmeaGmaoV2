@@ -288,49 +288,140 @@ const RegisterView = {
      * Muestra los detalles de un registro
      * @param {string} recordId ID del registro
      */
-    showRecordDetails(recordId) {
-        const record = RecordModel.getById(recordId);
-        if (!record) return;
+    /**
+ * Muestra los detalles de un registro
+ * @param {string} recordId ID del registro
+ */
+showRecordDetails(recordId) {
+    const record = RecordModel.getById(recordId);
+    if (!record) return;
+    
+    const entity = EntityModel.getById(record.entityId) || { name: 'Desconocido' };
+    const fields = FieldModel.getByIds(Object.keys(record.data));
+    
+    const modal = UIUtils.initModal('viewRecordModal');
+    const recordDetails = document.getElementById('record-details');
+    
+    // Preparar contenido del modal
+    const detailsHTML = `
+        <div class="mb-3">
+            <strong>Entidad:</strong> ${entity.name}
+        </div>
+        <div class="mb-3">
+            <strong>Fecha y Hora:</strong> <span id="record-timestamp">${UIUtils.formatDate(record.timestamp)}</span>
+        </div>
+        <div class="mb-3">
+            <strong>Datos:</strong>
+            <table class="table table-sm table-bordered mt-2">
+                <thead class="table-light">
+                    <tr>
+                        <th>Campo</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.entries(record.data).map(([fieldId, value]) => {
+                        const field = fields.find(f => f.id === fieldId) || { name: fieldId };
+                        return `
+                            <tr>
+                                <td>${field.name}</td>
+                                <td>${value}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    recordDetails.innerHTML = detailsHTML;
+    
+    // Añadir botones y sus listeners
+    const footerDiv = document.querySelector('#viewRecordModal .modal-footer');
+    footerDiv.innerHTML = `
+        <button type="button" class="btn btn-danger me-auto" id="deleteRecordBtn">Eliminar registro</button>
+        <button type="button" class="btn btn-warning" id="editDateBtn">Editar fecha</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+    `;
+    
+    // Listener para el botón de eliminar registro
+    document.getElementById('deleteRecordBtn').addEventListener('click', () => {
+        // Configurar el modal de confirmación
+        const confirmModal = UIUtils.initModal('confirmModal');
+        document.getElementById('confirm-message').textContent = 
+            '¿Está seguro de que desea eliminar este registro? Esta acción no se puede deshacer.';
+            
+        const confirmBtn = document.getElementById('confirmActionBtn');
         
-        const entity = EntityModel.getById(record.entityId) || { name: 'Desconocido' };
-        const fields = FieldModel.getByIds(Object.keys(record.data));
+        // Limpiar listeners anteriores
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
         
-        const modal = UIUtils.initModal('viewRecordModal');
-        const recordDetails = document.getElementById('record-details');
+        // Añadir nuevo listener
+        newConfirmBtn.addEventListener('click', () => {
+            const deleted = RecordModel.delete(recordId);
+            confirmModal.hide();
+            modal.hide();
+            
+            if (deleted) {
+                this.renderRecords(); // Actualizar lista de registros
+                UIUtils.showAlert('Registro eliminado correctamente', 'success', document.querySelector('.card-body'));
+            } else {
+                UIUtils.showAlert('Error al eliminar el registro', 'danger', document.querySelector('.card-body'));
+            }
+        });
         
-        // Preparar contenido del modal
-        const detailsHTML = `
-            <div class="mb-3">
-                <strong>Entidad:</strong> ${entity.name}
-            </div>
-            <div class="mb-3">
-                <strong>Fecha y Hora:</strong> ${UIUtils.formatDate(record.timestamp)}
-            </div>
-            <div class="mb-3">
-                <strong>Datos:</strong>
-                <table class="table table-sm table-bordered mt-2">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Campo</th>
-                            <th>Valor</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${Object.entries(record.data).map(([fieldId, value]) => {
-                            const field = fields.find(f => f.id === fieldId) || { name: fieldId };
-                            return `
-                                <tr>
-                                    <td>${field.name}</td>
-                                    <td>${value}</td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
+        // Mostrar modal de confirmación
+        confirmModal.show();
+    });
+    
+    // Listener para el botón de editar fecha
+    document.getElementById('editDateBtn').addEventListener('click', () => {
+        // Crear un input para la fecha y hora
+        const timestampSpan = document.getElementById('record-timestamp');
+        const currentTimestamp = new Date(record.timestamp);
+        
+        // Formatear la fecha para el input datetime-local
+        const formattedDate = currentTimestamp.toISOString().slice(0, 16);
+        
+        // Reemplazar el texto por un input
+        timestampSpan.innerHTML = `
+            <div class="input-group">
+                <input type="datetime-local" id="new-timestamp" class="form-control form-control-sm" value="${formattedDate}">
+                <button class="btn btn-sm btn-primary" id="save-timestamp">Guardar</button>
+                <button class="btn btn-sm btn-secondary" id="cancel-timestamp">Cancelar</button>
             </div>
         `;
         
-        recordDetails.innerHTML = detailsHTML;
-        modal.show();
-    }
+        // Listener para guardar la nueva fecha
+        document.getElementById('save-timestamp').addEventListener('click', () => {
+            const newTimestamp = document.getElementById('new-timestamp').value;
+            
+            if (!newTimestamp) {
+                UIUtils.showAlert('Debe seleccionar una fecha válida', 'warning', recordDetails);
+                return;
+            }
+            
+            // Convertir a formato ISO
+            const newDate = new Date(newTimestamp).toISOString();
+            const updatedRecord = RecordModel.updateDate(recordId, newDate);
+            
+            if (updatedRecord) {
+                // Actualizar la vista
+                timestampSpan.textContent = UIUtils.formatDate(newDate);
+                this.renderRecords(); // Actualizar lista de registros
+                UIUtils.showAlert('Fecha actualizada correctamente', 'success', recordDetails);
+            } else {
+                UIUtils.showAlert('Error al actualizar la fecha', 'danger', recordDetails);
+            }
+        });
+        
+        // Listener para cancelar la edición
+        document.getElementById('cancel-timestamp').addEventListener('click', () => {
+            timestampSpan.textContent = UIUtils.formatDate(record.timestamp);
+        });
+    });
+    
+    modal.show();
+}
 };

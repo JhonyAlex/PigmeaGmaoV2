@@ -255,5 +255,56 @@ const RecordModel = {
         });
         
         return reportData;
+    },
+
+
+    // Añadir estos métodos al RecordModel en js/models/record.js
+
+/**
+ * Actualiza la fecha de un registro
+ * @param {string} id ID del registro
+ * @param {string} newDate Nueva fecha (en formato ISO)
+ * @returns {Object|null} Registro actualizado o null si no se encuentra
+ */
+updateDate(id, newDate) {
+    const data = StorageService.getData();
+    const recordIndex = data.records.findIndex(record => record.id === id);
+    
+    if (recordIndex === -1) {
+        return null;
     }
+    
+    data.records[recordIndex].timestamp = newDate;
+    StorageService.saveData(data);
+    
+    return data.records[recordIndex];
+},
+
+/**
+ * Elimina un registro por su ID
+ * @param {string} id ID del registro a eliminar
+ * @returns {boolean} true si se eliminó correctamente, false si no
+ */
+delete(id) {
+    const data = StorageService.getData();
+    const initialLength = data.records.length;
+    
+    data.records = data.records.filter(record => record.id !== id);
+    
+    if (data.records.length !== initialLength) {
+        StorageService.saveData(data);
+        return true;
+    }
+    
+    return false;
+}
+
+
+
+
+
+
+
+
+
 };
