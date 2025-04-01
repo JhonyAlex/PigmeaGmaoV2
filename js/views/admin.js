@@ -32,10 +32,12 @@ const AdminView = {
                             <div class="mb-3">
                                 <label for="app-title" class="form-label">Título</label>
                                 <input type="text" class="form-control" id="app-title" value="${config.title}" required>
+                                <small class="text-muted">Este será el título del sitio</small>
                             </div>
                             <div class="mb-3">
                                 <label for="app-description" class="form-label">Descripción</label>
                                 <textarea class="form-control" id="app-description" rows="2">${config.description}</textarea>
+                                <small class="text-muted">Este es la descripción general</small>
                             </div>
                             <div class="mb-3">
                             <label for="entity-name-config" class="form-label">Nombre de Entidad</label>
