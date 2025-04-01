@@ -76,19 +76,21 @@ const ReportsView = {
                 ` : `
                     <form id="report-form" class="row g-3 mb-4">
                         <div class="col-md-4">
-                            <label for="report-field" class="form-label">Campo a Comparar</label>
-                            <select class="form-select" id="report-field" required>
-                                <option value="">Seleccione un campo</option>
-                                ${sharedNumericFields.map(field => 
-                                    `<option value="${field.id}">${field.name}</option>`
-                                ).join('')}
-                            </select>
-                        </div>
-                        <div class="col-md-4">
                             <label for="report-horizontal-field" class="form-label">Eje Horizontal</label>
                             <select class="form-select" id="report-horizontal-field">
                                 <option value="">Identidad Principal</option>
                                 ${sharedFields.map(field => 
+                                    `<option value="${field.id}">${field.name}</option>`
+                                ).join('')}
+                            </select>
+                        </div>  
+
+
+                        <div class="col-md-4">
+                            <label for="report-field" class="form-label">Campo a Comparar</label>
+                            <select class="form-select" id="report-field" required>
+                                <option value="">Seleccione un campo</option>
+                                ${sharedNumericFields.map(field => 
                                     `<option value="${field.id}">${field.name}</option>`
                                 ).join('')}
                             </select>
