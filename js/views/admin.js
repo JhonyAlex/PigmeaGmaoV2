@@ -16,6 +16,7 @@ const AdminView = {
     render() {
         const mainContent = document.getElementById('main-content');
         const config = StorageService.getConfig();
+        const entityName = config.entityName || 'Entidad';
         
         const template = `
             <div class="container mt-4">
@@ -54,15 +55,15 @@ const AdminView = {
                 <!-- Entidades Principales -->
                 <div class="card mb-4">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Entidades Principales</h5>
+                        <h5 class="mb-0">${entityName}s Principales</h5>
                         <button class="btn btn-light btn-sm" id="add-entity-btn">
-                            <i class="bi bi-plus-circle"></i> Agregar Entidad
+                            <i class="bi bi-plus-circle"></i> Agregar ${entityName}
                         </button>
                     </div>
                     <div class="card-body">
                         <div id="entities-container">
                             <div class="text-center py-4" id="no-entities-message">
-                                <p class="text-muted">No hay entidades registradas. Agregue una nueva entidad.</p>
+                                <p class="text-muted">No hay ${entityName.toLowerCase()}s registradas. Agregue una nueva ${entityName.toLowerCase()}.</p>
                             </div>
                             <div class="table-responsive" id="entities-table-container" style="display: none;">
                                 <table class="table table-hover">
@@ -393,6 +394,10 @@ const AdminView = {
         const entityIdInput = document.getElementById('entity-id');
         const entityNameInput = document.getElementById('entity-name');
         
+        // Obtener nombre personalizado
+        const config = StorageService.getConfig();
+        const entityName = config.entityName || 'Entidad';
+        
         // Limpiar formulario
         document.getElementById('entityForm').reset();
         
@@ -401,12 +406,12 @@ const AdminView = {
             const entity = EntityModel.getById(entityId);
             if (!entity) return;
             
-            modalTitle.textContent = 'Editar Entidad Principal';
+            modalTitle.textContent = `Editar ${entityName} Principal`;
             entityIdInput.value = entity.id;
             entityNameInput.value = entity.name;
         } else {
             // Modo creación
-            modalTitle.textContent = 'Nueva Entidad Principal';
+            modalTitle.textContent = `Nueva ${entityName} Principal`;
             entityIdInput.value = '';
         }
         
@@ -489,6 +494,8 @@ const AdminView = {
                 this.loadEntities();
                 
                 // Mostrar mensaje
+                const config = StorageService.getConfig();
+                const entityTypeName = config.entityName || 'Entidad';
                 UIUtils.showAlert(entityTypeName + ' eliminada correctamente', 'success', document.querySelector('.container'));
             } else {
                 UIUtils.showAlert('Error al eliminar la ' + entityTypeName.toLowerCase(), 'danger', document.querySelector('.container'));

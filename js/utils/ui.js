@@ -99,6 +99,16 @@ const UIUtils = {
         
         return inputHTML;
     },
+    getEntityName(lowercase = false, plural = false) {
+        const config = StorageService.getConfig();
+        let entityName = config.entityName || 'Entidad';
+        
+        if (plural) {
+            entityName += 's';
+        }
+        
+        return lowercase ? entityName.toLowerCase() : entityName;
+    },
 
     /**
  * Obtiene el nombre personalizado para "Entidad" desde la configuración
