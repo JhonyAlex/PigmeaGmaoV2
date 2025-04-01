@@ -99,6 +99,17 @@ const UIUtils = {
         
         return inputHTML;
     },
+
+    /**
+ * Obtiene el nombre personalizado para "Entidad" desde la configuración
+ * @param {boolean} lowercase Si es true, devuelve en minúscula
+ * @returns {string} El nombre personalizado para "Entidad"
+ */
+getEntityName(lowercase = false) {
+    const config = StorageService.getConfig();
+    const entityName = config.entityName || 'Entidad';
+    return lowercase ? entityName.toLowerCase() : entityName;
+},
     
     /**
      * Agrega efecto de animación a un elemento recién creado

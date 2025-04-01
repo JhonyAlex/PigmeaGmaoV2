@@ -424,6 +424,9 @@ const AdminView = {
         const entity = EntityModel.getById(entityId);
         if (!entity) return;
         
+        const config = StorageService.getConfig();
+        const entityName = config.entityName || 'Entidad';
+        
         const confirmModal = UIUtils.initModal('confirmModal');
         const confirmMessage = document.getElementById('confirm-message');
         const confirmActionBtn = document.getElementById('confirmActionBtn');
@@ -802,26 +805,49 @@ const AdminView = {
  * Actualiza las referencias visibles a "Entidad" con el nuevo nombre
  * @param {string} newEntityName El nuevo nombre para "Entidad"
  */
+/**
+ * Actualiza las referencias visibles a "Entidad" con el nuevo nombre
+ * @param {string} newEntityName El nuevo nombre para "Entidad"
+ */
 updateEntityNameReferences(newEntityName) {
-    // Actualizar títulos de entidades en la página actual
-    const entityHeaders = document.querySelectorAll('h5:contains("Entidades")');
-    entityHeaders.forEach(header => {
-        header.textContent = header.textContent.replace("Entidades", newEntityName + "s");
+    // Actualizar títulos de encabezados con la palabra "Entidades"
+    const allHeaders = document.querySelectorAll('h5');
+    allHeaders.forEach(header => {
+        if (header.textContent.includes("Entidades")) {
+            header.textContent = header.textContent.replace("Entidades", newEntityName + "s");
+        }
     });
 
-    // Actualizar botones y otros elementos en la página actual si es necesario
+    // Actualizar botón "Agregar Entidad"
     const addEntityBtn = document.getElementById('add-entity-btn');
     if (addEntityBtn) {
-        addEntityBtn.innerHTML = addEntityBtn.innerHTML.replace("Agregar Entidad", "Agregar " + newEntityName);
+        const btnContent = addEntityBtn.innerHTML;
+        if (btnContent.includes("Agregar Entidad")) {
+            addEntityBtn.innerHTML = btnContent.replace("Agregar Entidad", "Agregar " + newEntityName);
+        }
     }
 
     // Actualizar títulos de modales
     const entityModalTitle = document.getElementById('entityModalTitle');
-    if (entityModalTitle && entityModalTitle.textContent.includes("Entidad")) {
-        if (entityModalTitle.textContent.includes("Nueva")) {
+    if (entityModalTitle) {
+        const titleText = entityModalTitle.textContent;
+        if (titleText.includes("Nueva Entidad")) {
             entityModalTitle.textContent = "Nueva " + newEntityName + " Principal";
-        } else if (entityModalTitle.textContent.includes("Editar")) {
+        } else if (titleText.includes("Editar Entidad")) {
             entityModalTitle.textContent = "Editar " + newEntityName + " Principal";
+        } else if (titleText === "Entidad Principal") {
+            entityModalTitle.textContent = newEntityName + " Principal";
+        }
+    }
+
+    // Actualizar mensaje "No hay entidades registradas"
+    const noEntitiesMessage = document.getElementById('no-entities-message');
+    if (noEntitiesMessage) {
+        const messageText = noEntitiesMessage.querySelector('p');
+        if (messageText && messageText.textContent.includes("entidades")) {
+            messageText.textContent = messageText.textContent
+                .replace("entidades", newEntityName.toLowerCase() + "s")
+                .replace("nueva entidad", "nuevo " + newEntityName.toLowerCase());
         }
     }
 }
