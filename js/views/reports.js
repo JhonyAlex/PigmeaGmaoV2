@@ -27,133 +27,135 @@ const ReportsView = {
         
         const template = `
             <div class="container mt-4">
-                <h2>Reportes y Análisis</h2>
-                
-                <!-- Filtros -->
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Filtros</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="filter-form" class="row g-3">
-                            <div class="col-md-4">
-                                <label for="filter-entity" class="form-label">Entidad(es)</label>
-                                <select class="form-select" id="filter-entity" multiple size="4">
-                                    <option value="">Todas las entidades</option>
-                                    ${entities.map(entity => 
-                                        `<option value="${entity.id}">${entity.name}</option>`
-                                    ).join('')}
-                                </select>
-                                <div class="form-text">Mantenga presionado Ctrl (⌘ en Mac) para seleccionar múltiples entidades</div>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="filter-from-date" class="form-label">Desde</label>
-                                <input type="date" class="form-control" id="filter-from-date" value="${lastMonthStr}">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="filter-to-date" class="form-label">Hasta</label>
-                                <input type="date" class="form-control" id="filter-to-date" value="${today}">
-                            </div>
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
-                            </div>
-                        </form>
-                    </div>
+    <h2>Reportes y Análisis</h2>
+    
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Filtros</h5>
+        </div>
+        <div class="card-body">
+            <form id="filter-form" class="row g-3">
+                <div class="col-md-4">
+                    <label for="filter-entity" class="form-label">Entidad(es)</label>
+                    <select class="form-select" id="filter-entity" multiple size="4">
+                        <option value="">Todas las entidades</option>
+                        ${entities.map(entity => 
+                            `<option value="${entity.id}">${entity.name}</option>`
+                        ).join('')}
+                    </select>
+                    <div class="form-text">Mantenga presionado Ctrl (⌘ en Mac) para seleccionar múltiples entidades</div>
                 </div>
-                
-                <!-- Tabla de Registros -->
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Registros</h5>
-                        <div>
-                            <button id="export-csv-btn" class="btn btn-outline-light btn-sm me-2">
-                                <i class="bi bi-file-earmark-spreadsheet"></i> Exportar a CSV
-                            </button>
-                            <span id="records-count" class="badge bg-light text-dark">0 registros</span>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0" id="records-table">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Entidad</th>
-                                        <th>Fecha y Hora</th>
-                                        <th>Datos</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="records-list">
-                                    <!-- Los registros se cargarán dinámicamente -->
-                                </tbody>
-                            </table>
-                        </div>
-                        <div id="no-filtered-records" class="text-center py-4">
-                            <p class="text-muted">No hay registros que coincidan con los filtros.</p>
-                        </div>
-                    </div>
+                <div class="col-md-4">
+                    <label for="filter-from-date" class="form-label">Desde</label>
+                    <input type="date" class="form-control" id="filter-from-date" value="${lastMonthStr}">
                 </div>
-                
-                <!-- Reportes Comparativos -->
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Reportes Comparativos</h5>
-                    </div>
-                    <div class="card-body">
-                        ${sharedNumericFields.length === 0 ? `
-                            <div class="alert alert-info">
-                                No hay campos numéricos compartidos entre entidades para generar reportes comparativos.
-                                <hr>
-                                <p class="mb-0">Para generar reportes comparativos, debe crear campos numéricos y asignarlos a múltiples entidades.</p>
-                            </div>
-                        ` : `
-                            <form id="report-form" class="row g-3 mb-4">
-                                <div class="col-md-4">
-                                    <label for="report-field" class="form-label">Campo a Comparar</label>
-                                    <select class="form-select" id="report-field" required>
-                                        <option value="">Seleccione un campo</option>
-                                        ${sharedNumericFields.map(field => 
-                                            `<option value="${field.id}">${field.name}</option>`
-                                        ).join('')}
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="report-horizontal-field" class="form-label">Eje Horizontal</label>
-                                    <select class="form-select" id="report-horizontal-field">
-                                        <option value="">Identidad Principal</option>
-                                        ${sharedFields.map(field => 
-                                            `<option value="${field.id}">${field.name}</option>`
-                                        ).join('')}
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="report-aggregation" class="form-label">Tipo de Agregación</label>
-                                    <select class="form-select" id="report-aggregation">
-                                        <option value="sum">Suma</option>
-                                        <option value="average">Promedio</option>
-                                    </select>
-                                </div>
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-primary">Generar Reporte</button>
-                                </div>
-                            </form>
-                            
-                            <div id="report-container" style="display: none;">
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <div class="chart-container">
-                                            <canvas id="report-chart"></canvas>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div id="report-summary"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        `}
-                    </div>
+                <div class="col-md-4">
+                    <label for="filter-to-date" class="form-label">Hasta</label>
+                    <input type="date" class="form-control" id="filter-to-date" value="${today}">
                 </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+        <!-- Reportes Comparativos -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Reportes Comparativos</h5>
             </div>
+            <div class="card-body">
+                ${sharedNumericFields.length === 0 ? `
+                    <div class="alert alert-info">
+                        No hay campos numéricos compartidos entre entidades para generar reportes comparativos.
+                        <hr>
+                        <p class="mb-0">Para generar reportes comparativos, debe crear campos numéricos y asignarlos a múltiples entidades.</p>
+                    </div>
+                ` : `
+                    <form id="report-form" class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label for="report-field" class="form-label">Campo a Comparar</label>
+                            <select class="form-select" id="report-field" required>
+                                <option value="">Seleccione un campo</option>
+                                ${sharedNumericFields.map(field => 
+                                    `<option value="${field.id}">${field.name}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="report-horizontal-field" class="form-label">Eje Horizontal</label>
+                            <select class="form-select" id="report-horizontal-field">
+                                <option value="">Identidad Principal</option>
+                                ${sharedFields.map(field => 
+                                    `<option value="${field.id}">${field.name}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="report-aggregation" class="form-label">Tipo de Agregación</label>
+                            <select class="form-select" id="report-aggregation">
+                                <option value="sum">Suma</option>
+                                <option value="average">Promedio</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">Generar Reporte</button>
+                        </div>
+                    </form>
+                    
+                    <div id="report-container" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="chart-container">
+                                    <canvas id="report-chart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div id="report-summary"></div>
+                            </div>
+                        </div>
+                    </div>
+                `}
+            </div>
+        </div>
+    
+    <!-- Tabla de Registros -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Registros</h5>
+            <div>
+                <button id="export-csv-btn" class="btn btn-outline-light btn-sm me-2">
+                    <i class="bi bi-file-earmark-spreadsheet"></i> Exportar a CSV
+                </button>
+                <span id="records-count" class="badge bg-light text-dark">0 registros</span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="records-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Entidad</th>
+                            <th>Fecha y Hora</th>
+                            <th>Datos</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="records-list">
+                        <!-- Los registros se cargarán dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="no-filtered-records" class="text-center py-4">
+                <p class="text-muted">No hay registros que coincidan con los filtros.</p>
+            </div>
+        </div>
+    </div>
+    
+
+</div>
         `;
         
         mainContent.innerHTML = template;
