@@ -1,6 +1,6 @@
 :root {
-    /* Define tus colores principales sobrescribiendo Bootstrap */
-    --bs-primary: #00acc1;       /* O el color que prefieras */
+    /* Colores en formato HEX - estos son necesarios */
+    --bs-primary: #008fba;     /* Este es tu color azul personalizado (0, 143, 186) */
     --bs-secondary: #6c757d;
     --bs-success: #28a745;
     --bs-info: #17a2b8;
@@ -9,8 +9,17 @@
     --bs-light: #f8f9fa;
     --bs-dark: #343a40;
     
-    /* Tus variables personalizadas adicionales */
-    --color-primary-light: rgba(0, 123, 255, 0.1);
-    --color-primary-medium: rgba(0, 123, 255, 0.2);
-    --color-secondary-light: rgba(108, 117, 125, 0.1);
-  }
+    /* IMPORTANTE: Los mismos colores en formato RGB (sin el # y separados por comas) */
+    --bs-primary-rgb: 0, 143, 186;
+    --bs-secondary-rgb: 108, 117, 125;
+    --bs-success-rgb: 40, 167, 69;
+    --bs-info-rgb: 23, 162, 184;
+    --bs-warning-rgb: 255, 193, 7;
+    --bs-danger-rgb: 220, 53, 69;
+    --bs-light-rgb: 248, 249, 250;
+    --bs-dark-rgb: 52, 58, 64;
+    
+    /* Variables personalizadas adicionales */
+    --color-primary-light: rgba(var(--bs-primary-rgb), 0.1);
+    --color-primary-medium: rgba(var(--bs-primary-rgb), 0.2);
+}
