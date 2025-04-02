@@ -1,6 +1,9 @@
 :root {
-    /* Colores en formato HEX - estos son necesarios */
-    --bs-primary: #008fba;     /* Este es tu color azul personalizado (0, 143, 186) */
+    /* Color primario en formato HEX y RGB */
+    --bs-primary: #008fba;
+    --bs-primary-rgb: 0, 143, 186;
+    
+    /* Otros colores en formato HEX */
     --bs-secondary: #6c757d;
     --bs-success: #28a745;
     --bs-info: #17a2b8;
@@ -9,8 +12,7 @@
     --bs-light: #f8f9fa;
     --bs-dark: #343a40;
     
-    /* IMPORTANTE: Los mismos colores en formato RGB (sin el # y separados por comas) */
-    --bs-primary-rgb: 0, 143, 186;
+    /* Otros colores en formato RGB */
     --bs-secondary-rgb: 108, 117, 125;
     --bs-success-rgb: 40, 167, 69;
     --bs-info-rgb: 23, 162, 184;
@@ -22,4 +24,26 @@
     /* Variables personalizadas adicionales */
     --color-primary-light: rgba(var(--bs-primary-rgb), 0.1);
     --color-primary-medium: rgba(var(--bs-primary-rgb), 0.2);
+}
+
+/* Personalización adicional de botones si fuera necesario */
+.btn-primary {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+.btn-primary:hover, .btn-primary:active, .btn-primary:focus {
+    background-color: #007ca3; /* Una versión ligeramente más oscura del color primario */
+    border-color: #007ca3;
+}
+
+.btn-outline-primary {
+    color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
 }
