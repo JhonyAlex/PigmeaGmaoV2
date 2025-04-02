@@ -19,8 +19,14 @@ const ChartUtils = {
     ],
     
     /**
-     * Formatea números con el formato: 1'000.000,00
-     * Usa apóstrofo para millones, punto para miles y coma para decimales
+     * Formatea números con el formato solicitado:
+     * 10 → 10,00
+     * 100 → 100,00
+     * 1000 → 1.000,00
+     * 100000 → 100.000,00
+     * 1000000 → 1'000.000,00
+     * 1000000000 → 1.000'000.000,00
+     * 
      * @param {number} number Número a formatear
      * @param {number} decimals Cantidad de decimales (default: 2)
      * @returns {string} Número formateado
@@ -39,49 +45,29 @@ const ChartUtils = {
             return decimalPart ? `${integerPart},${decimalPart}` : integerPart;
         }
         
-        // Formateamos números mayores a 1000
-        // El patrón está basado en grupos de 3 dígitos desde la derecha
+        // Para valores mayores a 1000, formateamos según la cantidad de dígitos
+        let formattedInteger = '';
         
-        // Obtenemos la cantidad de grupos de 3 dígitos
-        const groups = Math.ceil(integerPart.length / 3);
-        
-        // Procesamos cada grupo
-        const formattedGroups = [];
-        for (let i = 0; i < groups; i++) {
-            // Calculamos el inicio del grupo actual desde la derecha
-            const start = Math.max(0, integerPart.length - (i + 1) * 3);
-            const end = integerPart.length - i * 3;
+        // Procesar de derecha a izquierda en grupos de 3
+        for (let i = 0; i < integerPart.length; i++) {
+            // Añadir el dígito actual
+            formattedInteger = integerPart[integerPart.length - 1 - i] + formattedInteger;
             
-            // Extraemos los dígitos del grupo actual
-            const group = integerPart.substring(start, end);
-            
-            // Agregamos el grupo al inicio de la lista
-            formattedGroups.unshift(group);
-        }
-        
-        // Unimos los grupos con el separador apropiado
-        let result = '';
-        for (let i = 0; i < formattedGroups.length; i++) {
-            // Si es el primer grupo (millones o mayor), usamos apóstrofo
-            if (i === 0 && formattedGroups.length > 2) {
-                result = formattedGroups[i];
-            } 
-            // Para el grupo siguiente, aplicamos el separador de millones (apóstrofo)
-            else if (i === 1 && formattedGroups.length > 2) {
-                result += "'" + formattedGroups[i];
-            }
-            // Para el último grupo (miles), usamos punto
-            else if (i === formattedGroups.length - 1) {
-                result += "." + formattedGroups[i];
-            }
-            // Para otros grupos, usamos apóstrofo
-            else {
-                result += "'" + formattedGroups[i];
+            // Si no es el último dígito y está en una posición múltiplo de 3
+            if (i > 0 && i % 3 === 0 && i < integerPart.length - 1) {
+                // Si la posición corresponde a millones (posición 6), usar apóstrofo
+                if (i === 6) {
+                    formattedInteger = "'" + formattedInteger;
+                } 
+                // En otro caso, usar punto para los miles
+                else {
+                    formattedInteger = "." + formattedInteger;
+                }
             }
         }
         
-        // Unimos con la parte decimal usando coma
-        return decimalPart ? `${result},${decimalPart}` : result;
+        // Unir con la parte decimal usando coma
+        return decimalPart ? `${formattedInteger},${decimalPart}` : formattedInteger;
     },
     
     /**
