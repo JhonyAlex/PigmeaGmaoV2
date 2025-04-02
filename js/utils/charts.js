@@ -32,42 +32,42 @@ const ChartUtils = {
      * @returns {string} Número formateado
      */
     formatNumber(number, decimals = 2) {
-        // Convertir a string con decimales fijos
-        const fixed = number.toFixed(decimals);
+        // Paso 1: Convertir el número a string con los decimales requeridos
+        let numStr = number.toFixed(decimals);
         
-        // Separar parte entera y decimal
-        const parts = fixed.split('.');
-        const integerPart = parts[0];
-        const decimalPart = parts[1] || '';
+        // Paso 2: Separar la parte entera y decimal
+        const [integerStr, decimalStr] = numStr.split('.');
         
-        // Si el número es menor que 1000, simplemente devuelve el formato básico con coma decimal
-        if (integerPart.length <= 3) {
-            return decimalPart ? `${integerPart},${decimalPart}` : integerPart;
+        // Paso 3: Si el número es menor que 1000, no necesitamos separadores
+        if (integerStr.length <= 3) {
+            return `${integerStr},${decimalStr || '00'}`;
         }
         
-        // Para valores mayores a 1000, formateamos según la cantidad de dígitos
-        let formattedInteger = '';
+        // Paso 4: Para números mayores, procesamos la parte entera
+        let result = '';
+        const len = integerStr.length;
         
-        // Procesar de derecha a izquierda en grupos de 3
-        for (let i = 0; i < integerPart.length; i++) {
-            // Añadir el dígito actual
-            formattedInteger = integerPart[integerPart.length - 1 - i] + formattedInteger;
+        // Procesamos cada dígito de derecha a izquierda
+        for (let i = len - 1; i >= 0; i--) {
+            // Añadimos el dígito al inicio
+            result = integerStr[i] + result;
             
-            // Si no es el último dígito y está en una posición múltiplo de 3
-            if (i > 0 && i % 3 === 0 && i < integerPart.length - 1) {
-                // Si la posición corresponde a millones (posición 6), usar apóstrofo
-                if (i === 6) {
-                    formattedInteger = "'" + formattedInteger;
-                } 
-                // En otro caso, usar punto para los miles
-                else {
-                    formattedInteger = "." + formattedInteger;
+            // Calculamos la posición desde la derecha (empezando desde 0)
+            const posFromRight = len - 1 - i;
+            
+            // Si no es el último dígito y estamos en una posición que requiere separador
+            if (i > 0 && (posFromRight + 1) % 3 === 0) {
+                // Posición 6 desde la derecha = posición de millones
+                if (posFromRight === 5) {
+                    result = "'" + result;
+                } else {
+                    result = "." + result;
                 }
             }
         }
         
-        // Unir con la parte decimal usando coma
-        return decimalPart ? `${formattedInteger},${decimalPart}` : formattedInteger;
+        // Paso 5: Unir la parte entera formateada con la parte decimal
+        return `${result},${decimalStr || '00'}`;
     },
     
     /**
