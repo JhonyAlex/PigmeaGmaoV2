@@ -1,0 +1,16 @@
+:root {
+    /* Define tus colores principales sobrescribiendo Bootstrap */
+    --bs-primary: #00acc1;       /* O el color que prefieras */
+    --bs-secondary: #6c757d;
+    --bs-success: #28a745;
+    --bs-info: #17a2b8;
+    --bs-warning: #ffc107;
+    --bs-danger: #dc3545;
+    --bs-light: #f8f9fa;
+    --bs-dark: #343a40;
+    
+    /* Tus variables personalizadas adicionales */
+    --color-primary-light: rgba(0, 123, 255, 0.1);
+    --color-primary-medium: rgba(0, 123, 255, 0.2);
+    --color-secondary-light: rgba(108, 117, 125, 0.1);
+  }
