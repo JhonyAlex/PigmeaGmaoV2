@@ -83,3 +83,7 @@ body {
 .highlight-new {
     animation: highlight 2s ease-out;
 }
+
+.col-md-8 {
+    width: 100%;
+}
