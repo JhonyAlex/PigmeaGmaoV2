@@ -24,6 +24,9 @@ const ReportsView = {
         const lastMonth = new Date();
         lastMonth.setMonth(lastMonth.getMonth() - 1);
         const lastMonthStr = lastMonth.toISOString().split('T')[0];
+        // Obtener nombre personalizado de la entidad
+        const config = StorageService.getConfig();
+        const entityName = config.entityName || 'Entidad';
         
         const template = `
             <div class="container mt-4">
@@ -37,14 +40,14 @@ const ReportsView = {
         <div class="card-body">
             <form id="filter-form" class="row g-3">
                 <div class="col-md-4">
-                    <label for="filter-entity" class="form-label">Entidad(es)</label>
+                    <label for="filter-entity" class="form-label">${entityName}(es)</label>
                     <select class="form-select" id="filter-entity" multiple size="4">
-                        <option value="">Todas las entidades</option>
+                        <option value="">Todas las ${entityName.toLowerCase()}s</option>
                         ${entities.map(entity => 
                             `<option value="${entity.id}">${entity.name}</option>`
                         ).join('')}
                     </select>
-                    <div class="form-text">Mantenga presionado Ctrl (⌘ en Mac) para seleccionar múltiples entidades</div>
+                    <div class="form-text">Mantenga presionado Ctrl (⌘ en Mac) para seleccionar múltiples ${entityName.toLowerCase()}s</div>
                 </div>
                 <div class="col-md-4">
                     <label for="filter-from-date" class="form-label">Desde</label>
@@ -69,16 +72,16 @@ const ReportsView = {
             <div class="card-body">
                 ${sharedNumericFields.length === 0 ? `
                     <div class="alert alert-info">
-                        No hay campos numéricos compartidos entre entidades para generar reportes comparativos.
+                        No hay campos numéricos compartidos entre ${entityName.toLowerCase()}s para generar reportes comparativos.
                         <hr>
-                        <p class="mb-0">Para generar reportes comparativos, debe crear campos numéricos y asignarlos a múltiples entidades.</p>
+                        <p class="mb-0">Para generar reportes comparativos, debe crear campos numéricos y asignarlos a múltiples ${entityName.toLowerCase()}s.</p>
                     </div>
                 ` : `
                     <form id="report-form" class="row g-3 mb-4">
                         <div class="col-md-4">
                             <label for="report-horizontal-field" class="form-label">Eje Horizontal</label>
                             <select class="form-select" id="report-horizontal-field">
-                                <option value="">Identidad Principal</option>
+                                <option value="">${entityName} Principal</option>
                                 ${sharedFields.map(field => 
                                     `<option value="${field.id}">${field.name}</option>`
                                 ).join('')}
@@ -149,7 +152,7 @@ const ReportsView = {
                 <table class="table table-hover mb-0" id="records-table">
                     <thead class="table-light">
                         <tr>
-                            <th>Entidad</th>
+                            <th>${entityName}</th>
                             <th>Fecha y Hora</th>
                             <th>Datos</th>
                             <th></th>
@@ -250,7 +253,9 @@ const ReportsView = {
     applyFilters() {
         const entityFilterSelect = document.getElementById('filter-entity');
         const selectedEntities = Array.from(entityFilterSelect.selectedOptions).map(option => option.value);
-        
+        // Obtener nombre personalizado de la entidad
+        const config = StorageService.getConfig();
+        const entityName = config.entityName || 'Entidad';
         // Si se selecciona "Todas las entidades" o no se selecciona ninguna, no aplicamos filtro de entidad
         const entityFilter = selectedEntities.includes('') || selectedEntities.length === 0 
             ? [] 
@@ -411,14 +416,16 @@ showRecordDetails(recordId) {
     
     const entity = EntityModel.getById(record.entityId) || { name: 'Desconocido' };
     const fields = FieldModel.getByIds(Object.keys(record.data));
-    
+     // Obtener nombre personalizado de la entidad
+     const config = StorageService.getConfig();
+     const entityName = config.entityName || 'Entidad';
     const modal = UIUtils.initModal('viewRecordModal');
     const recordDetails = document.getElementById('record-details');
     
     // Preparar contenido del modal
     const detailsHTML = `
         <div class="mb-3">
-            <strong>Entidad:</strong> ${entity.name}
+            <strong>${entityName}:</strong> ${entity.name}
         </div>
         <div class="mb-3">
             <strong>Fecha y Hora:</strong> <span id="record-timestamp">${UIUtils.formatDate(record.timestamp)}</span>
