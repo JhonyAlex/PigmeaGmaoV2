@@ -25,10 +25,6 @@ const ReportsView = {
         lastMonth.setMonth(lastMonth.getMonth() - 1);
         const lastMonthStr = lastMonth.toISOString().split('T')[0];
         
-        // Obtener nombre personalizado de la entidad
-        const config = StorageService.getConfig();
-        const entityName = config.entityName || 'Entidad';
-        
         const template = `
             <div class="container mt-4">
     <h2>Reportes y Análisis</h2>
@@ -41,14 +37,14 @@ const ReportsView = {
         <div class="card-body">
             <form id="filter-form" class="row g-3">
                 <div class="col-md-4">
-                    <label for="filter-entity" class="form-label">${entityName}(es)</label>
+                    <label for="filter-entity" class="form-label">Entidad(es)</label>
                     <select class="form-select" id="filter-entity" multiple size="4">
-                        <option value="">Todas las ${entityName.toLowerCase()}s</option>
+                        <option value="">Todas las entidades</option>
                         ${entities.map(entity => 
                             `<option value="${entity.id}">${entity.name}</option>`
                         ).join('')}
                     </select>
-                    <div class="form-text">Mantenga presionado Ctrl (⌘ en Mac) para seleccionar múltiples ${entityName.toLowerCase()}s</div>
+                    <div class="form-text">Mantenga presionado Ctrl (⌘ en Mac) para seleccionar múltiples entidades</div>
                 </div>
                 <div class="col-md-4">
                     <label for="filter-from-date" class="form-label">Desde</label>
@@ -73,16 +69,16 @@ const ReportsView = {
             <div class="card-body">
                 ${sharedNumericFields.length === 0 ? `
                     <div class="alert alert-info">
-                        No hay campos numéricos compartidos entre ${entityName.toLowerCase()}s para generar reportes comparativos.
+                        No hay campos numéricos compartidos entre entidades para generar reportes comparativos.
                         <hr>
-                        <p class="mb-0">Para generar reportes comparativos, debe crear campos numéricos y asignarlos a múltiples ${entityName.toLowerCase()}s.</p>
+                        <p class="mb-0">Para generar reportes comparativos, debe crear campos numéricos y asignarlos a múltiples entidades.</p>
                     </div>
                 ` : `
                     <form id="report-form" class="row g-3 mb-4">
                         <div class="col-md-4">
                             <label for="report-horizontal-field" class="form-label">Eje Horizontal</label>
                             <select class="form-select" id="report-horizontal-field">
-                                <option value="">${entityName} Principal</option>
+                                <option value="">Identidad Principal</option>
                                 ${sharedFields.map(field => 
                                     `<option value="${field.id}">${field.name}</option>`
                                 ).join('')}
@@ -139,11 +135,21 @@ const ReportsView = {
             </div>
         </div>
         <div class="card-body p-0">
+            <!-- Buscador para registros -->
+            <div class="p-3 bg-light border-bottom">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" id="search-records" class="form-control" placeholder="Buscar en registros...">
+                </div>
+            </div>
+            <!-- Fin del buscador -->
             <div class="table-responsive">
                 <table class="table table-hover mb-0" id="records-table">
                     <thead class="table-light">
                         <tr>
-                            <th>${entityName}</th>
+                            <th>Entidad</th>
                             <th>Fecha y Hora</th>
                             <th>Datos</th>
                             <th></th>
@@ -173,63 +179,70 @@ const ReportsView = {
     /**
      * Establece los event listeners para la vista
      */
-    // Modificar setupEventListeners para incluir el evento del botón de exportar a CSV
-setupEventListeners() {
-    // Aplicar filtros
-    document.getElementById('filter-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        this.applyFilters();
-        
-        // Si hay un reporte generado, actualizarlo con los nuevos filtros
-        const reportContainer = document.getElementById('report-container');
-        if (reportContainer && reportContainer.style.display === 'block') {
-            this.generateReport();
-        }
-    });
-    
-    // Generar reporte comparativo
-    const reportForm = document.getElementById('report-form');
-    if (reportForm) {
-        reportForm.addEventListener('submit', (e) => {
+    setupEventListeners() {
+        // Aplicar filtros
+        document.getElementById('filter-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            this.generateReport();
+            this.applyFilters();
+            
+            // Si hay un reporte generado, actualizarlo con los nuevos filtros
+            const reportContainer = document.getElementById('report-container');
+            if (reportContainer && reportContainer.style.display === 'block') {
+                this.generateReport();
+            }
         });
-    }
-    
-    // Exportar a CSV
-    const exportCsvBtn = document.getElementById('export-csv-btn');
-    if (exportCsvBtn) {
-        exportCsvBtn.addEventListener('click', () => {
-            // Obtener los registros filtrados actuales
-            const entityFilterSelect = document.getElementById('filter-entity');
-            const selectedEntities = Array.from(entityFilterSelect.selectedOptions).map(option => option.value);
-            
-            const entityFilter = selectedEntities.includes('') || selectedEntities.length === 0 
-                ? [] 
-                : selectedEntities;
-            
-            const fromDateFilter = document.getElementById('filter-from-date').value;
-            const toDateFilter = document.getElementById('filter-to-date').value;
-            
-            const filters = {
-                entityIds: entityFilter.length > 0 ? entityFilter : undefined,
-                fromDate: fromDateFilter || undefined,
-                toDate: toDateFilter || undefined
-            };
-            
-            // Obtener registros filtrados
-            const filteredRecords = RecordModel.filterMultiple(filters);
-            
-            // Ordenar por fecha (más reciente primero)
-            const sortedRecords = [...filteredRecords].sort((a, b) => 
-                new Date(b.timestamp) - new Date(a.timestamp)
-            );
-            
-            // Exportar a CSV
-            ExportUtils.exportToCSV(sortedRecords);
-        });
-    }
-},
+        
+        // Generar reporte comparativo
+        const reportForm = document.getElementById('report-form');
+        if (reportForm) {
+            reportForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.generateReport();
+            });
+        }
+        
+        // Exportar a CSV
+        const exportCsvBtn = document.getElementById('export-csv-btn');
+        if (exportCsvBtn) {
+            exportCsvBtn.addEventListener('click', () => {
+                // Obtener los registros filtrados actuales
+                const entityFilterSelect = document.getElementById('filter-entity');
+                const selectedEntities = Array.from(entityFilterSelect.selectedOptions).map(option => option.value);
+                
+                const entityFilter = selectedEntities.includes('') || selectedEntities.length === 0 
+                    ? [] 
+                    : selectedEntities;
+                
+                const fromDateFilter = document.getElementById('filter-from-date').value;
+                const toDateFilter = document.getElementById('filter-to-date').value;
+                
+                const filters = {
+                    entityIds: entityFilter.length > 0 ? entityFilter : undefined,
+                    fromDate: fromDateFilter || undefined,
+                    toDate: toDateFilter || undefined
+                };
+                
+                // Obtener registros filtrados
+                const filteredRecords = RecordModel.filterMultiple(filters);
+                
+                // Ordenar por fecha (más reciente primero)
+                const sortedRecords = [...filteredRecords].sort((a, b) => 
+                    new Date(b.timestamp) - new Date(a.timestamp)
+                );
+                
+                // Exportar a CSV
+                ExportUtils.exportToCSV(sortedRecords);
+            });
+        }
+
+        // Buscador en la tabla de registros
+        const searchInput = document.getElementById('search-records');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                this.filterRecordsBySearch();
+            });
+        }
+    },
     
     /**
      * Aplica los filtros y muestra los registros filtrados
@@ -258,8 +271,58 @@ setupEventListeners() {
         // Actualizar contador
         document.getElementById('records-count').textContent = `${filteredRecords.length} registros`;
         
-        // Mostrar registros
-        this.displayFilteredRecords(filteredRecords);
+        // Guardar los registros filtrados para usarlos en la búsqueda
+        this.filteredRecords = filteredRecords;
+        
+        // Mostrar registros (aplicando también el filtro de búsqueda si existe)
+        this.filterRecordsBySearch();
+    },
+    
+    /**
+     * Filtra los registros según el texto de búsqueda ingresado
+     */
+    filterRecordsBySearch() {
+        const searchText = document.getElementById('search-records').value.toLowerCase().trim();
+        
+        // Si no hay texto de búsqueda, mostrar todos los registros filtrados
+        if (!searchText) {
+            this.displayFilteredRecords(this.filteredRecords);
+            return;
+        }
+        
+        // Filtrar registros que contengan el texto de búsqueda
+        const searchedRecords = this.filteredRecords.filter(record => {
+            // Obtener la entidad
+            const entity = EntityModel.getById(record.entityId) || { name: 'Desconocido' };
+            
+            // Verificar si el nombre de la entidad coincide
+            if (entity.name.toLowerCase().includes(searchText)) return true;
+            
+            // Verificar en la fecha
+            const formattedDate = UIUtils.formatDate(record.timestamp).toLowerCase();
+            if (formattedDate.includes(searchText)) return true;
+            
+            // Verificar en los datos del registro
+            const fields = FieldModel.getByIds(Object.keys(record.data));
+            
+            for (const fieldId in record.data) {
+                const field = fields.find(f => f.id === fieldId) || { name: fieldId };
+                const value = String(record.data[fieldId]).toLowerCase();
+                
+                // Verificar si el nombre del campo o su valor coincide
+                if (field.name.toLowerCase().includes(searchText) || value.includes(searchText)) {
+                    return true;
+                }
+            }
+            
+            return false;
+        });
+        
+        // Mostrar registros que coinciden con la búsqueda
+        this.displayFilteredRecords(searchedRecords);
+        
+        // Actualizar contador
+        document.getElementById('records-count').textContent = `${searchedRecords.length} registros`;
     },
     
     /**
@@ -349,17 +412,13 @@ showRecordDetails(recordId) {
     const entity = EntityModel.getById(record.entityId) || { name: 'Desconocido' };
     const fields = FieldModel.getByIds(Object.keys(record.data));
     
-    // Obtener nombre personalizado de la entidad
-    const config = StorageService.getConfig();
-    const entityName = config.entityName || 'Entidad';
-    
     const modal = UIUtils.initModal('viewRecordModal');
     const recordDetails = document.getElementById('record-details');
     
     // Preparar contenido del modal
     const detailsHTML = `
         <div class="mb-3">
-            <strong>${entityName}:</strong> ${entity.name}
+            <strong>Entidad:</strong> ${entity.name}
         </div>
         <div class="mb-3">
             <strong>Fecha y Hora:</strong> <span id="record-timestamp">${UIUtils.formatDate(record.timestamp)}</span>
@@ -418,7 +477,7 @@ showRecordDetails(recordId) {
             modal.hide();
             
             if (deleted) {
-                this.renderRecords(); // Actualizar lista de registros
+                this.applyFilters(); // Actualizar lista de registros
                 UIUtils.showAlert('Registro eliminado correctamente', 'success', document.querySelector('.card-body'));
             } else {
                 UIUtils.showAlert('Error al eliminar el registro', 'danger', document.querySelector('.card-body'));
@@ -463,7 +522,7 @@ showRecordDetails(recordId) {
             if (updatedRecord) {
                 // Actualizar la vista
                 timestampSpan.textContent = UIUtils.formatDate(newDate);
-                this.renderRecords(); // Actualizar lista de registros
+                this.applyFilters(); // Actualizar lista de registros
                 UIUtils.showAlert('Fecha actualizada correctamente', 'success', recordDetails);
             } else {
                 UIUtils.showAlert('Error al actualizar la fecha', 'danger', recordDetails);
@@ -495,10 +554,6 @@ showRecordDetails(recordId) {
         // Obtener filtros actuales
         const entityFilterSelect = document.getElementById('filter-entity');
         const selectedEntities = Array.from(entityFilterSelect.selectedOptions).map(option => option.value);
-        
-        // Obtener nombre personalizado de la entidad
-        const config = StorageService.getConfig();
-        const entityName = config.entityName || 'Entidad';
         
         // Si se selecciona "Todas las entidades" o no se selecciona ninguna, no aplicamos filtro de entidad
         const entityFilter = selectedEntities.includes('') || selectedEntities.length === 0 
