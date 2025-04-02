@@ -19,6 +19,47 @@ const ChartUtils = {
     ],
     
     /**
+     * Formatea números con el formato: 1.000'000.000,00 
+     * Usa coma para decimales, punto para miles y apóstrofe para millón
+     * @param {number} number Número a formatear
+     * @param {number} decimals Cantidad de decimales (default: 2)
+     * @returns {string} Número formateado
+     */
+    formatNumber(number, decimals = 2) {
+        // Convertir a string con decimales fijos
+        const fixed = number.toFixed(decimals);
+        
+        // Separar parte entera y decimal
+        const parts = fixed.split('.');
+        const integerPart = parts[0];
+        const decimalPart = parts[1] || '';
+        
+        // Formatear la parte entera con puntos y apóstrofes
+        let formattedInteger = '';
+        let count = 0;
+        
+        // Procesar de derecha a izquierda
+        for (let i = integerPart.length - 1; i >= 0; i--) {
+            count++;
+            formattedInteger = integerPart[i] + formattedInteger;
+            
+            if (i > 0 && count % 3 === 0) {
+                // Cada 3 dígitos desde la derecha
+                if (Math.floor((integerPart.length - count) / 3) > 0) {
+                    // Si hay más grupos de 3 dígitos, usar apóstrofe
+                    formattedInteger = "'" + formattedInteger;
+                } else {
+                    // Si es el último grupo, usar punto
+                    formattedInteger = '.' + formattedInteger;
+                }
+            }
+        }
+        
+        // Unir con la parte decimal usando coma
+        return decimalPart ? `${formattedInteger},${decimalPart}` : formattedInteger;
+    },
+    
+    /**
      * Crea o actualiza un gráfico de barras
      * @param {string} canvasId ID del elemento canvas
      * @param {Object} reportData Datos del reporte
@@ -67,8 +108,8 @@ const ChartUtils = {
                     },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
-                                const value = context.raw.toFixed(2);
+                            label: (context) => {
+                                const value = this.formatNumber(context.raw);
                                 return `${context.dataset.label}: ${value}`;
                             }
                         }
@@ -76,7 +117,12 @@ const ChartUtils = {
                 },
                 scales: {
                     y: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => {
+                                return this.formatNumber(value);
+                            }
+                        }
                     }
                 }
             }
@@ -95,18 +141,18 @@ const ChartUtils = {
      */
     createSummaryTable(reportData) {
         const rows = reportData.entities.map(entity => {
-            const formattedValue = entity.value.toFixed(2);
+            const formattedValue = this.formatNumber(entity.value);
             return `
                 <tr>
                     <td>${entity.name}</td>
                     <td class="text-end">${formattedValue}</td>
-                    <td class="text-end">${entity.count}</td>
+                    <td class="text-end">${this.formatNumber(entity.count, 0)}</td>
                 </tr>
             `;
         });
         
         // Calcular total general
-        const totalValue = reportData.entities.reduce((sum, entity) => sum + entity.value, 0).toFixed(2);
+        const totalValue = reportData.entities.reduce((sum, entity) => sum + entity.value, 0);
         const totalCount = reportData.entities.reduce((sum, entity) => sum + entity.count, 0);
         
         // Determinar el título de la primera columna
@@ -127,8 +173,8 @@ const ChartUtils = {
                 <tfoot>
                     <tr class="table-primary">
                         <th>TOTAL</th>
-                        <th class="text-end">${totalValue}</th>
-                        <th class="text-end">${totalCount}</th>
+                        <th class="text-end">${this.formatNumber(totalValue)}</th>
+                        <th class="text-end">${this.formatNumber(totalCount, 0)}</th>
                     </tr>
                 </tfoot>
             </table>
