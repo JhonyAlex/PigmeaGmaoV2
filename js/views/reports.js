@@ -57,6 +57,16 @@ const ReportsView = {
                     <label for="filter-to-date" class="form-label">Hasta</label>
                     <input type="date" class="form-control" id="filter-to-date" value="${today}">
                 </div>
+                <!-- Botones de atajos de fecha -->
+<div class="col-12 mt-2">
+    <div class="btn-group btn-group-sm" role="group" aria-label="Atajos de fecha">
+        <button type="button" class="btn btn-outline-secondary date-shortcut" data-range="yesterday">Ayer</button>
+        <button type="button" class="btn btn-outline-secondary date-shortcut" data-range="thisWeek">Esta semana</button>
+        <button type="button" class="btn btn-outline-secondary date-shortcut" data-range="lastWeek">Semana pasada</button>
+        <button type="button" class="btn btn-outline-secondary date-shortcut" data-range="thisMonth">Mes actual</button>
+        <button type="button" class="btn btn-outline-secondary date-shortcut" data-range="lastMonth">Mes pasado</button>
+    </div>
+</div>
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
                 </div>
@@ -245,6 +255,20 @@ const ReportsView = {
                 this.filterRecordsBySearch();
             });
         }
+
+        // Atajos de fecha
+document.querySelectorAll('.date-shortcut').forEach(button => {
+    button.addEventListener('click', (e) => {
+        const range = e.target.getAttribute('data-range');
+        this.setDateRange(range);
+        // Aplicar filtros automáticamente
+        document.getElementById('filter-form').dispatchEvent(new Event('submit'));
+    });
+});
+
+
+
+
     },
     
     /**
@@ -597,5 +621,82 @@ showRecordDetails(recordId) {
             <h6 class="mb-3">Resumen del Reporte</h6>
             ${ChartUtils.createSummaryTable(reportData)}
         `;
+    },
+    /**
+ * Configura el rango de fecha según el atajo seleccionado
+ * @param {string} range Tipo de rango de fecha (yesterday, thisWeek, lastWeek, thisMonth, lastMonth)
+ */
+setDateRange(range) {
+    const fromDateInput = document.getElementById('filter-from-date');
+    const toDateInput = document.getElementById('filter-to-date');
+    
+    // Fecha actual
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    let fromDate, toDate;
+    
+    // Calcular rango según selección
+    switch (range) {
+        case 'yesterday':
+            // Ayer (solo un día)
+            fromDate = new Date(today);
+            fromDate.setDate(today.getDate() - 1);
+            toDate = new Date(fromDate);
+            break;
+            
+        case 'thisWeek':
+            // Esta semana (desde domingo o lunes hasta hoy)
+            fromDate = new Date(today);
+            // Obtener el primer día de la semana (0 = domingo, 1 = lunes)
+            const firstDayOfWeek = 1; // Usando lunes como primer día
+            const day = today.getDay();
+            const diff = (day >= firstDayOfWeek) ? day - firstDayOfWeek : 6 - firstDayOfWeek + day;
+            fromDate.setDate(today.getDate() - diff);
+            toDate = new Date(today);
+            break;
+            
+        case 'lastWeek':
+            // Semana pasada
+            fromDate = new Date(today);
+            const firstDayLastWeek = 1; // Lunes
+            const dayLastWeek = today.getDay();
+            // Retroceder al lunes de la semana pasada
+            fromDate.setDate(today.getDate() - dayLastWeek - 6);
+            // Fin de semana pasada (domingo)
+            toDate = new Date(fromDate);
+            toDate.setDate(fromDate.getDate() + 6);
+            break;
+            
+        case 'thisMonth':
+            // Mes actual
+            fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            toDate = new Date(today);
+            break;
+            
+        case 'lastMonth':
+            // Mes pasado
+            fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            toDate = new Date(today.getFullYear(), today.getMonth(), 0);
+            break;
+            
+        default:
+            return; // No hacer nada si no coincide
     }
+    
+    // Formatear fechas para los inputs
+    fromDateInput.value = this.formatDateForInput(fromDate);
+    toDateInput.value = this.formatDateForInput(toDate);
+},
+
+/**
+ * Formatea una fecha para usar en input type="date"
+ * @param {Date} date Objeto Date a formatear
+ * @returns {string} Fecha formateada YYYY-MM-DD
+ */
+formatDateForInput(date) {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 };
