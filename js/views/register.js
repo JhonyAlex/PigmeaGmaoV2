@@ -29,76 +29,76 @@ const RegisterView = {
         
         const template = `
             <div class="container mt-4">
-                <div class="row">
-                    <div class="col-md-8 mx-auto">
-                        <div class="card mb-4">
-                            <div class="card-header bg-primary text-white">
-                                <h3 class="mb-0">${config.title}</h3>
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">${config.title}</h3>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">${config.description}</p>
+                    
+                    <form id="register-form">
+                        <div class="mb-3">
+                            <label class="form-label">Seleccione ${entities.length > 0 ? `una ${this.entityName}` : `la ${this.entityName}`}</label>
+                            <div id="entity-selector" class="d-flex flex-wrap gap-2">
+                                ${entities.map(entity => 
+                                    `<button type="button" class="btn btn-outline-primary entity-btn" data-entity-id="${entity.id}">${entity.name}</button>`
+                                ).join('')}
                             </div>
-                            <div class="card-body">
-                                <p class="card-text">${config.description}</p>
-                                
-                                <form id="register-form">
-                                    <div class="mb-3">
-                                        <label class="form-label">Seleccione ${entities.length > 0 ? `una ${this.entityName}` : `la ${this.entityName}`}</label>
-                                        <div id="entity-selector" class="d-flex flex-wrap gap-2">
-                                            ${entities.map(entity => 
-                                                `<button type="button" class="btn btn-outline-primary entity-btn" data-entity-id="${entity.id}">${entity.name}</button>`
-                                            ).join('')}
-                                        </div>
-                                        <input type="hidden" id="selected-entity-id" name="entity-id" required>
-                                    </div>
-                                    
-                                    <div id="dynamic-fields-container">
-                                        <!-- Los campos se cargarán dinámicamente -->
-                                    </div>
-                                    
-                                    <div class="d-grid gap-2">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="yesterday-check">
-                                                <label class="form-check-label" for="yesterday-check">
-                                                    Ayer
-                                                </label>
-                                            </div>
-                                            <button type="submit" class="btn btn-primary" id="save-record-btn">
-                                                Guardar Registro
-                                            </button>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
+                            <input type="hidden" id="selected-entity-id" name="entity-id" required>
                         </div>
                         
-                        <!-- Últimos registros -->
-                        <div class="card">
-                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">Últimos Registros</h5>
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="recent-records-container">
-                                    <table class="table table-hover mb-0" id="recent-records-table">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>${this.entityName}</th>
-                                                <th>Fecha y Hora</th>
-                                                <th>Datos</th>
-                                                <th></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="recent-records-list">
-                                            <!-- Los registros se cargarán dinámicamente -->
-                                        </tbody>
-                                    </table>
+                        <div id="dynamic-fields-container">
+                            <!-- Los campos se cargarán dinámicamente -->
+                        </div>
+                        
+                        <div id="submit-container" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="yesterday-check">
+                                    <label class="form-check-label" for="yesterday-check">
+                                        Ayer
+                                    </label>
                                 </div>
-                                <div id="no-records-message" class="text-center py-4">
-                                    <p class="text-muted">No hay registros recientes.</p>
-                                </div>
+                                <button type="submit" class="btn btn-primary" id="save-record-btn">
+                                    Guardar Registro
+                                </button>
                             </div>
                         </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Últimos registros -->
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Últimos Registros</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="recent-records-container">
+                        <table class="table table-hover mb-0" id="recent-records-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>${this.entityName}</th>
+                                    <th>Fecha y Hora</th>
+                                    <th>Datos</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-records-list">
+                                <!-- Los registros se cargarán dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="no-records-message" class="text-center py-4">
+                        <p class="text-muted">No hay registros recientes.</p>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
         `;
         
         mainContent.innerHTML = template;
@@ -141,40 +141,69 @@ const RegisterView = {
     },
     
     /**
-     * Carga los campos dinámicos basados en la entidad seleccionada
-     * @param {string} entityId ID de la entidad seleccionada
-     */
-    loadDynamicFields(entityId) {
-        const dynamicFieldsContainer = document.getElementById('dynamic-fields-container');
-        
-        // Limpiar contenedor
+ * Carga los campos dinámicos basados en la entidad seleccionada
+ * @param {string} entityId ID de la entidad seleccionada
+ */
+loadDynamicFields(entityId) {
+    const dynamicFieldsContainer = document.getElementById('dynamic-fields-container');
+    const submitContainer = document.getElementById('submit-container');
+    const currentEntityId = document.getElementById('selected-entity-id').value;
+    
+    // Si el usuario hace clic en la misma entidad que ya está seleccionada (toggle)
+    if (entityId === currentEntityId && dynamicFieldsContainer.innerHTML !== '') {
+        // Limpiar contenedor de campos
         dynamicFieldsContainer.innerHTML = '';
         
-        if (!entityId) return;
+        // Ocultar el contenedor del botón y checkbox
+        submitContainer.style.display = 'none';
         
-        // Obtener entidad y sus campos
-        const entity = EntityModel.getById(entityId);
-        if (!entity) return;
+        // Limpiar el ID de entidad seleccionada
+        document.getElementById('selected-entity-id').value = '';
         
-        const fields = FieldModel.getByIds(entity.fields);
-        
-        // No hay campos asignados
-        if (fields.length === 0) {
-            dynamicFieldsContainer.innerHTML = `
-                <div class="alert alert-warning">
-                    Esta ${this.entityName.toLowerCase()} no tiene campos asignados. 
-                    Configure los campos en la sección de Administración.
-                </div>
-            `;
-            return;
-        }
-        
-        // Generar campos dinámicos
-        fields.forEach(field => {
-            const fieldHTML = UIUtils.generateFieldInput(field);
-            dynamicFieldsContainer.insertAdjacentHTML('beforeend', fieldHTML);
-        });
-    },
+        return;
+    }
+    
+    // Limpiar contenedor
+    dynamicFieldsContainer.innerHTML = '';
+    
+    if (!entityId) {
+        // Ocultar el contenedor del botón y checkbox
+        submitContainer.style.display = 'none';
+        return;
+    }
+    
+    // Obtener entidad y sus campos
+    const entity = EntityModel.getById(entityId);
+    if (!entity) {
+        // Ocultar el contenedor del botón y checkbox
+        submitContainer.style.display = 'none';
+        return;
+    }
+    
+    const fields = FieldModel.getByIds(entity.fields);
+    
+    // No hay campos asignados
+    if (fields.length === 0) {
+        dynamicFieldsContainer.innerHTML = `
+            <div class="alert alert-warning">
+                Esta ${this.entityName.toLowerCase()} no tiene campos asignados. 
+                Configure los campos en la sección de Administración.
+            </div>
+        `;
+        // Ocultar el contenedor del botón y checkbox
+        submitContainer.style.display = 'none';
+        return;
+    }
+    
+    // Generar campos dinámicos
+    fields.forEach(field => {
+        const fieldHTML = UIUtils.generateFieldInput(field);
+        dynamicFieldsContainer.insertAdjacentHTML('beforeend', fieldHTML);
+    });
+    
+    // Mostrar el contenedor del botón y checkbox
+    submitContainer.style.display = 'block';
+},
     
     /**
      * Guarda un nuevo registro
