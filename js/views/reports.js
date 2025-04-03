@@ -57,16 +57,6 @@ const ReportsView = {
                     <label for="filter-to-date" class="form-label">Hasta</label>
                     <input type="date" class="form-control" id="filter-to-date" value="${today}">
                 </div>
-                <!-- Botones de atajos de fecha -->
-<div class="col-12 mt-2">
-    <div class="btn-group btn-group-sm" role="group" aria-label="Atajos de fecha">
-        <button type="button" class="btn btn-outline-secondary date-shortcut" data-range="yesterday">Ayer</button>
-        <button type="button" class="btn btn-outline-secondary date-shortcut" data-range="thisWeek">Esta semana</button>
-        <button type="button" class="btn btn-outline-secondary date-shortcut" data-range="lastWeek">Semana pasada</button>
-        <button type="button" class="btn btn-outline-secondary date-shortcut" data-range="thisMonth">Mes actual</button>
-        <button type="button" class="btn btn-outline-secondary date-shortcut" data-range="lastMonth">Mes pasado</button>
-    </div>
-</div>
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
                 </div>
@@ -74,6 +64,21 @@ const ReportsView = {
         </div>
     </div>
 
+    <!-- Atajos de filtros de fecha -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Atajos de fecha</h5>
+    </div>
+    <div class="card-body text-center">
+        <div class="btn-group" role="group" aria-label="Atajos de fecha">
+            <button type="button" class="btn btn-outline-primary date-shortcut" data-range="yesterday">Ayer</button>
+            <button type="button" class="btn btn-outline-primary date-shortcut" data-range="thisWeek">Esta semana</button>
+            <button type="button" class="btn btn-outline-primary date-shortcut" data-range="lastWeek">Semana pasada</button>
+            <button type="button" class="btn btn-outline-primary date-shortcut" data-range="thisMonth">Mes actual</button>
+            <button type="button" class="btn btn-outline-primary date-shortcut" data-range="lastMonth">Mes pasado</button>
+        </div>
+    </div>
+</div>
         <!-- Reportes Comparativos -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
