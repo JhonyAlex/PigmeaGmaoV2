@@ -54,9 +54,17 @@ const RegisterView = {
                                     </div>
                                     
                                     <div class="d-grid gap-2">
-                                        <button type="submit" class="btn btn-primary" id="save-record-btn">
-                                            Guardar Registro
-                                        </button>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="yesterday-check">
+                                                <label class="form-check-label" for="yesterday-check">
+                                                    Ayer
+                                                </label>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary" id="save-record-btn">
+                                                Guardar Registro
+                                            </button>
+                                        </div>
                                     </div>
                                 </form>
                             </div>
@@ -198,6 +206,20 @@ const RegisterView = {
         const newRecord = RecordModel.create(entityId, validation.data);
         
         if (newRecord) {
+            // Verificar si el checkbox "Ayer" está marcado
+            const yesterdayCheck = document.getElementById('yesterday-check');
+            
+            if (yesterdayCheck && yesterdayCheck.checked) {
+                // Obtener la fecha actual
+                const currentDate = new Date(newRecord.timestamp);
+                
+                // Restar un día manteniendo la misma hora
+                currentDate.setDate(currentDate.getDate() - 1);
+                
+                // Actualizar la fecha del registro
+                RecordModel.updateDate(newRecord.id, currentDate.toISOString());
+            }
+            
             // Limpiar formulario
             form.reset();
             document.getElementById('dynamic-fields-container').innerHTML = '';
