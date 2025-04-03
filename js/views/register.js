@@ -29,76 +29,76 @@ const RegisterView = {
         
         const template = `
             <div class="container mt-4">
-    <div class="row">
-        <div class="col-md-8 mx-auto">
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="mb-0">${config.title}</h3>
-                </div>
-                <div class="card-body">
-                    <p class="card-text">${config.description}</p>
-                    
-                    <form id="register-form">
-                        <div class="mb-3">
-                            <label class="form-label">Seleccione ${entities.length > 0 ? `una ${this.entityName}` : `la ${this.entityName}`}</label>
-                            <div id="entity-selector" class="d-flex flex-wrap gap-2">
-                                ${entities.map(entity => 
-                                    `<button type="button" class="btn btn-outline-primary entity-btn" data-entity-id="${entity.id}">${entity.name}</button>`
-                                ).join('')}
+                <div class="row">
+                    <div class="col-md-8 mx-auto">
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h3 class="mb-0">${config.title}</h3>
                             </div>
-                            <input type="hidden" id="selected-entity-id" name="entity-id" required>
+                            <div class="card-body">
+                                <p class="card-text">${config.description}</p>
+                                
+                                <form id="register-form">
+                                    <div class="mb-3">
+                                        <label class="form-label">Seleccione ${entities.length > 0 ? `una ${this.entityName}` : `la ${this.entityName}`}</label>
+                                        <div id="entity-selector" class="d-flex flex-wrap gap-2">
+                                            ${entities.map(entity => 
+                                                `<button type="button" class="btn btn-outline-primary entity-btn" data-entity-id="${entity.id}">${entity.name}</button>`
+                                            ).join('')}
+                                        </div>
+                                        <input type="hidden" id="selected-entity-id" name="entity-id" required>
+                                    </div>
+                                    
+                                    <div id="dynamic-fields-container">
+                                        <!-- Los campos se cargarán dinámicamente -->
+                                    </div>
+                                    
+                                    <div id="submit-container" style="display: none;">
+                                        <div class="d-flex justify-content-between align-items-center mt-3">
+                                            <button type="submit" class="btn btn-primary" id="save-record-btn">
+                                                Guardar Registro
+                                            </button>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="yesterday-check">
+                                                <label class="form-check-label" for="yesterday-check">
+                                                    Ayer
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                         
-                        <div id="dynamic-fields-container">
-                            <!-- Los campos se cargarán dinámicamente -->
-                        </div>
-                        
-                        <div id="submit-container" style="display: none;">
-                            <div class="d-flex justify-content-between align-items-center mt-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="yesterday-check">
-                                    <label class="form-check-label" for="yesterday-check">
-                                        Ayer
-                                    </label>
+                        <!-- Últimos registros -->
+                        <div class="card">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Últimos Registros</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="recent-records-container">
+                                    <table class="table table-hover mb-0" id="recent-records-table">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>${this.entityName}</th>
+                                                <th>Fecha y Hora</th>
+                                                <th>Datos</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recent-records-list">
+                                            <!-- Los registros se cargarán dinámicamente -->
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <button type="submit" class="btn btn-primary" id="save-record-btn">
-                                    Guardar Registro
-                                </button>
+                                <div id="no-records-message" class="text-center py-4">
+                                    <p class="text-muted">No hay registros recientes.</p>
+                                </div>
                             </div>
                         </div>
-                    </form>
-                </div>
-            </div>
-            
-            <!-- Últimos registros -->
-            <div class="card">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Últimos Registros</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="recent-records-container">
-                        <table class="table table-hover mb-0" id="recent-records-table">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>${this.entityName}</th>
-                                    <th>Fecha y Hora</th>
-                                    <th>Datos</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody id="recent-records-list">
-                                <!-- Los registros se cargarán dinámicamente -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div id="no-records-message" class="text-center py-4">
-                        <p class="text-muted">No hay registros recientes.</p>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
         `;
         
         mainContent.innerHTML = template;
@@ -114,22 +114,34 @@ const RegisterView = {
         // Botones de entidad
         document.querySelectorAll('.entity-btn').forEach(button => {
             button.addEventListener('click', (e) => {
-                // Quitar clase activa de todos los botones
-                document.querySelectorAll('.entity-btn').forEach(btn => {
-                    btn.classList.remove('btn-primary');
-                    btn.classList.add('btn-outline-primary');
-                });
+                const clickedButton = e.target;
+                const entityId = clickedButton.getAttribute('data-entity-id');
+                const currentEntityId = document.getElementById('selected-entity-id').value;
+                const isToggle = entityId === currentEntityId && document.getElementById('dynamic-fields-container').innerHTML !== '';
                 
-                // Agregar clase activa al botón seleccionado
-                e.target.classList.remove('btn-outline-primary');
-                e.target.classList.add('btn-primary');
-                
-                // Guardar ID de entidad seleccionada
-                const entityId = e.target.getAttribute('data-entity-id');
-                document.getElementById('selected-entity-id').value = entityId;
-                
-                // Cargar campos dinámicos
-                this.loadDynamicFields(entityId);
+                // Si es toggle, deseleccionar el botón y limpiar campos
+                if (isToggle) {
+                    clickedButton.classList.remove('btn-primary');
+                    clickedButton.classList.add('btn-outline-primary');
+                    document.getElementById('selected-entity-id').value = '';
+                    this.loadDynamicFields(''); // Pasamos string vacío para limpiar
+                } else {
+                    // Quitar clase activa de todos los botones
+                    document.querySelectorAll('.entity-btn').forEach(btn => {
+                        btn.classList.remove('btn-primary');
+                        btn.classList.add('btn-outline-primary');
+                    });
+                    
+                    // Agregar clase activa al botón seleccionado
+                    clickedButton.classList.remove('btn-outline-primary');
+                    clickedButton.classList.add('btn-primary');
+                    
+                    // Guardar ID de entidad seleccionada
+                    document.getElementById('selected-entity-id').value = entityId;
+                    
+                    // Cargar campos dinámicos
+                    this.loadDynamicFields(entityId);
+                }
             });
         });
         
@@ -140,34 +152,19 @@ const RegisterView = {
         });
     },
     
-    /**
+ /**
  * Carga los campos dinámicos basados en la entidad seleccionada
  * @param {string} entityId ID de la entidad seleccionada
  */
 loadDynamicFields(entityId) {
     const dynamicFieldsContainer = document.getElementById('dynamic-fields-container');
     const submitContainer = document.getElementById('submit-container');
-    const currentEntityId = document.getElementById('selected-entity-id').value;
-    
-    // Si el usuario hace clic en la misma entidad que ya está seleccionada (toggle)
-    if (entityId === currentEntityId && dynamicFieldsContainer.innerHTML !== '') {
-        // Limpiar contenedor de campos
-        dynamicFieldsContainer.innerHTML = '';
-        
-        // Ocultar el contenedor del botón y checkbox
-        submitContainer.style.display = 'none';
-        
-        // Limpiar el ID de entidad seleccionada
-        document.getElementById('selected-entity-id').value = '';
-        
-        return;
-    }
     
     // Limpiar contenedor
     dynamicFieldsContainer.innerHTML = '';
     
+    // Si no hay entityId, ocultar el contenedor del botón y limpiar
     if (!entityId) {
-        // Ocultar el contenedor del botón y checkbox
         submitContainer.style.display = 'none';
         return;
     }
@@ -175,7 +172,6 @@ loadDynamicFields(entityId) {
     // Obtener entidad y sus campos
     const entity = EntityModel.getById(entityId);
     if (!entity) {
-        // Ocultar el contenedor del botón y checkbox
         submitContainer.style.display = 'none';
         return;
     }
@@ -190,7 +186,6 @@ loadDynamicFields(entityId) {
                 Configure los campos en la sección de Administración.
             </div>
         `;
-        // Ocultar el contenedor del botón y checkbox
         submitContainer.style.display = 'none';
         return;
     }
@@ -208,66 +203,77 @@ loadDynamicFields(entityId) {
     /**
      * Guarda un nuevo registro
      */
-    saveRecord() {
-        const form = document.getElementById('register-form');
-        const entityId = document.getElementById('selected-entity-id').value;
-        
-        if (!entityId) {
-            UIUtils.showAlert(`Debe seleccionar una ${this.entityName.toLowerCase()}`, 'warning', document.querySelector('.card-body'));
-            return;
+    /**
+ * Guarda un nuevo registro
+ */
+saveRecord() {
+    const form = document.getElementById('register-form');
+    const entityId = document.getElementById('selected-entity-id').value;
+    
+    if (!entityId) {
+        UIUtils.showAlert(`Debe seleccionar una ${this.entityName.toLowerCase()}`, 'warning', document.querySelector('.card-body'));
+        return;
+    }
+    
+    // Obtener entidad y sus campos
+    const entity = EntityModel.getById(entityId);
+    if (!entity) return;
+    
+    const fields = FieldModel.getByIds(entity.fields);
+    
+    // Validar el formulario
+    const validation = ValidationUtils.validateForm(form, fields);
+    
+    if (!validation.isValid) {
+        UIUtils.showAlert('Por favor complete correctamente todos los campos requeridos', 'warning', document.querySelector('.card-body'));
+        return;
+    }
+    
+    // Verificar si el checkbox "Ayer" está marcado
+    const yesterdayCheck = document.getElementById('yesterday-check');
+    const useYesterdayDate = yesterdayCheck && yesterdayCheck.checked;
+    
+    // Guardar registro
+    const newRecord = RecordModel.create(entityId, validation.data);
+    
+    if (newRecord) {
+        // Si el checkbox de ayer está marcado, actualizar la fecha
+        if (useYesterdayDate) {
+            // Obtener la fecha actual del registro
+            const currentDate = new Date(newRecord.timestamp);
+            
+            // Restar un día manteniendo la misma hora
+            currentDate.setDate(currentDate.getDate() - 1);
+            
+            // Actualizar la fecha del registro
+            RecordModel.updateDate(newRecord.id, currentDate.toISOString());
         }
         
-        // Obtener entidad y sus campos
-        const entity = EntityModel.getById(entityId);
-        if (!entity) return;
+        // Limpiar formulario
+        form.reset();
+        document.getElementById('dynamic-fields-container').innerHTML = '';
         
-        const fields = FieldModel.getByIds(entity.fields);
+        // Ocultar el contenedor del botón y checkbox
+        document.getElementById('submit-container').style.display = 'none';
         
-        // Validar el formulario
-        const validation = ValidationUtils.validateForm(form, fields);
+        // Desactivar el botón de la entidad seleccionada
+        document.querySelectorAll('.entity-btn').forEach(btn => {
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-outline-primary');
+        });
         
-        if (!validation.isValid) {
-            UIUtils.showAlert('Por favor complete correctamente todos los campos requeridos', 'warning', document.querySelector('.card-body'));
-            return;
-        }
+        // Limpiar el ID de entidad seleccionada
+        document.getElementById('selected-entity-id').value = '';
         
-        // Guardar registro
-        const newRecord = RecordModel.create(entityId, validation.data);
+        // Recargar registros recientes
+        this.loadRecentRecords();
         
-        if (newRecord) {
-            // Verificar si el checkbox "Ayer" está marcado
-            const yesterdayCheck = document.getElementById('yesterday-check');
-            
-            if (yesterdayCheck && yesterdayCheck.checked) {
-                // Obtener la fecha actual
-                const currentDate = new Date(newRecord.timestamp);
-                
-                // Restar un día manteniendo la misma hora
-                currentDate.setDate(currentDate.getDate() - 1);
-                
-                // Actualizar la fecha del registro
-                RecordModel.updateDate(newRecord.id, currentDate.toISOString());
-            }
-            
-            // Limpiar formulario
-            form.reset();
-            document.getElementById('dynamic-fields-container').innerHTML = '';
-            
-            // Desactivar el botón de la entidad seleccionada
-            document.querySelectorAll('.entity-btn').forEach(btn => {
-                btn.classList.remove('btn-primary');
-                btn.classList.add('btn-outline-primary');
-            });
-            
-            // Recargar registros recientes
-            this.loadRecentRecords();
-            
-            // Mostrar mensaje
-            UIUtils.showAlert('Registro guardado correctamente', 'success', document.querySelector('.card-body'));
-        } else {
-            UIUtils.showAlert('Error al guardar el registro', 'danger', document.querySelector('.card-body'));
-        }
-    },
+        // Mostrar mensaje
+        UIUtils.showAlert('Registro guardado correctamente', 'success', document.querySelector('.card-body'));
+    } else {
+        UIUtils.showAlert('Error al guardar el registro', 'danger', document.querySelector('.card-body'));
+    }
+},
     
     /**
      * Carga y muestra los registros recientes
