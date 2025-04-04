@@ -3,6 +3,14 @@
  */
 const ReportsView = {
     /**
+     * Propiedades para paginación
+     */
+    pagination: {
+        currentPage: 1,
+        itemsPerPage: 20,
+    },
+    
+    /**
      * Inicializa la vista de reportes
      */
     init() {
@@ -181,6 +189,25 @@ const ReportsView = {
             <div id="no-filtered-records" class="text-center py-4">
                 <p class="text-muted">No hay registros que coincidan con los filtros.</p>
             </div>
+            
+            <!-- Controles de Paginación -->
+            <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-light">
+                <div class="d-flex align-items-center">
+                    <label class="me-2 mb-0">Registros por página:</label>
+                    <select id="items-per-page" class="form-select form-select-sm" style="width: auto;">
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+                <div class="pagination-container">
+                    <nav aria-label="Navegación de página">
+                        <ul class="pagination pagination-sm mb-0" id="pagination-controls">
+                            <!-- Controles de paginación se generarán dinámicamente -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -261,19 +288,25 @@ const ReportsView = {
             });
         }
 
+        // Añadir event listener para el selector de registros por página
+        const itemsPerPageSelect = document.getElementById('items-per-page');
+        if (itemsPerPageSelect) {
+            itemsPerPageSelect.addEventListener('change', () => {
+                this.pagination.itemsPerPage = parseInt(itemsPerPageSelect.value);
+                this.pagination.currentPage = 1; // Volver a la primera página al cambiar
+                this.filterRecordsBySearch(); // Actualizar la visualización
+            });
+        }
+
         // Atajos de fecha
-document.querySelectorAll('.date-shortcut').forEach(button => {
-    button.addEventListener('click', (e) => {
-        const range = e.target.getAttribute('data-range');
-        this.setDateRange(range);
-        // Aplicar filtros automáticamente
-        document.getElementById('filter-form').dispatchEvent(new Event('submit'));
-    });
-});
-
-
-
-
+        document.querySelectorAll('.date-shortcut').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const range = e.target.getAttribute('data-range');
+                this.setDateRange(range);
+                // Aplicar filtros automáticamente
+                document.getElementById('filter-form').dispatchEvent(new Event('submit'));
+            });
+        });
     },
     
     /**
@@ -308,6 +341,9 @@ document.querySelectorAll('.date-shortcut').forEach(button => {
         // Guardar los registros filtrados para usarlos en la búsqueda
         this.filteredRecords = filteredRecords;
         
+        // Reiniciar la página actual al aplicar nuevos filtros
+        this.pagination.currentPage = 1;
+        
         // Mostrar registros (aplicando también el filtro de búsqueda si existe)
         this.filterRecordsBySearch();
     },
@@ -319,44 +355,187 @@ document.querySelectorAll('.date-shortcut').forEach(button => {
         const searchText = document.getElementById('search-records').value.toLowerCase().trim();
         
         // Si no hay texto de búsqueda, mostrar todos los registros filtrados
-        if (!searchText) {
-            this.displayFilteredRecords(this.filteredRecords);
-            return;
+        let searchedRecords = this.filteredRecords;
+        
+        if (searchText) {
+            // Filtrar registros que contengan el texto de búsqueda
+            searchedRecords = this.filteredRecords.filter(record => {
+                // Obtener la entidad
+                const entity = EntityModel.getById(record.entityId) || { name: 'Desconocido' };
+                
+                // Verificar si el nombre de la entidad coincide
+                if (entity.name.toLowerCase().includes(searchText)) return true;
+                
+                // Verificar en la fecha
+                const formattedDate = UIUtils.formatDate(record.timestamp).toLowerCase();
+                if (formattedDate.includes(searchText)) return true;
+                
+                // Verificar en los datos del registro
+                const fields = FieldModel.getByIds(Object.keys(record.data));
+                
+                for (const fieldId in record.data) {
+                    const field = fields.find(f => f.id === fieldId) || { name: fieldId };
+                    const value = String(record.data[fieldId]).toLowerCase();
+                    
+                    // Verificar si el nombre del campo o su valor coincide
+                    if (field.name.toLowerCase().includes(searchText) || value.includes(searchText)) {
+                        return true;
+                    }
+                }
+                
+                return false;
+            });
         }
         
-        // Filtrar registros que contengan el texto de búsqueda
-        const searchedRecords = this.filteredRecords.filter(record => {
-            // Obtener la entidad
-            const entity = EntityModel.getById(record.entityId) || { name: 'Desconocido' };
-            
-            // Verificar si el nombre de la entidad coincide
-            if (entity.name.toLowerCase().includes(searchText)) return true;
-            
-            // Verificar en la fecha
-            const formattedDate = UIUtils.formatDate(record.timestamp).toLowerCase();
-            if (formattedDate.includes(searchText)) return true;
-            
-            // Verificar en los datos del registro
-            const fields = FieldModel.getByIds(Object.keys(record.data));
-            
-            for (const fieldId in record.data) {
-                const field = fields.find(f => f.id === fieldId) || { name: fieldId };
-                const value = String(record.data[fieldId]).toLowerCase();
-                
-                // Verificar si el nombre del campo o su valor coincide
-                if (field.name.toLowerCase().includes(searchText) || value.includes(searchText)) {
-                    return true;
-                }
-            }
-            
-            return false;
-        });
-        
-        // Mostrar registros que coinciden con la búsqueda
-        this.displayFilteredRecords(searchedRecords);
+        // Guardar los resultados de la búsqueda
+        this.searchedRecords = searchedRecords;
         
         // Actualizar contador
         document.getElementById('records-count').textContent = `${searchedRecords.length} registros`;
+        
+        // Mostrar registros paginados
+        this.displayPaginatedRecords();
+    },
+    
+    /**
+     * Muestra los registros con paginación
+     */
+    displayPaginatedRecords() {
+        const { currentPage, itemsPerPage } = this.pagination;
+        const records = this.searchedRecords || [];
+        const totalRecords = records.length;
+        const totalPages = Math.ceil(totalRecords / itemsPerPage);
+        
+        // Calcular índices de registros a mostrar
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, totalRecords);
+        const recordsToShow = records.slice(startIndex, endIndex);
+        
+        // Mostrar registros paginados
+        this.displayFilteredRecords(recordsToShow);
+        
+        // Actualizar controles de paginación
+        this.updatePaginationControls(totalPages);
+    },
+    
+    /**
+     * Actualiza los controles de paginación
+     * @param {number} totalPages Total de páginas
+     */
+    updatePaginationControls(totalPages) {
+        const paginationControls = document.getElementById('pagination-controls');
+        if (!paginationControls) return;
+        
+        const { currentPage } = this.pagination;
+        
+        // Limpiar controles existentes
+        paginationControls.innerHTML = '';
+        
+        // No mostrar paginación si hay una sola página o ninguna
+        if (totalPages <= 1) return;
+        
+        // Botón Anterior
+        const prevButton = document.createElement('li');
+        prevButton.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevButton.innerHTML = `<a class="page-link" href="#" aria-label="Anterior"><span aria-hidden="true">&laquo;</span></a>`;
+        
+        if (currentPage > 1) {
+            prevButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.goToPage(currentPage - 1);
+            });
+        }
+        
+        paginationControls.appendChild(prevButton);
+        
+        // Determinar qué números de página mostrar
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        
+        // Ajustar si estamos al final para mostrar 5 páginas cuando sea posible
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+        
+        // Primera página y elipsis si es necesario
+        if (startPage > 1) {
+            const firstPageItem = document.createElement('li');
+            firstPageItem.className = 'page-item';
+            firstPageItem.innerHTML = `<a class="page-link" href="#">1</a>`;
+            firstPageItem.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.goToPage(1);
+            });
+            paginationControls.appendChild(firstPageItem);
+            
+            if (startPage > 2) {
+                const ellipsisItem = document.createElement('li');
+                ellipsisItem.className = 'page-item disabled';
+                ellipsisItem.innerHTML = `<a class="page-link" href="#">...</a>`;
+                paginationControls.appendChild(ellipsisItem);
+            }
+        }
+        
+        // Páginas numeradas
+        for (let i = startPage; i <= endPage; i++) {
+            const pageItem = document.createElement('li');
+            pageItem.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            pageItem.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+            
+            if (i !== currentPage) {
+                pageItem.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.goToPage(i);
+                });
+            }
+            
+            paginationControls.appendChild(pageItem);
+        }
+        
+        // Elipsis y última página si es necesario
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const ellipsisItem = document.createElement('li');
+                ellipsisItem.className = 'page-item disabled';
+                ellipsisItem.innerHTML = `<a class="page-link" href="#">...</a>`;
+                paginationControls.appendChild(ellipsisItem);
+            }
+            
+            const lastPageItem = document.createElement('li');
+            lastPageItem.className = 'page-item';
+            lastPageItem.innerHTML = `<a class="page-link" href="#">${totalPages}</a>`;
+            lastPageItem.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.goToPage(totalPages);
+            });
+            paginationControls.appendChild(lastPageItem);
+        }
+        
+        // Botón Siguiente
+        const nextButton = document.createElement('li');
+        nextButton.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextButton.innerHTML = `<a class="page-link" href="#" aria-label="Siguiente"><span aria-hidden="true">&raquo;</span></a>`;
+        
+        if (currentPage < totalPages) {
+            nextButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.goToPage(currentPage + 1);
+            });
+        }
+        
+        paginationControls.appendChild(nextButton);
+    },
+    
+    /**
+     * Navega a una página específica
+     * @param {number} pageNumber Número de página
+     */
+    goToPage(pageNumber) {
+        this.pagination.currentPage = pageNumber;
+        this.displayPaginatedRecords();
+        
+        // Desplazar al inicio de la tabla
+        document.getElementById('records-table').scrollIntoView({ behavior: 'smooth' });
     },
     
     /**
@@ -435,144 +614,140 @@ document.querySelectorAll('.date-shortcut').forEach(button => {
      * Muestra los detalles de un registro
      * @param {string} recordId ID del registro
      */
-    /**
- * Muestra los detalles de un registro
- * @param {string} recordId ID del registro
- */
-showRecordDetails(recordId) {
-    const record = RecordModel.getById(recordId);
-    if (!record) return;
-    
-    const entity = EntityModel.getById(record.entityId) || { name: 'Desconocido' };
-    const fields = FieldModel.getByIds(Object.keys(record.data));
-     // Obtener nombre personalizado de la entidad
-     const config = StorageService.getConfig();
-     const entityName = config.entityName || 'Entidad';
-    const modal = UIUtils.initModal('viewRecordModal');
-    const recordDetails = document.getElementById('record-details');
-    
-    // Preparar contenido del modal
-    const detailsHTML = `
-        <div class="mb-3">
-            <strong>${entityName}:</strong> ${entity.name}
-        </div>
-        <div class="mb-3">
-            <strong>Fecha y Hora:</strong> <span id="record-timestamp">${UIUtils.formatDate(record.timestamp)}</span>
-        </div>
-        <div class="mb-3">
-            <strong>Datos:</strong>
-            <table class="table table-sm table-bordered mt-2">
-                <thead class="table-light">
-                    <tr>
-                        <th>Campo</th>
-                        <th>Valor</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${Object.entries(record.data).map(([fieldId, value]) => {
-                        const field = fields.find(f => f.id === fieldId) || { name: fieldId };
-                        return `
-                            <tr>
-                                <td>${field.name}</td>
-                                <td>${value}</td>
-                            </tr>
-                        `;
-                    }).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
-    
-    recordDetails.innerHTML = detailsHTML;
-    
-    // Añadir botones y sus listeners
-    const footerDiv = document.querySelector('#viewRecordModal .modal-footer');
-    footerDiv.innerHTML = `
-        <button type="button" class="btn btn-danger me-auto" id="deleteRecordBtn">Eliminar registro</button>
-        <button type="button" class="btn btn-warning" id="editDateBtn">Editar fecha</button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-    `;
-    
-    // Listener para el botón de eliminar registro
-    document.getElementById('deleteRecordBtn').addEventListener('click', () => {
-        // Configurar el modal de confirmación
-        const confirmModal = UIUtils.initModal('confirmModal');
-        document.getElementById('confirm-message').textContent = 
-            '¿Está seguro de que desea eliminar este registro? Esta acción no se puede deshacer.';
-            
-        const confirmBtn = document.getElementById('confirmActionBtn');
+    showRecordDetails(recordId) {
+        const record = RecordModel.getById(recordId);
+        if (!record) return;
         
-        // Limpiar listeners anteriores
-        const newConfirmBtn = confirmBtn.cloneNode(true);
-        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        const entity = EntityModel.getById(record.entityId) || { name: 'Desconocido' };
+        const fields = FieldModel.getByIds(Object.keys(record.data));
+         // Obtener nombre personalizado de la entidad
+         const config = StorageService.getConfig();
+         const entityName = config.entityName || 'Entidad';
+        const modal = UIUtils.initModal('viewRecordModal');
+        const recordDetails = document.getElementById('record-details');
         
-        // Añadir nuevo listener
-        newConfirmBtn.addEventListener('click', () => {
-            const deleted = RecordModel.delete(recordId);
-            confirmModal.hide();
-            modal.hide();
-            
-            if (deleted) {
-                this.applyFilters(); // Actualizar lista de registros
-                UIUtils.showAlert('Registro eliminado correctamente', 'success', document.querySelector('.card-body'));
-            } else {
-                UIUtils.showAlert('Error al eliminar el registro', 'danger', document.querySelector('.card-body'));
-            }
-        });
-        
-        // Mostrar modal de confirmación
-        confirmModal.show();
-    });
-    
-    // Listener para el botón de editar fecha
-    document.getElementById('editDateBtn').addEventListener('click', () => {
-        // Crear un input para la fecha y hora
-        const timestampSpan = document.getElementById('record-timestamp');
-        const currentTimestamp = new Date(record.timestamp);
-        
-        // Formatear la fecha para el input datetime-local
-        const formattedDate = currentTimestamp.toISOString().slice(0, 16);
-        
-        // Reemplazar el texto por un input
-        timestampSpan.innerHTML = `
-            <div class="input-group">
-                <input type="datetime-local" id="new-timestamp" class="form-control form-control-sm" value="${formattedDate}">
-                <button class="btn btn-sm btn-primary" id="save-timestamp">Guardar</button>
-                <button class="btn btn-sm btn-secondary" id="cancel-timestamp">Cancelar</button>
+        // Preparar contenido del modal
+        const detailsHTML = `
+            <div class="mb-3">
+                <strong>${entityName}:</strong> ${entity.name}
+            </div>
+            <div class="mb-3">
+                <strong>Fecha y Hora:</strong> <span id="record-timestamp">${UIUtils.formatDate(record.timestamp)}</span>
+            </div>
+            <div class="mb-3">
+                <strong>Datos:</strong>
+                <table class="table table-sm table-bordered mt-2">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Campo</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${Object.entries(record.data).map(([fieldId, value]) => {
+                            const field = fields.find(f => f.id === fieldId) || { name: fieldId };
+                            return `
+                                <tr>
+                                    <td>${field.name}</td>
+                                    <td>${value}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
             </div>
         `;
         
-        // Listener para guardar la nueva fecha
-        document.getElementById('save-timestamp').addEventListener('click', () => {
-            const newTimestamp = document.getElementById('new-timestamp').value;
+        recordDetails.innerHTML = detailsHTML;
+        
+        // Añadir botones y sus listeners
+        const footerDiv = document.querySelector('#viewRecordModal .modal-footer');
+        footerDiv.innerHTML = `
+            <button type="button" class="btn btn-danger me-auto" id="deleteRecordBtn">Eliminar registro</button>
+            <button type="button" class="btn btn-warning" id="editDateBtn">Editar fecha</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        `;
+        
+        // Listener para el botón de eliminar registro
+        document.getElementById('deleteRecordBtn').addEventListener('click', () => {
+            // Configurar el modal de confirmación
+            const confirmModal = UIUtils.initModal('confirmModal');
+            document.getElementById('confirm-message').textContent = 
+                '¿Está seguro de que desea eliminar este registro? Esta acción no se puede deshacer.';
+                
+            const confirmBtn = document.getElementById('confirmActionBtn');
             
-            if (!newTimestamp) {
-                UIUtils.showAlert('Debe seleccionar una fecha válida', 'warning', recordDetails);
-                return;
-            }
+            // Limpiar listeners anteriores
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
             
-            // Convertir a formato ISO
-            const newDate = new Date(newTimestamp).toISOString();
-            const updatedRecord = RecordModel.updateDate(recordId, newDate);
+            // Añadir nuevo listener
+            newConfirmBtn.addEventListener('click', () => {
+                const deleted = RecordModel.delete(recordId);
+                confirmModal.hide();
+                modal.hide();
+                
+                if (deleted) {
+                    this.applyFilters(); // Actualizar lista de registros
+                    UIUtils.showAlert('Registro eliminado correctamente', 'success', document.querySelector('.card-body'));
+                } else {
+                    UIUtils.showAlert('Error al eliminar el registro', 'danger', document.querySelector('.card-body'));
+                }
+            });
             
-            if (updatedRecord) {
-                // Actualizar la vista
-                timestampSpan.textContent = UIUtils.formatDate(newDate);
-                this.applyFilters(); // Actualizar lista de registros
-                UIUtils.showAlert('Fecha actualizada correctamente', 'success', recordDetails);
-            } else {
-                UIUtils.showAlert('Error al actualizar la fecha', 'danger', recordDetails);
-            }
+            // Mostrar modal de confirmación
+            confirmModal.show();
         });
         
-        // Listener para cancelar la edición
-        document.getElementById('cancel-timestamp').addEventListener('click', () => {
-            timestampSpan.textContent = UIUtils.formatDate(record.timestamp);
+        // Listener para el botón de editar fecha
+        document.getElementById('editDateBtn').addEventListener('click', () => {
+            // Crear un input para la fecha y hora
+            const timestampSpan = document.getElementById('record-timestamp');
+            const currentTimestamp = new Date(record.timestamp);
+            
+            // Formatear la fecha para el input datetime-local
+            const formattedDate = currentTimestamp.toISOString().slice(0, 16);
+            
+            // Reemplazar el texto por un input
+            timestampSpan.innerHTML = `
+                <div class="input-group">
+                    <input type="datetime-local" id="new-timestamp" class="form-control form-control-sm" value="${formattedDate}">
+                    <button class="btn btn-sm btn-primary" id="save-timestamp">Guardar</button>
+                    <button class="btn btn-sm btn-secondary" id="cancel-timestamp">Cancelar</button>
+                </div>
+            `;
+            
+            // Listener para guardar la nueva fecha
+            document.getElementById('save-timestamp').addEventListener('click', () => {
+                const newTimestamp = document.getElementById('new-timestamp').value;
+                
+                if (!newTimestamp) {
+                    UIUtils.showAlert('Debe seleccionar una fecha válida', 'warning', recordDetails);
+                    return;
+                }
+                
+                // Convertir a formato ISO
+                const newDate = new Date(newTimestamp).toISOString();
+                const updatedRecord = RecordModel.updateDate(recordId, newDate);
+                
+                if (updatedRecord) {
+                    // Actualizar la vista
+                    timestampSpan.textContent = UIUtils.formatDate(newDate);
+                    this.applyFilters(); // Actualizar lista de registros
+                    UIUtils.showAlert('Fecha actualizada correctamente', 'success', recordDetails);
+                } else {
+                    UIUtils.showAlert('Error al actualizar la fecha', 'danger', recordDetails);
+                }
+            });
+            
+            // Listener para cancelar la edición
+            document.getElementById('cancel-timestamp').addEventListener('click', () => {
+                timestampSpan.textContent = UIUtils.formatDate(record.timestamp);
+            });
         });
-    });
-    
-    modal.show();
-},
+        
+        modal.show();
+    },
     
     /**
      * Genera y muestra un reporte comparativo
@@ -628,80 +803,80 @@ showRecordDetails(recordId) {
         `;
     },
     /**
- * Configura el rango de fecha según el atajo seleccionado
- * @param {string} range Tipo de rango de fecha (yesterday, thisWeek, lastWeek, thisMonth, lastMonth)
- */
-setDateRange(range) {
-    const fromDateInput = document.getElementById('filter-from-date');
-    const toDateInput = document.getElementById('filter-to-date');
-    
-    // Fecha actual
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    let fromDate, toDate;
-    
-    // Calcular rango según selección
-    switch (range) {
-        case 'yesterday':
-            // Ayer (solo un día)
-            fromDate = new Date(today);
-            fromDate.setDate(today.getDate() - 1);
-            toDate = new Date(fromDate);
-            break;
-            
-        case 'thisWeek':
-            // Esta semana (desde domingo o lunes hasta hoy)
-            fromDate = new Date(today);
-            // Obtener el primer día de la semana (0 = domingo, 1 = lunes)
-            const firstDayOfWeek = 1; // Usando lunes como primer día
-            const day = today.getDay();
-            const diff = (day >= firstDayOfWeek) ? day - firstDayOfWeek : 6 - firstDayOfWeek + day;
-            fromDate.setDate(today.getDate() - diff);
-            toDate = new Date(today);
-            break;
-            
-        case 'lastWeek':
-            // Semana pasada
-            fromDate = new Date(today);
-            const firstDayLastWeek = 1; // Lunes
-            const dayLastWeek = today.getDay();
-            // Retroceder al lunes de la semana pasada
-            fromDate.setDate(today.getDate() - dayLastWeek - 6);
-            // Fin de semana pasada (domingo)
-            toDate = new Date(fromDate);
-            toDate.setDate(fromDate.getDate() + 6);
-            break;
-            
-        case 'thisMonth':
-            // Mes actual
-            fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
-            toDate = new Date(today);
-            break;
-            
-        case 'lastMonth':
-            // Mes pasado
-            fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-            toDate = new Date(today.getFullYear(), today.getMonth(), 0);
-            break;
-            
-        default:
-            return; // No hacer nada si no coincide
-    }
-    
-    // Formatear fechas para los inputs
-    fromDateInput.value = this.formatDateForInput(fromDate);
-    toDateInput.value = this.formatDateForInput(toDate);
-},
+     * Configura el rango de fecha según el atajo seleccionado
+     * @param {string} range Tipo de rango de fecha (yesterday, thisWeek, lastWeek, thisMonth, lastMonth)
+     */
+    setDateRange(range) {
+        const fromDateInput = document.getElementById('filter-from-date');
+        const toDateInput = document.getElementById('filter-to-date');
+        
+        // Fecha actual
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        let fromDate, toDate;
+        
+        // Calcular rango según selección
+        switch (range) {
+            case 'yesterday':
+                // Ayer (solo un día)
+                fromDate = new Date(today);
+                fromDate.setDate(today.getDate() - 1);
+                toDate = new Date(fromDate);
+                break;
+                
+            case 'thisWeek':
+                // Esta semana (desde domingo o lunes hasta hoy)
+                fromDate = new Date(today);
+                // Obtener el primer día de la semana (0 = domingo, 1 = lunes)
+                const firstDayOfWeek = 1; // Usando lunes como primer día
+                const day = today.getDay();
+                const diff = (day >= firstDayOfWeek) ? day - firstDayOfWeek : 6 - firstDayOfWeek + day;
+                fromDate.setDate(today.getDate() - diff);
+                toDate = new Date(today);
+                break;
+                
+            case 'lastWeek':
+                // Semana pasada
+                fromDate = new Date(today);
+                const firstDayLastWeek = 1; // Lunes
+                const dayLastWeek = today.getDay();
+                // Retroceder al lunes de la semana pasada
+                fromDate.setDate(today.getDate() - dayLastWeek - 6);
+                // Fin de semana pasada (domingo)
+                toDate = new Date(fromDate);
+                toDate.setDate(fromDate.getDate() + 6);
+                break;
+                
+            case 'thisMonth':
+                // Mes actual
+                fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                toDate = new Date(today);
+                break;
+                
+            case 'lastMonth':
+                // Mes pasado
+                fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                toDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                break;
+                
+            default:
+                return; // No hacer nada si no coincide
+        }
+        
+        // Formatear fechas para los inputs
+        fromDateInput.value = this.formatDateForInput(fromDate);
+        toDateInput.value = this.formatDateForInput(toDate);
+    },
 
-/**
- * Formatea una fecha para usar en input type="date"
- * @param {Date} date Objeto Date a formatear
- * @returns {string} Fecha formateada YYYY-MM-DD
- */
-formatDateForInput(date) {
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
+    /**
+     * Formatea una fecha para usar en input type="date"
+     * @param {Date} date Objeto Date a formatear
+     * @returns {string} Fecha formateada YYYY-MM-DD
+     */
+    formatDateForInput(date) {
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
 };
