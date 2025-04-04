@@ -195,14 +195,32 @@ loadDynamicFields(entityId) {
         const fieldHTML = UIUtils.generateFieldInput(field);
         dynamicFieldsContainer.insertAdjacentHTML('beforeend', fieldHTML);
         
-        // Activar búsqueda para campos select después de insertarlos en el DOM
+        // Si es un campo select, aplicarle un estilo de "invisible" hasta que se inicialice completamente
         if (field.type === 'select') {
-            UIUtils.setupSearchableSelect(`#${field.id}`);
+            const selectElement = document.getElementById(field.id);
+            if (selectElement) {
+                selectElement.style.visibility = 'hidden'; // Ocultar el select nativo sin afectar el layout
+            }
         }
     });
-    
+
     // Mostrar el contenedor del botón y checkbox
     submitContainer.style.display = 'block';
+    
+    // Inicializar los select2 después de insertar todos los campos en el DOM
+    // Esto garantiza que todos los elementos ya estén en el DOM antes de inicializar
+    setTimeout(() => {
+        fields.forEach(field => {
+            if (field.type === 'select') {
+                UIUtils.setupSearchableSelect(`#${field.id}`);
+                // Hacer visible el select2 una vez inicializado
+                const selectElement = document.getElementById(field.id);
+                if (selectElement) {
+                    selectElement.style.visibility = 'visible';
+                }
+            }
+        });
+    }, 10); // Un pequeño delay para asegurar que el DOM se actualice primero
 },
     
     /**
