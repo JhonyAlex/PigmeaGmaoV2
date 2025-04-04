@@ -83,3 +83,51 @@ body {
 .highlight-new {
     animation: highlight 2s ease-out;
 }
+
+/* Estilos para select con búsqueda */
+.select-with-search {
+    position: relative;
+}
+
+.select-search-box {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: white;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    margin-top: 2px;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.select-search-input {
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.25rem;
+}
+
+.select-search-options {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.select-search-option {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.select-search-option:hover {
+    background-color: #f8f9fa;
+}
+
+.select-search-option.active {
+    background-color: #e9ecef;
+}
+
+/* Estilo para destacar texto coincidente en resultados de búsqueda */
+.highlight-match {
+    font-weight: bold;
+    background-color: rgba(0, 123, 255, 0.1);
+}

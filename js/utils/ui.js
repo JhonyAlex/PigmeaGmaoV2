@@ -85,20 +85,156 @@ const UIUtils = {
                     `<option value="${option}" ${option === value ? 'selected' : ''}>${option}</option>`
                 ).join('');
                 
+                // Crear un campo select con capacidad de búsqueda
                 inputHTML = `
                     <div class="mb-3 dynamic-field">
                         <label for="${field.id}" class="form-label ${requiredClass}">${field.name}</label>
-                        <select class="form-select" id="${field.id}" name="${field.id}" ${required}>
-                            <option value="" ${value ? '' : 'selected'}>-- Seleccione --</option>
-                            ${options}
-                        </select>
+                        <div class="select-with-search">
+                            <select class="form-select searchable-select" id="${field.id}" name="${field.id}" ${required}>
+                                <option value="" ${value ? '' : 'selected'}>-- Seleccione --</option>
+                                ${options}
+                            </select>
+                            <div class="select-search-box d-none">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control select-search-input" placeholder="Buscar...">
+                                </div>
+                                <div class="select-search-options"></div>
+                            </div>
+                        </div>
                     </div>
                 `;
+                
+                // Al insertar el HTML, debemos vincular los eventos de búsqueda
+                setTimeout(() => {
+                    this.setupSearchableSelect(`#${field.id}`);
+                }, 0);
                 break;
         }
         
         return inputHTML;
     },
+    
+    /**
+     * Configura un select para que tenga función de búsqueda
+     * @param {string} selector Selector del elemento select
+     */
+    setupSearchableSelect(selector) {
+        const select = document.querySelector(selector);
+        if (!select || !select.classList.contains('searchable-select')) return;
+        
+        const selectContainer = select.closest('.select-with-search');
+        const searchBox = selectContainer.querySelector('.select-search-box');
+        const searchInput = selectContainer.querySelector('.select-search-input');
+        const optionsContainer = selectContainer.querySelector('.select-search-options');
+        
+        // Estilos dinámicos para el cuadro de búsqueda
+        const styles = document.createElement('style');
+        styles.textContent = `
+            .select-with-search {
+                position: relative;
+            }
+            .select-search-box {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                z-index: 1000;
+                background: white;
+                border: 1px solid #ced4da;
+                border-radius: 0.25rem;
+                margin-top: 2px;
+                box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+                max-height: 300px;
+                overflow-y: auto;
+            }
+            .select-search-options {
+                max-height: 250px;
+                overflow-y: auto;
+            }
+            .select-search-option {
+                padding: 0.5rem 1rem;
+                cursor: pointer;
+            }
+            .select-search-option:hover {
+                background-color: #f8f9fa;
+            }
+            .select-search-option.active {
+                background-color: #e9ecef;
+            }
+        `;
+        
+        // Añadir estilos si no existen
+        if (!document.querySelector('style#searchable-select-styles')) {
+            styles.id = 'searchable-select-styles';
+            document.head.appendChild(styles);
+        }
+        
+        // Al hacer clic en el select, mostrar el cuadro de búsqueda
+        select.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Mostrar cuadro de búsqueda
+            searchBox.classList.remove('d-none');
+            
+            // Cargar todas las opciones
+            updateOptions('');
+            
+            // Enfocar en el campo de búsqueda
+            setTimeout(() => searchInput.focus(), 10);
+        });
+        
+        // Función para actualizar las opciones mostradas
+        function updateOptions(searchText) {
+            const options = Array.from(select.options).slice(1); // Ignorar el primer "Seleccione"
+            const filtered = searchText ? 
+                options.filter(opt => opt.text.toLowerCase().includes(searchText.toLowerCase())) : 
+                options;
+            
+            optionsContainer.innerHTML = '';
+            
+            filtered.forEach(option => {
+                const div = document.createElement('div');
+                div.className = 'select-search-option';
+                div.dataset.value = option.value;
+                div.textContent = option.text;
+                div.addEventListener('click', () => {
+                    select.value = option.value;
+                    searchBox.classList.add('d-none');
+                    
+                    // Disparar evento change para que funcionen validaciones u otros listeners
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+                optionsContainer.appendChild(div);
+            });
+            
+            if (filtered.length === 0) {
+                const div = document.createElement('div');
+                div.className = 'select-search-option text-muted';
+                div.textContent = 'No se encontraron opciones';
+                optionsContainer.appendChild(div);
+            }
+        }
+        
+        // Búsqueda en tiempo real
+        searchInput.addEventListener('input', function() {
+            updateOptions(this.value);
+        });
+        
+        // Cerrar al hacer clic fuera
+        document.addEventListener('click', function(e) {
+            if (!selectContainer.contains(e.target)) {
+                searchBox.classList.add('d-none');
+            }
+        });
+        
+        // Prevenir que el clic en el cuadro de búsqueda cierre el dropdown
+        searchBox.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    },
+    
     getEntityName(lowercase = false, plural = false) {
         const config = StorageService.getConfig();
         let entityName = config.entityName || 'Entidad';

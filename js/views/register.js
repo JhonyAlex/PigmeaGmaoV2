@@ -194,6 +194,11 @@ loadDynamicFields(entityId) {
     fields.forEach(field => {
         const fieldHTML = UIUtils.generateFieldInput(field);
         dynamicFieldsContainer.insertAdjacentHTML('beforeend', fieldHTML);
+        
+        // Activar búsqueda para campos select después de insertarlos en el DOM
+        if (field.type === 'select') {
+            UIUtils.setupSearchableSelect(`#${field.id}`);
+        }
     });
     
     // Mostrar el contenedor del botón y checkbox
