@@ -12,7 +12,9 @@ const ExportUtils = {
         
         const a = document.createElement('a');
         a.href = url;
-        a.download = `app_data_export_${new Date().toISOString().split('T')[0]}.json`;
+        const now = new Date();
+        const formattedDate = now.toISOString().replace('T', ' ').substring(0, 19);
+        a.download = `Datos para Web Actualizados (${formattedDate}).json`;
         document.body.appendChild(a);
         a.click();
         
