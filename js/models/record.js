@@ -7,9 +7,11 @@ const RecordModel = {
      * @returns {Array} Lista de registros
      */
     getAll() {
-        return StorageService.getData().records;
+        // Asumiendo que StorageService.getData() devuelve un objeto { records: [...] }
+        const data = StorageService.getData();
+        return data && data.records ? data.records : [];
     },
-    
+
     /**
      * Obtiene un registro por su ID
      * @param {string} id ID del registro
@@ -19,7 +21,7 @@ const RecordModel = {
         const records = this.getAll();
         return records.find(record => record.id === id) || null;
     },
-    
+
     /**
      * Crea un nuevo registro
      * @param {string} entityId ID de la entidad
@@ -27,20 +29,23 @@ const RecordModel = {
      * @returns {Object} Registro creado
      */
     create(entityId, formData) {
-        const data = StorageService.getData();
+        const data = StorageService.getData() || { records: [] }; // Inicializa si no existe
         const newRecord = {
-            id: 'record_' + Date.now(),
+            id: 'record_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7), // ID más único
             entityId: entityId,
             timestamp: new Date().toISOString(),
             data: { ...formData }
         };
-        
+
+        if (!data.records) {
+             data.records = []; // Asegura que el array exista
+        }
         data.records.push(newRecord);
         StorageService.saveData(data);
-        
+
         return newRecord;
     },
-    
+
     /**
      * Filtra registros según criterios (una sola entidad)
      * @param {Object} filters Criterios de filtrado
@@ -48,27 +53,34 @@ const RecordModel = {
      */
     filter(filters = {}) {
         let records = this.getAll();
-        
+
         // Filtrar por entidad
         if (filters.entityId) {
             records = records.filter(record => record.entityId === filters.entityId);
         }
-        
+
         // Filtrar por fecha
         if (filters.fromDate) {
             const fromDate = new Date(filters.fromDate);
-            records = records.filter(record => new Date(record.timestamp) >= fromDate);
+            // Para comparar solo fechas, ignorando la hora:
+            fromDate.setHours(0, 0, 0, 0);
+            records = records.filter(record => {
+                const recordDate = new Date(record.timestamp);
+                recordDate.setHours(0, 0, 0, 0);
+                return recordDate >= fromDate;
+            });
         }
-        
+
         if (filters.toDate) {
             const toDate = new Date(filters.toDate);
-            toDate.setHours(23, 59, 59); // Final del día
+            // Para incluir todo el día 'toDate':
+            toDate.setHours(23, 59, 59, 999);
             records = records.filter(record => new Date(record.timestamp) <= toDate);
         }
-        
+
         return records;
     },
-    
+
     /**
      * Filtra registros según criterios (múltiples entidades)
      * @param {Object} filters Criterios de filtrado con entityIds como array
@@ -76,27 +88,38 @@ const RecordModel = {
      */
     filterMultiple(filters = {}) {
         let records = this.getAll();
-        
+
         // Filtrar por entidades (múltiples)
-        if (filters.entityIds && filters.entityIds.length > 0) {
-            records = records.filter(record => filters.entityIds.includes(record.entityId));
+        if (filters.entityIds && Array.isArray(filters.entityIds) && filters.entityIds.length > 0) {
+            const entityIdSet = new Set(filters.entityIds); // Más eficiente para búsquedas
+            records = records.filter(record => entityIdSet.has(record.entityId));
         }
-        
-        // Filtrar por fecha
-        if (filters.fromDate) {
-            const fromDate = new Date(filters.fromDate);
-            records = records.filter(record => new Date(record.timestamp) >= fromDate);
+
+        // Reutilizar lógica de filtrado de fecha
+        if (filters.fromDate || filters.toDate) {
+             // Pasamos los filtros de fecha a la función 'filter' que ya tiene la lógica
+             // Nota: Esto es conceptual. Para reutilizar bien, la lógica de fecha debería
+             // estar en una función separada o 'filter' debería aceptar un array inicial.
+             // Por ahora, repetimos la lógica para claridad:
+            if (filters.fromDate) {
+                const fromDate = new Date(filters.fromDate);
+                fromDate.setHours(0, 0, 0, 0);
+                records = records.filter(record => {
+                    const recordDate = new Date(record.timestamp);
+                    recordDate.setHours(0, 0, 0, 0);
+                    return recordDate >= fromDate;
+                });
+            }
+            if (filters.toDate) {
+                const toDate = new Date(filters.toDate);
+                toDate.setHours(23, 59, 59, 999);
+                records = records.filter(record => new Date(record.timestamp) <= toDate);
+            }
         }
-        
-        if (filters.toDate) {
-            const toDate = new Date(filters.toDate);
-            toDate.setHours(23, 59, 59); // Final del día
-            records = records.filter(record => new Date(record.timestamp) <= toDate);
-        }
-        
+
         return records;
     },
-    
+
     /**
      * Obtiene los últimos N registros
      * @param {number} limit Número de registros a retornar
@@ -105,11 +128,11 @@ const RecordModel = {
     getRecent(limit = 10) {
         const records = this.getAll();
         // Ordenar por fecha (más reciente primero)
-        return [...records]
+        return [...records] // Crear copia para no mutar el original
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
             .slice(0, limit);
     },
-    
+
     /**
      * Genera datos para reportes comparativos (compatible con múltiples entidades)
      * @param {string} fieldId ID del campo a comparar
@@ -119,192 +142,248 @@ const RecordModel = {
      * @returns {Object} Datos para el reporte
      */
     generateReportMultiple(fieldId, aggregation = 'sum', filters = {}, horizontalFieldId = '') {
-        // Obtenemos el campo para asegurarnos que es numérico
+        // Asumiendo que FieldModel y EntityModel están disponibles globalmente o importados
         const field = FieldModel.getById(fieldId);
         if (!field || field.type !== 'number') {
-            return { error: 'El campo debe ser numérico' };
+            console.error('generateReportMultiple: El campo debe ser numérico y existir.');
+            return { error: 'El campo debe ser numérico y existir.' };
         }
-        
-        // Obtenemos las entidades que usan este campo
-        let entities = EntityModel.getAll().filter(entity => 
+
+        let entities = EntityModel.getAll().filter(entity =>
             entity.fields.includes(fieldId)
         );
-        
-        // Si hay un filtro de entidades específicas, filtramos aún más
-        if (filters.entityIds && filters.entityIds.length > 0) {
-            entities = entities.filter(entity => filters.entityIds.includes(entity.id));
+
+        if (filters.entityIds && Array.isArray(filters.entityIds) && filters.entityIds.length > 0) {
+            const entityIdSet = new Set(filters.entityIds);
+            entities = entities.filter(entity => entityIdSet.has(entity.id));
         }
-        
-        // Si no hay entidades, no podemos generar el reporte
-        if (entities.length === 0) {
+
+        if (entities.length === 0 && !horizontalFieldId) { // Si no hay eje horizontal, necesitamos entidades
+             console.error('generateReportMultiple: No hay entidades aplicables.');
             return { error: 'No hay entidades que coincidan con los filtros y usen este campo' };
         }
-        
-        // Filtramos los registros
+
+        // Usamos filterMultiple para obtener los registros base
         const filteredRecords = this.filterMultiple(filters);
-        
-        // Si se proporciona un campo para el eje horizontal, lo usamos
+
+        // ---- Lógica para eje horizontal ----
         if (horizontalFieldId) {
             const horizontalField = FieldModel.getById(horizontalFieldId);
             if (!horizontalField) {
+                console.error('generateReportMultiple: Campo horizontal no existe.');
                 return { error: 'El campo seleccionado para el eje horizontal no existe' };
             }
-            
-            // Agrupar por el valor del campo horizontal
+
             const reportData = {
                 field: field.name,
                 horizontalField: horizontalField.name,
                 aggregation: aggregation,
-                entities: []
+                groups: [] // Cambiado de 'entities' a 'groups' para más claridad
             };
-            
-            // Obtener valores únicos del campo horizontal
-            const uniqueValues = new Set();
-            filteredRecords.forEach(record => {
-                if (record.data[horizontalFieldId] !== undefined) {
-                    uniqueValues.add(record.data[horizontalFieldId]);
+
+            // Agrupar por valor del campo horizontal
+            const groupedByHorizontalValue = filteredRecords.reduce((acc, record) => {
+                const hValue = record.data[horizontalFieldId];
+                // Ignorar registros sin valor en el campo horizontal o sin valor en el campo a agregar
+                if (hValue === undefined || record.data[fieldId] === undefined) {
+                    return acc;
                 }
-            });
-            
-            // Para cada valor único, calcular la agregación
-            Array.from(uniqueValues).forEach(value => {
-                // Filtrar registros para este valor
-                const valueRecords = filteredRecords.filter(record => 
-                    record.data[horizontalFieldId] === value && 
-                    record.data[fieldId] !== undefined
-                );
-                
-                if (valueRecords.length === 0) {
-                    reportData.entities.push({
-                        id: value,
-                        name: value,
-                        value: 0,
-                        count: 0
-                    });
-                    return;
+                if (!acc[hValue]) {
+                    acc[hValue] = [];
                 }
-                
-                // Convertir valores a números
-                const values = valueRecords.map(record => 
-                    parseFloat(record.data[fieldId]) || 0
-                );
-                
-                // Calcular valor según agregación
+                acc[hValue].push(parseFloat(record.data[fieldId]) || 0); // Almacena solo el valor numérico
+                return acc;
+            }, {});
+
+            // Calcular agregación para cada grupo
+            for (const value in groupedByHorizontalValue) {
+                const values = groupedByHorizontalValue[value];
                 let aggregatedValue = 0;
-                if (aggregation === 'sum') {
-                    aggregatedValue = values.reduce((sum, val) => sum + val, 0);
-                } else if (aggregation === 'average') {
-                    aggregatedValue = values.reduce((sum, val) => sum + val, 0) / values.length;
+                if (values.length > 0) {
+                    const sum = values.reduce((s, v) => s + v, 0);
+                    if (aggregation === 'sum') {
+                        aggregatedValue = sum;
+                    } else if (aggregation === 'average') {
+                        aggregatedValue = sum / values.length;
+                    }
                 }
-                
-                reportData.entities.push({
-                    id: value,
-                    name: value,
+                reportData.groups.push({
+                    id: value, // El ID es el valor del campo horizontal
+                    name: value, // El nombre también
                     value: aggregatedValue,
-                    count: valueRecords.length
+                    count: values.length
                 });
-            });
-            
+            }
+             // Ordenar grupos si es necesario (ej. si son fechas o números)
+             // reportData.groups.sort(...);
+
             return reportData;
         }
-        
-        // Si no hay campo horizontal, usamos las entidades como siempre
+
+        // ---- Lógica sin eje horizontal (agrupado por entidad) ----
         const reportData = {
             field: field.name,
             aggregation: aggregation,
             entities: []
         };
-        
-        // Para cada entidad (ya filtradas si hay filtro de entidad), calculamos los valores
+
         entities.forEach(entity => {
-            // Filtrar registros para esta entidad
-            const entityRecords = filteredRecords.filter(record => 
-                record.entityId === entity.id && 
-                record.data[fieldId] !== undefined
+            // Filtrar registros para esta entidad específica DENTRO de los ya filtrados por fecha/etc.
+            const entityRecords = filteredRecords.filter(record =>
+                record.entityId === entity.id &&
+                record.data[fieldId] !== undefined // Asegurar que el campo exista en el registro
             );
-            
-            if (entityRecords.length === 0) {
-                reportData.entities.push({
-                    id: entity.id,
-                    name: entity.name,
-                    value: 0,
-                    count: 0
-                });
-                return;
+
+            let aggregatedValue = 0;
+            let count = 0;
+
+            if (entityRecords.length > 0) {
+                const values = entityRecords.map(record =>
+                    parseFloat(record.data[fieldId]) || 0
+                );
+                count = values.length;
+                const sum = values.reduce((s, v) => s + v, 0);
+
+                if (aggregation === 'sum') {
+                    aggregatedValue = sum;
+                } else if (aggregation === 'average') {
+                    aggregatedValue = sum / count;
+                }
             }
-            
-            // Convertir valores a números
-            const values = entityRecords.map(record => 
-                parseFloat(record.data[fieldId]) || 0
-            );
-            
-            // Calcular valor según agregación
-            let value = 0;
-            if (aggregation === 'sum') {
-                value = values.reduce((sum, val) => sum + val, 0);
-            } else if (aggregation === 'average') {
-                value = values.reduce((sum, val) => sum + val, 0) / values.length;
-            }
-            
+
             reportData.entities.push({
                 id: entity.id,
                 name: entity.name,
-                value: value,
-                count: entityRecords.length
+                value: aggregatedValue,
+                count: count
             });
         });
-        
+
         return reportData;
     },
 
+    /**
+     * Actualiza la fecha de un registro específico.
+     * @param {string} id ID del registro a actualizar.
+     * @param {string} newDate Nueva fecha en formato ISO string.
+     * @returns {Object|null} El registro actualizado o null si no se encontró.
+     */
+    updateDate(id, newDate) {
+        try {
+            const data = StorageService.getData();
+            if (!data || !data.records) return null;
 
-    // Añadir estos métodos al RecordModel en js/models/record.js
+            const recordIndex = data.records.findIndex(record => record.id === id);
 
-/**
- * Actualiza la fecha de un registro
- * @param {string} id ID del registro
- * @param {string} newDate Nueva fecha (en formato ISO)
- * @returns {Object|null} Registro actualizado o null si no se encuentra
- */
-updateDate(id, newDate) {
-    const data = StorageService.getData();
-    const recordIndex = data.records.findIndex(record => record.id === id);
-    
-    if (recordIndex === -1) {
-        return null;
+            if (recordIndex === -1) {
+                console.warn(`Registro con ID ${id} no encontrado para actualizar fecha.`);
+                return null;
+            }
+
+            // Validar que newDate sea un formato de fecha válido antes de asignar
+             try {
+                 const dateObject = new Date(newDate);
+                 if (isNaN(dateObject.getTime())) {
+                     throw new Error('Formato de fecha inválido');
+                 }
+                 data.records[recordIndex].timestamp = dateObject.toISOString(); // Guardar siempre en ISO
+             } catch(dateError) {
+                 console.error(`Error al procesar la nueva fecha "${newDate}":`, dateError);
+                 return null; // No actualizar si la fecha no es válida
+             }
+
+            StorageService.saveData(data);
+            return data.records[recordIndex];
+
+        } catch (error) {
+            console.error('Error en RecordModel.updateDate:', error);
+            return null;
+        }
+    },
+
+    /**
+     * Actualiza los datos y la fecha de un registro específico.
+     * @param {string} id ID del registro a actualizar.
+     * @param {Object} newData Nuevos datos para el campo 'data' del registro.
+     * @param {string} newDate Nueva fecha en formato ISO string.
+     * @returns {Object|null} El registro actualizado o null si no se encontró o hubo error.
+     */
+    updateRecord(id, newData, newDate) {
+        try {
+            const data = StorageService.getData();
+            if (!data || !data.records) {
+                 console.error('No se pudieron obtener los datos o registros del StorageService.');
+                 return null;
+            }
+
+            const recordIndex = data.records.findIndex(record => record.id === id);
+
+            if (recordIndex === -1) {
+                console.warn(`Registro con ID ${id} no encontrado para actualizar.`);
+                return null; // Registro no encontrado
+            }
+
+             // Validar y actualizar la fecha
+            try {
+                 const dateObject = new Date(newDate);
+                 if (isNaN(dateObject.getTime())) {
+                     throw new Error('Formato de fecha inválido');
+                 }
+                 data.records[recordIndex].timestamp = dateObject.toISOString(); // Guardar siempre en ISO
+             } catch(dateError) {
+                 console.error(`Error al procesar la nueva fecha "${newDate}" durante la actualización:`, dateError);
+                 return null; // No actualizar si la fecha no es válida
+             }
+
+            // Actualizar los datos (asegurarse de que newData sea un objeto)
+            if (typeof newData === 'object' && newData !== null) {
+                 // Se podría hacer una fusión si se quisiera conservar datos antiguos no presentes en newData:
+                 // data.records[recordIndex].data = { ...data.records[recordIndex].data, ...newData };
+                 // O simplemente reemplazar:
+                 data.records[recordIndex].data = { ...newData };
+            } else {
+                 console.warn(`Los nuevos datos proporcionados para el registro ${id} no son un objeto válido. Se mantendrán los datos originales.`);
+                 // Opcionalmente, podrías decidir no actualizar nada si los datos no son válidos
+                 // return null;
+            }
+
+
+            // Guardar los datos actualizados usando StorageService
+            StorageService.saveData(data);
+
+            // Devolver el registro actualizado
+            return data.records[recordIndex];
+
+        } catch (error) {
+            console.error(`Error al actualizar el registro con ID ${id}:`, error);
+            return null;
+        }
+    },
+
+    /**
+     * Elimina un registro por su ID.
+     * @param {string} id ID del registro a eliminar.
+     * @returns {boolean} true si se eliminó correctamente, false si no se encontró o hubo error.
+     */
+    delete(id) {
+        try {
+            const data = StorageService.getData();
+            if (!data || !data.records) return false;
+
+            const initialLength = data.records.length;
+            data.records = data.records.filter(record => record.id !== id);
+
+            // Comprobar si realmente se eliminó algo
+            if (data.records.length < initialLength) {
+                StorageService.saveData(data);
+                return true;
+            } else {
+                console.warn(`Registro con ID ${id} no encontrado para eliminar.`);
+                return false; // No se encontró el registro
+            }
+        } catch (error) {
+            console.error(`Error al eliminar el registro con ID ${id}:`, error);
+            return false;
+        }
     }
-    
-    data.records[recordIndex].timestamp = newDate;
-    StorageService.saveData(data);
-    
-    return data.records[recordIndex];
-},
-
-/**
- * Elimina un registro por su ID
- * @param {string} id ID del registro a eliminar
- * @returns {boolean} true si se eliminó correctamente, false si no
- */
-delete(id) {
-    const data = StorageService.getData();
-    const initialLength = data.records.length;
-    
-    data.records = data.records.filter(record => record.id !== id);
-    
-    if (data.records.length !== initialLength) {
-        StorageService.saveData(data);
-        return true;
-    }
-    
-    return false;
-}
-
-
-
-
-
-
-
-
-
 };
