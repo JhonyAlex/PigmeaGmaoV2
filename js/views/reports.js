@@ -227,9 +227,9 @@ const ReportsView = {
                         <tr>
                             <th class="sortable" data-sort="entity">${entityName} <i class="bi"></i></th>
                             <th class="sortable" data-sort="timestamp">Fecha y Hora <i class="bi"></i></th>
-                            <th class="sortable column-1" data-sort="field1">Campo 1 <i class="bi"></i></th>
-                            <th class="sortable column-2" data-sort="field2">Campo 2 <i class="bi"></i></th>
-                            <th class="sortable column-3" data-sort="field3">Campo 3 <i class="bi"></i></th>
+                            <th class="sortable column-1" data-sort="field1">Columna 3 <i class="bi"></i></th>
+                            <th class="sortable column-2" data-sort="field2">Columna 4 <i class="bi"></i></th>
+                            <th class="sortable column-3" data-sort="field3">Columna 5 <i class="bi"></i></th>
                             <th></th>
                         </tr>
                     </thead>
