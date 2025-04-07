@@ -1038,11 +1038,35 @@ const ReportsView = {
             backdrop.classList.remove('show');
             setTimeout(() => {
                 backdrop.remove();
-                // Restaurar el scroll del body si fuera necesario
+                
+                // Restaurar completamente el scroll y propiedades del body
                 document.body.classList.remove('modal-open');
                 document.body.style.overflow = '';
                 document.body.style.paddingRight = '';
+                
+                // Forzar la restauración del scroll
+                document.documentElement.style.overflow = '';
+                document.documentElement.style.paddingRight = '';
+                
+                // Asegurar que se pueda hacer scroll
+                window.scrollTo(window.scrollX, window.scrollY);
             }, 150);
+        }
+        
+        // También intentar cerrar cualquier modal Bootstrap abierto
+        const openModals = document.querySelectorAll('.modal.show');
+        if (openModals.length > 0) {
+            openModals.forEach(modalEl => {
+                if (modalEl.classList.contains('show')) {
+                    const bsModal = bootstrap.Modal.getInstance(modalEl);
+                    if (bsModal) {
+                        bsModal.hide();
+                    } else {
+                        modalEl.classList.remove('show');
+                        modalEl.style.display = 'none';
+                    }
+                }
+            });
         }
     },
 
