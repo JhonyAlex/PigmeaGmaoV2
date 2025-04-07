@@ -1029,45 +1029,53 @@ const ReportsView = {
     },
 
     /**
-     * Elimina manualmente el backdrop modal que pueda haber quedado
+     * Elimina manualmente el backdrop modal y restaura el scroll
      */
     removeModalBackdrop() {
         // Eliminar cualquier backdrop modal que pudiera quedar
-        const backdrop = document.querySelector('.modal-backdrop');
-        if (backdrop) {
-            backdrop.classList.remove('show');
-            setTimeout(() => {
-                backdrop.remove();
-                
-                // Restaurar completamente el scroll y propiedades del body
-                document.body.classList.remove('modal-open');
-                document.body.style.overflow = '';
-                document.body.style.paddingRight = '';
-                
-                // Forzar la restauración del scroll
-                document.documentElement.style.overflow = '';
-                document.documentElement.style.paddingRight = '';
-                
-                // Asegurar que se pueda hacer scroll
-                window.scrollTo(window.scrollX, window.scrollY);
-            }, 150);
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        if (backdrops.length > 0) {
+            backdrops.forEach(backdrop => backdrop.remove());
         }
         
-        // También intentar cerrar cualquier modal Bootstrap abierto
+        // Cerrar todos los modales abiertos
         const openModals = document.querySelectorAll('.modal.show');
         if (openModals.length > 0) {
             openModals.forEach(modalEl => {
-                if (modalEl.classList.contains('show')) {
-                    const bsModal = bootstrap.Modal.getInstance(modalEl);
-                    if (bsModal) {
-                        bsModal.hide();
-                    } else {
-                        modalEl.classList.remove('show');
-                        modalEl.style.display = 'none';
-                    }
-                }
+                modalEl.classList.remove('show');
+                modalEl.style.display = 'none';
+                modalEl.setAttribute('aria-hidden', 'true');
+                modalEl.removeAttribute('aria-modal');
             });
         }
+        
+        // Restaurar estados del body
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        
+        // Restaurar html (documentElement)
+        document.documentElement.style.overflow = '';
+        document.documentElement.style.paddingRight = '';
+        
+        // Forzar scroll con un timeout para asegurar que se aplican los cambios
+        setTimeout(() => {
+            // Desbloquear scroll de diferentes formas
+            document.body.style.overflow = 'auto';
+            document.documentElement.style.overflow = 'auto';
+            
+            // Forzar un reflow del documento
+            document.body.offsetHeight;
+            
+            // Intentar mover el scroll mínimamente
+            window.scrollBy(0, 1);
+            window.scrollBy(0, -1);
+            
+            // Si hay un bloqueo de scroll en toda la ventana, intentar eliminarlo
+            if (window.scrollY === 0 && document.body.scrollHeight > window.innerHeight) {
+                window.scrollTo(0, 1);
+            }
+        }, 200);
     },
 
     /**
