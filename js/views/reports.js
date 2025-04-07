@@ -915,6 +915,8 @@ const ReportsView = {
                 cancelBtn.addEventListener('click', () => {
                     // Recargar los detalles del registro sin guardar cambios
                     this.showRecordDetails(recordId);
+                    // Eliminar el backdrop manualmente
+                    this.removeModalBackdrop();
                 });
                 
                 // Insertar antes del botón Cerrar
@@ -1013,6 +1015,9 @@ const ReportsView = {
             // Recargar los detalles del registro para ver los cambios
             this.showRecordDetails(recordId);
             
+            // Eliminar el backdrop manualmente
+            this.removeModalBackdrop();
+            
             // Actualizar la lista de registros
             this.applyFilters();
             
@@ -1020,6 +1025,24 @@ const ReportsView = {
             UIUtils.showAlert('Registro actualizado correctamente', 'success', document.getElementById('record-details'));
         } else {
             UIUtils.showAlert('Error al actualizar el registro', 'danger', document.getElementById('record-details'));
+        }
+    },
+
+    /**
+     * Elimina manualmente el backdrop modal que pueda haber quedado
+     */
+    removeModalBackdrop() {
+        // Eliminar cualquier backdrop modal que pudiera quedar
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.classList.remove('show');
+            setTimeout(() => {
+                backdrop.remove();
+                // Restaurar el scroll del body si fuera necesario
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }, 150);
         }
     },
 
