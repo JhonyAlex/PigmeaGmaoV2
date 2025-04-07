@@ -826,25 +826,27 @@ const ReportsView = {
             </div>
             <div class="mb-3">
                 <strong>Datos:</strong>
-                <table class="table table-sm table-bordered mt-2">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Campo</th>
-                            <th>Valor</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${Object.entries(record.data).map(([fieldId, value]) => {
-            const field = fields.find(f => f.id === fieldId) || { name: fieldId };
-            return `
-                                <tr>
-                                    <td>${field.name}</td>
-                                    <td>${value}</td>
-                                </tr>
-                            `;
-        }).join('')}
-                    </tbody>
-                </table>
+                <div id="record-fields-container">
+                    <table class="table table-sm table-bordered mt-2">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Campo</th>
+                                <th>Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${Object.entries(record.data).map(([fieldId, value]) => {
+                                const field = fields.find(f => f.id === fieldId) || { name: fieldId };
+                                return `
+                                    <tr data-field-id="${fieldId}" data-field-type="${field.type || 'text'}">
+                                        <td>${field.name}</td>
+                                        <td class="field-value">${value}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         `;
 
@@ -854,7 +856,7 @@ const ReportsView = {
         const footerDiv = document.querySelector('#viewRecordModal .modal-footer');
         footerDiv.innerHTML = `
             <button type="button" class="btn btn-danger me-auto" id="deleteRecordBtn">Eliminar registro</button>
-            <button type="button" class="btn btn-warning" id="editDateBtn">Editar fecha</button>
+            <button type="button" class="btn btn-warning" id="editRecordBtn">Editar registro</button>
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
         `;
 
@@ -889,54 +891,136 @@ const ReportsView = {
             confirmModal.show();
         });
 
-        // Listener para el botón de editar fecha
-        document.getElementById('editDateBtn').addEventListener('click', () => {
-            // Crear un input para la fecha y hora
+        // Listener para el botón de editar registro
+        document.getElementById('editRecordBtn').addEventListener('click', () => {
+            // Cambiar el título del botón durante la edición
+            const editBtn = document.getElementById('editRecordBtn');
+            if (editBtn.textContent === 'Guardar cambios') {
+                // Estamos en modo edición, guardar los cambios
+                this.saveRecordChanges(recordId, modal);
+                return;
+            }
+            
+            // Cambiar a modo edición
+            editBtn.textContent = 'Guardar cambios';
+            editBtn.classList.remove('btn-warning');
+            editBtn.classList.add('btn-success');
+            
+            // Añadir botón para cancelar la edición
+            if (!document.getElementById('cancelEditBtn')) {
+                const cancelBtn = document.createElement('button');
+                cancelBtn.id = 'cancelEditBtn';
+                cancelBtn.className = 'btn btn-outline-secondary';
+                cancelBtn.textContent = 'Cancelar';
+                cancelBtn.addEventListener('click', () => {
+                    // Recargar los detalles del registro sin guardar cambios
+                    this.showRecordDetails(recordId);
+                });
+                
+                // Insertar antes del botón Cerrar
+                const closeBtn = document.querySelector('#viewRecordModal .modal-footer button[data-bs-dismiss="modal"]');
+                footerDiv.insertBefore(cancelBtn, closeBtn);
+            }
+            
+            // Editar fecha y hora
             const timestampSpan = document.getElementById('record-timestamp');
             const currentTimestamp = new Date(record.timestamp);
-
-            // Formatear la fecha para el input datetime-local
             const formattedDate = currentTimestamp.toISOString().slice(0, 16);
-
-            // Reemplazar el texto por un input
+            
             timestampSpan.innerHTML = `
                 <div class="input-group">
                     <input type="datetime-local" id="new-timestamp" class="form-control form-control-sm" value="${formattedDate}">
-                    <button class="btn btn-sm btn-primary" id="save-timestamp">Guardar</button>
-                    <button class="btn btn-sm btn-secondary" id="cancel-timestamp">Cancelar</button>
                 </div>
             `;
-
-            // Listener para guardar la nueva fecha
-            document.getElementById('save-timestamp').addEventListener('click', () => {
-                const newTimestamp = document.getElementById('new-timestamp').value;
-
-                if (!newTimestamp) {
-                    UIUtils.showAlert('Debe seleccionar una fecha válida', 'warning', recordDetails);
-                    return;
+            
+            // Hacer editables todos los campos del registro
+            const fieldsContainer = document.getElementById('record-fields-container');
+            const fieldRows = fieldsContainer.querySelectorAll('tbody tr');
+            
+            fieldRows.forEach(row => {
+                const fieldId = row.getAttribute('data-field-id');
+                const fieldType = row.getAttribute('data-field-type');
+                const field = fields.find(f => f.id === fieldId);
+                const currentValue = record.data[fieldId];
+                const valueCell = row.querySelector('.field-value');
+                
+                // Crear el input adecuado según el tipo de campo
+                let inputHTML;
+                
+                switch (fieldType) {
+                    case 'number':
+                        inputHTML = `<input type="number" class="form-control form-control-sm edit-field" 
+                                    data-field-id="${fieldId}" value="${currentValue}">`;
+                        break;
+                    case 'select':
+                        if (field && field.options && field.options.length > 0) {
+                            inputHTML = `
+                                <select class="form-select form-select-sm edit-field" data-field-id="${fieldId}">
+                                    ${field.options.map(option => 
+                                        `<option value="${option}" ${currentValue === option ? 'selected' : ''}>${option}</option>`
+                                    ).join('')}
+                                </select>
+                            `;
+                        } else {
+                            // Si no hay opciones o campo no encontrado, usar un input text
+                            inputHTML = `<input type="text" class="form-control form-control-sm edit-field" 
+                                       data-field-id="${fieldId}" value="${currentValue}">`;
+                        }
+                        break;
+                    case 'text':
+                    default:
+                        inputHTML = `<input type="text" class="form-control form-control-sm edit-field" 
+                                   data-field-id="${fieldId}" value="${currentValue}">`;
                 }
-
-                // Convertir a formato ISO
-                const newDate = new Date(newTimestamp).toISOString();
-                const updatedRecord = RecordModel.updateDate(recordId, newDate);
-
-                if (updatedRecord) {
-                    // Actualizar la vista
-                    timestampSpan.textContent = UIUtils.formatDate(newDate);
-                    this.applyFilters(); // Actualizar lista de registros
-                    UIUtils.showAlert('Fecha actualizada correctamente', 'success', recordDetails);
-                } else {
-                    UIUtils.showAlert('Error al actualizar la fecha', 'danger', recordDetails);
-                }
-            });
-
-            // Listener para cancelar la edición
-            document.getElementById('cancel-timestamp').addEventListener('click', () => {
-                timestampSpan.textContent = UIUtils.formatDate(record.timestamp);
+                
+                valueCell.innerHTML = inputHTML;
             });
         });
 
         modal.show();
+    },
+    
+    /**
+     * Guarda los cambios realizados en un registro
+     * @param {string} recordId ID del registro
+     * @param {bootstrap.Modal} modal Instancia del modal
+     */
+    saveRecordChanges(recordId, modal) {
+        const record = RecordModel.getById(recordId);
+        if (!record) return;
+        
+        // Obtener todos los datos editados
+        const fieldsData = {};
+        document.querySelectorAll('.edit-field').forEach(input => {
+            const fieldId = input.getAttribute('data-field-id');
+            fieldsData[fieldId] = input.value;
+        });
+        
+        // Obtener la nueva fecha
+        const newTimestamp = document.getElementById('new-timestamp').value;
+        if (!newTimestamp) {
+            UIUtils.showAlert('Debe seleccionar una fecha válida', 'warning', document.getElementById('record-details'));
+            return;
+        }
+        
+        // Convertir a formato ISO
+        const newDate = new Date(newTimestamp).toISOString();
+        
+        // Actualizar el registro
+        const success = RecordModel.update(recordId, fieldsData, newDate);
+        
+        if (success) {
+            // Recargar los detalles del registro para ver los cambios
+            this.showRecordDetails(recordId);
+            
+            // Actualizar la lista de registros
+            this.applyFilters();
+            
+            // Mostrar mensaje de éxito
+            UIUtils.showAlert('Registro actualizado correctamente', 'success', document.getElementById('record-details'));
+        } else {
+            UIUtils.showAlert('Error al actualizar el registro', 'danger', document.getElementById('record-details'));
+        }
     },
 
     /**
