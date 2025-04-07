@@ -11,6 +11,23 @@ const ReportsView = {
     },
     
     /**
+     * Propiedades para ordenación de columnas
+     */
+    sorting: {
+        column: 'timestamp', // Columna por defecto para ordenar (fecha)
+        direction: 'desc'    // Dirección por defecto (descendente)
+    },
+    
+    /**
+     * Columnas seleccionadas por el usuario para mostrar
+     */
+    selectedColumns: {
+        field1: '',
+        field2: '',
+        field3: ''
+    },
+    
+    /**
      * Inicializa la vista de reportes
      */
     init() {
@@ -161,6 +178,39 @@ const ReportsView = {
             </div>
         </div>
         <div class="card-body p-0">
+            <!-- Selector de columnas para la tabla -->
+            <div class="p-3 bg-light border-bottom">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="column-selector-1" class="form-label">Columna 1:</label>
+                        <select class="form-select form-select-sm column-selector" id="column-selector-1">
+                            <option value="">Seleccione un campo</option>
+                            ${sharedFields.map(field => 
+                                `<option value="${field.id}">${field.name}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="column-selector-2" class="form-label">Columna 2:</label>
+                        <select class="form-select form-select-sm column-selector" id="column-selector-2">
+                            <option value="">Seleccione un campo</option>
+                            ${sharedFields.map(field => 
+                                `<option value="${field.id}">${field.name}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="column-selector-3" class="form-label">Columna 3:</label>
+                        <select class="form-select form-select-sm column-selector" id="column-selector-3">
+                            <option value="">Seleccione un campo</option>
+                            ${sharedFields.map(field => 
+                                `<option value="${field.id}">${field.name}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Buscador para registros -->
             <div class="p-3 bg-light border-bottom">
                 <div class="input-group">
@@ -175,9 +225,11 @@ const ReportsView = {
                 <table class="table table-hover mb-0" id="records-table">
                     <thead class="table-light">
                         <tr>
-                            <th>${entityName}</th>
-                            <th>Fecha y Hora</th>
-                            <th>Datos</th>
+                            <th class="sortable" data-sort="entity">${entityName} <i class="bi"></i></th>
+                            <th class="sortable" data-sort="timestamp">Fecha y Hora <i class="bi"></i></th>
+                            <th class="sortable column-1" data-sort="field1">Campo 1 <i class="bi"></i></th>
+                            <th class="sortable column-2" data-sort="field2">Campo 2 <i class="bi"></i></th>
+                            <th class="sortable column-3" data-sort="field3">Campo 3 <i class="bi"></i></th>
                             <th></th>
                         </tr>
                     </thead>
@@ -307,6 +359,60 @@ const ReportsView = {
                 document.getElementById('filter-form').dispatchEvent(new Event('submit'));
             });
         });
+
+        // Event listeners para selectores de columnas
+        document.querySelectorAll('.column-selector').forEach((select, index) => {
+            select.addEventListener('change', () => {
+                const fieldNumber = index + 1;
+                this.selectedColumns[`field${fieldNumber}`] = select.value;
+                
+                // Actualizar el encabezado de columna con el nombre del campo seleccionado
+                const columnHeader = document.querySelector(`.column-${fieldNumber}`);
+                if (columnHeader) {
+                    // Obtener el nombre del campo seleccionado
+                    const fieldId = select.value;
+                    if (fieldId) {
+                        const field = FieldModel.getById(fieldId);
+                        if (field) {
+                            columnHeader.innerHTML = `${field.name} <i class="bi"></i>`;
+                        }
+                    } else {
+                        columnHeader.innerHTML = `Campo ${fieldNumber} <i class="bi"></i>`;
+                    }
+                }
+                
+                // Actualizar la tabla
+                this.filterRecordsBySearch();
+            });
+        });
+
+        // Event listeners para ordenar las columnas
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const column = th.getAttribute('data-sort');
+                
+                // Si ya estamos ordenando por esta columna, invertir dirección
+                if (this.sorting.column === column) {
+                    this.sorting.direction = this.sorting.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    // Nueva columna seleccionada, establecer ordenación ascendente por defecto
+                    this.sorting.column = column;
+                    this.sorting.direction = 'asc';
+                }
+                
+                // Actualizar íconos de ordenación en todas las columnas
+                document.querySelectorAll('th.sortable i.bi').forEach(icon => {
+                    icon.className = 'bi'; // Resetear clase
+                });
+                
+                // Actualizar ícono de la columna seleccionada
+                const icon = th.querySelector('i.bi');
+                icon.className = `bi bi-sort-${this.sorting.direction === 'asc' ? 'up' : 'down'}`;
+                
+                // Actualizar la tabla
+                this.filterRecordsBySearch();
+            });
+        });
     },
     
     /**
@@ -393,8 +499,83 @@ const ReportsView = {
         // Actualizar contador
         document.getElementById('records-count').textContent = `${searchedRecords.length} registros`;
         
+        // Ordenar registros según la columna seleccionada y dirección
+        const sortedRecords = this.sortRecords(searchedRecords);
+        
+        // Actualizar registros con ordenación aplicada
+        this.searchedRecords = sortedRecords;
+        
         // Mostrar registros paginados
         this.displayPaginatedRecords();
+    },
+    
+    /**
+     * Ordena los registros según la configuración actual de ordenación
+     * @param {Array} records Registros a ordenar
+     * @returns {Array} Registros ordenados
+     */
+    sortRecords(records) {
+        const { column, direction } = this.sorting;
+        const multiplier = direction === 'asc' ? 1 : -1;
+        
+        return [...records].sort((a, b) => {
+            let valueA, valueB;
+            
+            switch (column) {
+                case 'entity':
+                    // Ordenar por nombre de entidad
+                    const entityA = EntityModel.getById(a.entityId) || { name: '' };
+                    const entityB = EntityModel.getById(b.entityId) || { name: '' };
+                    valueA = entityA.name.toLowerCase();
+                    valueB = entityB.name.toLowerCase();
+                    break;
+                
+                case 'timestamp':
+                    // Ordenar por fecha
+                    valueA = new Date(a.timestamp).getTime();
+                    valueB = new Date(b.timestamp).getTime();
+                    break;
+                
+                case 'field1':
+                case 'field2':
+                case 'field3':
+                    // Ordenar por campos personalizados
+                    const fieldNumber = column.charAt(5); // Extraer el número del campo (1, 2 o 3)
+                    const fieldId = this.selectedColumns[column];
+                    
+                    // Si no hay un campo seleccionado, usar la fecha como fallback
+                    if (!fieldId) {
+                        valueA = new Date(a.timestamp).getTime();
+                        valueB = new Date(b.timestamp).getTime();
+                    } else {
+                        // Comparar valores del campo seleccionado
+                        valueA = a.data && a.data[fieldId] !== undefined ? a.data[fieldId] : '';
+                        valueB = b.data && b.data[fieldId] !== undefined ? b.data[fieldId] : '';
+                        
+                        // Si son números, convertirlos para una comparación numérica
+                        if (!isNaN(valueA) && !isNaN(valueB)) {
+                            valueA = Number(valueA);
+                            valueB = Number(valueB);
+                        } else {
+                            // Si no son números, convertir a string para comparación
+                            valueA = String(valueA).toLowerCase();
+                            valueB = String(valueB).toLowerCase();
+                        }
+                    }
+                    break;
+                
+                default:
+                    // Por defecto, ordenar por fecha (más reciente primero)
+                    valueA = new Date(a.timestamp).getTime();
+                    valueB = new Date(b.timestamp).getTime();
+                    multiplier = -1; // Invertir para que el más reciente esté primero por defecto
+            }
+            
+            // Comparar valores
+            if (valueA < valueB) return -1 * multiplier;
+            if (valueA > valueB) return 1 * multiplier;
+            return 0;
+        });
     },
     
     /**
@@ -561,36 +742,25 @@ const ReportsView = {
         // Limpiar lista
         recordsList.innerHTML = '';
         
-        // Ordenar registros por fecha (más reciente primero)
-        const sortedRecords = [...records].sort((a, b) => 
-            new Date(b.timestamp) - new Date(a.timestamp)
-        );
-        
         // Renderizar cada registro
-        sortedRecords.forEach(record => {
+        records.forEach(record => {
             const entity = EntityModel.getById(record.entityId) || { name: 'Desconocido' };
             const fields = FieldModel.getByIds(Object.keys(record.data));
             
-            // Preparar datos para mostrar
-            const dataFields = [];
-            for (const fieldId in record.data) {
-                const field = fields.find(f => f.id === fieldId);
-                if (field) {
-                    dataFields.push(`${field.name}: ${record.data[fieldId]}`);
-                }
-            }
-            
-            // Limitar a 3 campos y agregar elipsis si hay más
-            let displayData = dataFields.slice(0, 3).join(', ');
-            if (dataFields.length > 3) {
-                displayData += '...';
-            }
+            // Obtener los valores de las columnas personalizadas
+            const fieldColumns = {
+                field1: this.getFieldValue(record, this.selectedColumns.field1, fields),
+                field2: this.getFieldValue(record, this.selectedColumns.field2, fields),
+                field3: this.getFieldValue(record, this.selectedColumns.field3, fields)
+            };
             
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${entity.name}</td>
                 <td>${UIUtils.formatDate(record.timestamp)}</td>
-                <td>${displayData}</td>
+                <td>${fieldColumns.field1}</td>
+                <td>${fieldColumns.field2}</td>
+                <td>${fieldColumns.field3}</td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary view-record" data-record-id="${record.id}">
                         Ver
@@ -608,6 +778,26 @@ const ReportsView = {
                 this.showRecordDetails(recordId);
             });
         });
+    },
+    
+    /**
+     * Obtiene el valor formateado de un campo para una columna personalizada
+     * @param {Object} record Registro del que obtener el dato
+     * @param {string} fieldId ID del campo a obtener
+     * @param {Array} fields Lista de campos disponibles
+     * @returns {string} Valor formateado del campo o un string vacío si no existe
+     */
+    getFieldValue(record, fieldId, fields) {
+        if (!fieldId || !record.data || record.data[fieldId] === undefined) {
+            return '';
+        }
+        
+        const field = fields.find(f => f.id === fieldId);
+        if (!field) return record.data[fieldId];
+        
+        // Formatear el valor según el tipo de campo (si fuera necesario)
+        // Por ahora simplemente devolver el valor como string
+        return record.data[fieldId];
     },
     
     /**
