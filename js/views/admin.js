@@ -68,23 +68,19 @@ const AdminView = {
                                 <p class="text-muted">No hay ${entityName.toLowerCase()}s registradas. Agregue una nueva ${entityName.toLowerCase()}.</p>
                             </div>
                             <div class="table-responsive" id="entities-table-container" style="display: none;">
-                                <table class="table table-hover">
-    <thead>
-        <tr>
-            <th>Nombre</th>
-            <th>Tipo</th>
-            <th>Requerido</th>
-            <th>Opciones</th>
-            <th>Reportes</th>
-            <th>Tabla</th>
-            <th>Acciones</th>
-        </tr>
-    </thead>
-    <tbody id="fields-list">
-        <!-- Campos se cargarán aquí -->
-    </tbody>
-</table>
-                            </div>
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Campos Asignados</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="entities-list">
+            <!-- Entidades se cargarán aquí -->
+        </tbody>
+    </table>
+</div>
                         </div>
                     </div>
                 </div>
@@ -285,7 +281,7 @@ const AdminView = {
     /**
      * Carga y muestra los campos personalizados
      */
-    oadFields() {
+    loadFields() {
         const fields = FieldModel.getAll();
         const fieldsContainer = document.getElementById('fields-container');
         const noFieldsMessage = document.getElementById('no-fields-message');
