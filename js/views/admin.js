@@ -146,6 +146,53 @@ const AdminView = {
     </div>
 </div>
 
+
+
+// Añadir esta sección antes de la sección de importación masiva
+
+<!-- Campos Personalizados -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Campos Personalizados</h5>
+        <button class="btn btn-light btn-sm" id="add-field-btn">
+            <i class="bi bi-plus-circle"></i> Agregar Campo
+        </button>
+    </div>
+    <div class="card-body">
+        <div id="fields-container">
+            <div class="text-center py-4" id="no-fields-message">
+                <p class="text-muted">No hay campos personalizados. Agregue campos para personalizar sus formularios.</p>
+            </div>
+            <div class="table-responsive" id="fields-table-container" style="display: none;">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Tipo</th>
+                            <th>Requerido</th>
+                            <th>Opciones</th>
+                            <th>Para Reportes</th>
+                            <th>Para Tabla</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fields-list">
+                        <!-- Los campos se cargarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
  <!-- Importación Masiva -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
