@@ -33,6 +33,37 @@ const ReportsView = {
     init() {
         this.render();
         this.setupEventListeners();
+        
+        // Generar automáticamente el reporte al cargar la página
+        this.autoGenerateReport();
+    },
+
+    /**
+     * Genera automáticamente un informe al cargar la página si hay datos disponibles
+     */
+    autoGenerateReport() {
+        // Verificar si hay campos disponibles para generar un reporte
+        const sharedNumericFields = FieldModel.getSharedNumericFields();
+        if (sharedNumericFields.length === 0) {
+            return; // No hay campos para generar reporte
+        }
+
+        // Esperar a que el DOM esté completamente cargado (por si acaso)
+        setTimeout(() => {
+            // Obtener campos marcados para reportes comparativos
+            const compareField = FieldModel.getAll().find(field => field.isCompareField);
+            
+            if (compareField) {
+                // Si hay un campo marcado para comparar, usarlo
+                document.getElementById('report-field').value = compareField.id;
+            } else {
+                // Si no hay campo marcado, usar el primer campo numérico disponible
+                document.getElementById('report-field').value = sharedNumericFields[0].id;
+            }
+            
+            // Generar el reporte usando los valores predeterminados o los que están en el formulario
+            this.generateReport();
+        }, 100);
     },
 
     /**
