@@ -19,6 +19,7 @@ const AdminView = {
         const mainContent = document.getElementById('main-content');
         const config = StorageService.getConfig();
         const entityName = config.entityName || 'Entidad';
+        const entities = EntityModel.getAll();
         
         const template = `
             <div class="container mt-4">
