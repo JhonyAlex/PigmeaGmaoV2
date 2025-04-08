@@ -2,6 +2,8 @@
  * Vista de administración para gestionar entidades y campos
  */
 const AdminView = {
+
+    importData: null,
     /**
      * Inicializa la vista de administración
      */
@@ -87,36 +89,122 @@ const AdminView = {
                 
                 <!-- Campos Personalizados -->
                 <div class="card mb-4">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Campos Personalizados</h5>
-                        <button class="btn btn-light btn-sm" id="add-field-btn">
-                            <i class="bi bi-plus-circle"></i> Agregar Campo
-                        </button>
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Importación Masiva de Registros</h5>
+    </div>
+    <div class="card-body">
+        <p class="mb-3">Desde aquí puede importar registros masivamente a través de archivos CSV o Excel.</p>
+        
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">Descargar Plantilla</h6>
                     </div>
                     <div class="card-body">
-                        <div id="fields-container">
-                            <div class="text-center py-4" id="no-fields-message">
-                                <p class="text-muted">No hay campos registrados. Agregue un nuevo campo.</p>
+                        <p class="small text-muted">Descargue una plantilla con los campos de la entidad seleccionada:</p>
+                        
+                        <div class="mb-3">
+                            <label for="template-entity" class="form-label">Entidad para plantilla</label>
+                            <select class="form-select" id="template-entity">
+                                <option value="">Todas las entidades</option>
+                                ${entities.map(entity =>
+                                    `<option value="${entity.id}">${entity.name}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        
+                        <button type="button" class="btn btn-outline-primary" id="download-template-btn">
+                            <i class="bi bi-download"></i> Descargar Plantilla
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">Importar Datos</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="small text-muted">Seleccione un archivo CSV o Excel con los datos a importar:</p>
+                        
+                        <div class="mb-3">
+                            <label for="import-file" class="form-label">Archivo a importar</label>
+                            <input class="form-control" type="file" id="import-file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                            <div class="form-text">Formatos soportados: CSV, Excel (.xlsx, .xls)</div>
+                        </div>
+                        
+                        <button type="button" class="btn btn-primary" id="process-import-btn" disabled>
+                            <i class="bi bi-upload"></i> Procesar Archivo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+ <!-- Importación Masiva -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Importación Masiva de Registros</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">Desde aquí puede importar registros masivamente a través de archivos CSV o Excel.</p>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Descargar Plantilla</h6>
                             </div>
-                            <div class="table-responsive" id="fields-table-container" style="display: none;">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Nombre</th>
-                                            <th>Tipo</th>
-                                            <th>Requerido</th>
-                                            <th>Opciones</th>
-                                            <th>Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="fields-list">
-                                        <!-- Campos se cargarán aquí -->
-                                    </tbody>
-                                </table>
+                            <div class="card-body">
+                                <p class="small text-muted">Descargue una plantilla con los campos de la entidad seleccionada:</p>
+                                
+                                <div class="mb-3">
+                                    <label for="template-entity" class="form-label">Entidad para plantilla</label>
+                                    <select class="form-select" id="template-entity">
+                                        <option value="">Todas las entidades</option>
+                                        ${entities.map(entity =>
+                                            `<option value="${entity.id}">${entity.name}</option>`
+                                        ).join('')}
+                                    </select>
+                                </div>
+                                
+                                <button type="button" class="btn btn-outline-primary" id="download-template-btn">
+                                    <i class="bi bi-download"></i> Descargar Plantilla
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Importar Datos</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="small text-muted">Seleccione un archivo CSV o Excel con los datos a importar:</p>
+                                
+                                <div class="mb-3">
+                                    <label for="import-file" class="form-label">Archivo a importar</label>
+                                    <input class="form-control" type="file" id="import-file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                    <div class="form-text">Formatos soportados: CSV, Excel (.xlsx, .xls)</div>
+                                </div>
+                                
+                                <button type="button" class="btn btn-primary" id="process-import-btn" disabled>
+                                    <i class="bi bi-upload"></i> Procesar Archivo
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+
+
             </div>
         `;
         
@@ -140,7 +228,42 @@ const AdminView = {
         const addOptionBtn = document.getElementById('add-option-btn');
         const saveAssignFieldsBtn = document.getElementById('saveAssignFieldsBtn');
         const optionsContainer = document.getElementById('options-container');
-    
+        const templateEntitySelect = document.getElementById('template-entity');
+        const downloadTemplateBtn = document.getElementById('download-template-btn');
+        const importFileInput = document.getElementById('import-file');
+        const processImportBtn = document.getElementById('process-import-btn');
+        const confirmImportBtn = document.getElementById('confirmImportBtn');
+        
+        if (downloadTemplateBtn) {
+            downloadTemplateBtn.addEventListener('click', () => {
+                const entityId = templateEntitySelect.value;
+                this.downloadImportTemplate(entityId);
+            });
+        }
+        
+        if (importFileInput) {
+            importFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                processImportBtn.disabled = !file;
+            });
+        }
+        
+        if (processImportBtn) {
+            processImportBtn.addEventListener('click', () => {
+                const file = importFileInput.files[0];
+                if (file) {
+                    this.processImportFile(file);
+                }
+            });
+        }
+        
+        if (confirmImportBtn) {
+            confirmImportBtn.addEventListener('click', () => {
+                this.confirmImport();
+            });
+        }
+
+
         // Configuración del formulario
         if (configForm) {
             console.log("Configurando listener para el formulario de configuración");
@@ -1090,5 +1213,189 @@ updateEntityNameReferences(newEntityName) {
             entityModalTitle.textContent = "Editar " + newEntityName + " Principal";
         }
     }
+}, /**
+* Descarga una plantilla para importación masiva
+* @param {string} entityId ID de la entidad seleccionada (opcional)
+*/
+downloadImportTemplate(entityId = null) {
+   MassImportUtils.generateSampleFile(entityId);
+},
+
+/**
+* Datos procesados de la importación actual
+*/
+importData: null,
+
+/**
+* Procesa un archivo para importación masiva
+* @param {File} file Archivo a procesar
+*/
+processImportFile(file) {
+   if (!file) return;
+   
+   // Mostrar indicador de carga
+   const processBtn = document.getElementById('process-import-btn');
+   const originalText = processBtn.innerHTML;
+   processBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...';
+   processBtn.disabled = true;
+   
+   // Procesar el archivo
+   MassImportUtils.parseImportFile(file)
+       .then(result => {
+           // Guardar resultado para uso posterior
+           this.importData = result;
+           
+           // Mostrar previsualización
+           this.showImportPreview(result);
+           
+           // Restaurar botón
+           processBtn.innerHTML = originalText;
+           processBtn.disabled = false;
+       })
+       .catch(error => {
+           UIUtils.showAlert('Error al procesar el archivo: ' + error.message, 'danger');
+           
+           // Restaurar botón
+           processBtn.innerHTML = originalText;
+           processBtn.disabled = false;
+       });
+},
+
+/**
+* Muestra la previsualización de los datos a importar
+* @param {Object} importData Datos procesados
+*/
+showImportPreview(importData) {
+   if (!importData) return;
+   
+   const modal = UIUtils.initModal('importPreviewModal');
+   const importSummary = document.getElementById('import-summary');
+   const importErrors = document.getElementById('import-errors');
+   const errorList = document.getElementById('error-list');
+   const previewTable = document.getElementById('import-preview-table');
+   const confirmBtn = document.getElementById('confirmImportBtn');
+   
+   // Actualizar resumen
+   importSummary.innerHTML = `
+       <div class="alert ${importData.valid ? 'alert-success' : 'alert-warning'}">
+           <p class="mb-0"><strong>Resumen:</strong> ${importData.validRows} de ${importData.totalRows} filas válidas para importar.</p>
+       </div>
+   `;
+   
+   // Mostrar errores si hay
+   if (importData.errors && importData.errors.length > 0) {
+       errorList.innerHTML = importData.errors.map(error => `<li>${error}</li>`).join('');
+       importErrors.style.display = 'block';
+   } else {
+       importErrors.style.display = 'none';
+   }
+   
+   // Habilitar/deshabilitar botón de confirmar
+   confirmBtn.disabled = !importData.valid || importData.validRows === 0;
+   
+   // Crear tabla de previsualización
+   if (importData.data && importData.data.length > 0) {
+       // Obtener entidades para mostrar nombres
+       const entities = EntityModel.getAll();
+       
+       // Cabeceras
+       const theadHTML = `
+           <tr>
+               <th>Entidad</th>
+               <th>Fecha y Hora</th>
+               <th>Campos</th>
+           </tr>
+       `;
+       
+       // Filas de datos (mostrar máximo 100 para no sobrecargar)
+       const maxRows = Math.min(importData.data.length, 100);
+       let tbodyHTML = '';
+       
+       for (let i = 0; i < maxRows; i++) {
+           const item = importData.data[i];
+           const entity = entities.find(e => e.id === item.entityId) || { name: 'Desconocido' };
+           const formattedDate = new Date(item.timestamp).toLocaleString();
+           
+           // Formatear los campos en pares clave-valor
+           const fieldsHTML = Object.keys(item.data)
+               .map(fieldId => {
+                   const field = FieldModel.getById(fieldId);
+                   return `<strong>${field ? field.name : fieldId}:</strong> ${item.data[fieldId]}`;
+               })
+               .join('<br>');
+           
+           tbodyHTML += `
+               <tr>
+                   <td>${entity.name}</td>
+                   <td>${formattedDate}</td>
+                   <td>${fieldsHTML}</td>
+               </tr>
+           `;
+       }
+       
+       // Si hay más filas, mostrar indicador
+       if (importData.data.length > maxRows) {
+           tbodyHTML += `
+               <tr>
+                   <td colspan="3" class="text-center text-muted">
+                       ... y ${importData.data.length - maxRows} filas más
+                   </td>
+               </tr>
+           `;
+       }
+       
+       // Actualizar tabla
+       previewTable.querySelector('thead').innerHTML = theadHTML;
+       previewTable.querySelector('tbody').innerHTML = tbodyHTML;
+   }
+   
+   // Mostrar modal
+   modal.show();
+},
+
+/**
+* Confirma la importación de los datos
+*/
+confirmImport() {
+   if (!this.importData || !this.importData.data) {
+       UIUtils.showAlert('No hay datos para importar', 'warning');
+       return;
+   }
+   
+   // Confirmar importación
+   const confirmModal = UIUtils.initModal('confirmModal');
+   const confirmMessage = document.getElementById('confirm-message');
+   const confirmActionBtn = document.getElementById('confirmActionBtn');
+   
+   confirmMessage.textContent = `¿Está seguro de importar ${this.importData.data.length} registros? Esta acción añadirá los nuevos registros a los existentes.`;
+   
+   // Eliminar listeners anteriores
+   const newConfirmBtn = confirmActionBtn.cloneNode(true);
+   confirmActionBtn.parentNode.replaceChild(newConfirmBtn, confirmActionBtn);
+   
+   // Agregar nuevo listener
+   newConfirmBtn.addEventListener('click', () => {
+       // Importar los datos
+       const result = MassImportUtils.importRecords(this.importData.data);
+       
+       // Cerrar modales
+       bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+       bootstrap.Modal.getInstance(document.getElementById('importPreviewModal')).hide();
+       
+       // Mostrar resultado
+       if (result.success) {
+           // Limpiar formulario
+           document.getElementById('import-file').value = '';
+           document.getElementById('process-import-btn').disabled = true;
+           this.importData = null;
+           
+           UIUtils.showAlert(result.message, 'success');
+       } else {
+           UIUtils.showAlert(result.message, 'danger');
+       }
+   });
+   
+   // Mostrar modal
+   confirmModal.show();
 }
 };  
