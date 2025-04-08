@@ -303,9 +303,43 @@ const ReportsView = {
         `;
     
         mainContent.innerHTML = template;
+        
+        // Actualizar los nombres de las columnas en la tabla según los campos marcados
+        this.updateColumnHeaders();
     
         // Cargar datos iniciales con los filtros predeterminados
         this.applyFilters();
+    },
+
+    /**
+     * Actualiza los encabezados de columna en la tabla según los campos seleccionados
+     */
+    updateColumnHeaders() {
+        // Actualizar encabezados de columna basados en los campos seleccionados
+        const column1Header = document.querySelector('th.column-1');
+        const column2Header = document.querySelector('th.column-2');
+        const column3Header = document.querySelector('th.column-3');
+        
+        if (column1Header && this.selectedColumns.field1) {
+            const field = FieldModel.getById(this.selectedColumns.field1);
+            if (field) {
+                column1Header.innerHTML = `${field.name} <i class="bi"></i>`;
+            }
+        }
+        
+        if (column2Header && this.selectedColumns.field2) {
+            const field = FieldModel.getById(this.selectedColumns.field2);
+            if (field) {
+                column2Header.innerHTML = `${field.name} <i class="bi"></i>`;
+            }
+        }
+        
+        if (column3Header && this.selectedColumns.field3) {
+            const field = FieldModel.getById(this.selectedColumns.field3);
+            if (field) {
+                column3Header.innerHTML = `${field.name} <i class="bi"></i>`;
+            }
+        }
     },
 
     /**
@@ -437,19 +471,7 @@ const ReportsView = {
                     }
                     
                     // Actualizar el encabezado de columna con el nombre del campo seleccionado
-                    const columnHeader = document.querySelector(`.column-${fieldNumber}`);
-                    if (columnHeader) {
-                        // Obtener el nombre del campo seleccionado
-                        const fieldId = select.value;
-                        if (fieldId) {
-                            const field = FieldModel.getById(fieldId);
-                            if (field) {
-                                columnHeader.innerHTML = `${field.name} <i class="bi"></i>`;
-                            }
-                        } else {
-                            columnHeader.innerHTML = `Campo ${fieldNumber + 2} <i class="bi"></i>`;
-                        }
-                    }
+                    this.updateColumnHeaders();
                     
                     // Actualizar la tabla
                     this.filterRecordsBySearch();
@@ -483,6 +505,56 @@ const ReportsView = {
                 // Actualizar la tabla
                 this.filterRecordsBySearch();
             });
+        });
+
+        // Suscribirse a cambios en el modelo de campos para actualizar los encabezados cuando
+        // las casillas de verificación de columnas cambien en el formulario de campos
+        document.addEventListener('fieldModelUpdated', (e) => {
+            const field = e.detail;
+            let shouldUpdateColumns = false;
+            
+            // Verificar si hubo cambio en alguna propiedad de columna
+            if ('isColumn3' in field || 'isColumn4' in field || 'isColumn5' in field) {
+                // Si cambió una propiedad de columna, actualizar selectedColumns
+                if (field.isColumn3) {
+                    this.selectedColumns.field1 = field.id;
+                    shouldUpdateColumns = true;
+                } else if (this.selectedColumns.field1 === field.id) {
+                    this.selectedColumns.field1 = '';
+                    shouldUpdateColumns = true;
+                }
+                
+                if (field.isColumn4) {
+                    this.selectedColumns.field2 = field.id;
+                    shouldUpdateColumns = true;
+                } else if (this.selectedColumns.field2 === field.id) {
+                    this.selectedColumns.field2 = '';
+                    shouldUpdateColumns = true;
+                }
+                
+                if (field.isColumn5) {
+                    this.selectedColumns.field3 = field.id;
+                    shouldUpdateColumns = true;
+                } else if (this.selectedColumns.field3 === field.id) {
+                    this.selectedColumns.field3 = '';
+                    shouldUpdateColumns = true;
+                }
+                
+                // Actualizar selectores de columna
+                if (shouldUpdateColumns) {
+                    const column1Select = document.getElementById('column-selector-1');
+                    const column2Select = document.getElementById('column-selector-2');
+                    const column3Select = document.getElementById('column-selector-3');
+                    
+                    if (column1Select) column1Select.value = this.selectedColumns.field1;
+                    if (column2Select) column2Select.value = this.selectedColumns.field2;
+                    if (column3Select) column3Select.value = this.selectedColumns.field3;
+                    
+                    // Actualizar encabezados y tabla
+                    this.updateColumnHeaders();
+                    this.filterRecordsBySearch();
+                }
+            }
         });
     },
 
