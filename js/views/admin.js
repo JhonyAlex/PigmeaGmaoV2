@@ -916,12 +916,12 @@ const AdminView = {
             fieldForm.reportValidity();
             return;
         }
-        
+    
         const fieldId = document.getElementById('field-id').value;
         const fieldName = document.getElementById('field-name').value;
         const fieldType = document.getElementById('field-type').value;
         const fieldRequired = document.getElementById('field-required').checked;
-        
+    
         // Obtener valores de los nuevos checkboxes
         const useForRecordsTable = document.getElementById('field-use-for-records-table').checked;
         const isColumn3 = document.getElementById('field-is-column-3').checked;
@@ -930,7 +930,7 @@ const AdminView = {
         const useForComparativeReports = document.getElementById('field-use-for-comparative-reports').checked;
         const isHorizontalAxis = document.getElementById('field-is-horizontal-axis').checked;
         const isCompareField = document.getElementById('field-is-compare-field').checked;
-        
+    
         // Recolectar opciones si es tipo selección
         let options = [];
         if (fieldType === 'select') {
@@ -939,48 +939,58 @@ const AdminView = {
                 const value = input.value.trim();
                 if (value) options.push(value);
             });
-            
+    
             // Validar que haya al menos una opción
             if (options.length === 0) {
                 UIUtils.showAlert('Debe agregar al menos una opción para el tipo Selección', 'warning', document.querySelector('.modal-body'));
                 return;
             }
         }
-        
+    
         // Validar exclusividad en otras entidades si se marca alguna columna o reporte
+        // --- IMPORTANTE: Esta lógica de exclusividad debe ejecutarse ANTES de guardar el campo actual ---
         if (isColumn3 || isColumn4 || isColumn5 || isHorizontalAxis || isCompareField) {
             const fields = FieldModel.getAll();
-            
+    
             // Para cada campo existente (excepto el actual)
             fields.forEach(existingField => {
                 if (existingField.id !== fieldId) {
+                    let updated = false; // Bandera para saber si se actualizó el campo existente
+    
                     // Para columnas
                     if (isColumn3 && existingField.isColumn3) {
                         existingField.isColumn3 = false;
-                        FieldModel.update(existingField.id, existingField);
+                        updated = true;
                     }
                     if (isColumn4 && existingField.isColumn4) {
                         existingField.isColumn4 = false;
-                        FieldModel.update(existingField.id, existingField);
+                        updated = true;
                     }
                     if (isColumn5 && existingField.isColumn5) {
                         existingField.isColumn5 = false;
-                        FieldModel.update(existingField.id, existingField);
+                        updated = true;
                     }
-                    
+    
                     // Para reportes
                     if (isHorizontalAxis && existingField.isHorizontalAxis) {
                         existingField.isHorizontalAxis = false;
-                        FieldModel.update(existingField.id, existingField);
+                        updated = true;
                     }
                     if (isCompareField && existingField.isCompareField) {
                         existingField.isCompareField = false;
+                        updated = true;
+                    }
+    
+                    // Si se modificó algún flag del campo existente, guardarlo
+                    if (updated) {
                         FieldModel.update(existingField.id, existingField);
+                        // NOTA: Considera cómo manejar errores aquí si la actualización falla.
+                        // Por simplicidad, se omite el manejo de errores para estas actualizaciones secundarias.
                     }
                 }
             });
         }
-        
+    
         const fieldData = {
             name: fieldName,
             type: fieldType,
@@ -995,7 +1005,7 @@ const AdminView = {
             isHorizontalAxis: isHorizontalAxis,
             isCompareField: isCompareField
         };
-        
+    
         let result;
         if (fieldId) {
             // Actualizar campo existente
@@ -1004,20 +1014,44 @@ const AdminView = {
             // Crear nuevo campo
             result = FieldModel.create(fieldData);
         }
-        
+    
+        // --- INICIO DEL BLOQUE MODIFICADO ---
         if (result) {
             // Cerrar modal
-            bootstrap.Modal.getInstance(document.getElementById('fieldModal')).hide();
-            
-            // Recargar lista
-            this.loadFields();
-            
-            // Mostrar mensaje
-            const message = fieldId ? 'Campo actualizado correctamente' : 'Campo creado correctamente';
-            UIUtils.showAlert(message, 'success', document.querySelector('.container'));
+            const fieldModalInstance = bootstrap.Modal.getInstance(document.getElementById('fieldModal'));
+            if (fieldModalInstance) {
+                 fieldModalInstance.hide();
+            }
+    
+    
+            // Recargar lista de campos (en la vista de administración)
+            this.loadFields(); // Asegúrate que 'this' se refiere al contexto correcto o llama al método adecuado
+    
+            // Actualizar los encabezados de columna en la vista de reportes si está visible
+            // Asumiendo que tienes un objeto Router y UIUtils globales o accesibles
+            if (typeof Router !== 'undefined' && Router.currentRoute === 'reports') {
+                // Si la vista de reportes está activa, actualízala
+                if (Router.routes && Router.routes.reports && typeof Router.routes.reports.init === 'function') {
+                    Router.routes.reports.init(); // Llama al método para refrescar la vista de reportes
+                    UIUtils.showAlert('Campo guardado y vista de reportes actualizada', 'success', document.querySelector('.container'));
+                } else {
+                     // Si no se puede refrescar la vista de reportes, muestra un mensaje estándar o de advertencia
+                     const message = fieldId ? 'Campo actualizado correctamente' : 'Campo creado correctamente';
+                     UIUtils.showAlert(message + '. No se pudo actualizar la vista de reportes automáticamente.', 'warning', document.querySelector('.container'));
+                }
+            } else if (isColumn3 || isColumn4 || isColumn5) {
+                // Si se modificó una columna pero no estamos en reportes, notificar al usuario
+                UIUtils.showAlert('Campo guardado. Para ver los cambios en las columnas de reportes, cambie a la vista de Reportes', 'info', document.querySelector('.container'));
+            } else {
+                // Mensaje normal si no se afectaron columnas de reportes o no estamos en la vista de reportes
+                const message = fieldId ? 'Campo actualizado correctamente' : 'Campo creado correctamente';
+                UIUtils.showAlert(message, 'success', document.querySelector('.container'));
+            }
         } else {
-            UIUtils.showAlert('Error al guardar el campo', 'danger', document.querySelector('.container'));
+            // Si hubo un error al guardar (result es false o undefined)
+            UIUtils.showAlert('Error al guardar el campo', 'danger', document.querySelector('.modal-body')); // Mostrar error dentro del modal es a menudo mejor UX
         }
+        // --- FIN DEL BLOQUE MODIFICADO ---
     },
     
     /**
