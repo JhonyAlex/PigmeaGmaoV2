@@ -145,11 +145,6 @@ const AdminView = {
 			</div>
 		</div>
 	</div>
-
-
-
-	// Añadir esta sección antes de la sección de importación masiva
-
 	<!-- Campos Personalizados -->
 	<div class="card mb-4">
 		<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
