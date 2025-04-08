@@ -69,17 +69,21 @@ const AdminView = {
                             </div>
                             <div class="table-responsive" id="entities-table-container" style="display: none;">
                                 <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Nombre</th>
-                                            <th>Campos Asignados</th>
-                                            <th>Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="entities-list">
-                                        <!-- Entidades se cargarán aquí -->
-                                    </tbody>
-                                </table>
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Tipo</th>
+            <th>Requerido</th>
+            <th>Opciones</th>
+            <th>Reportes</th>
+            <th>Tabla</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody id="fields-list">
+        <!-- Campos se cargarán aquí -->
+    </tbody>
+</table>
                             </div>
                         </div>
                     </div>
@@ -281,7 +285,7 @@ const AdminView = {
     /**
      * Carga y muestra los campos personalizados
      */
-    loadFields() {
+    oadFields() {
         const fields = FieldModel.getAll();
         const fieldsContainer = document.getElementById('fields-container');
         const noFieldsMessage = document.getElementById('no-fields-message');
@@ -323,11 +327,38 @@ const AdminView = {
                 options = '-';
             }
             
+            // Crear indicadores para uso en reportes y tabla
+            let reportIndicator = '';
+            if (field.useForComparativeReports) {
+                if (field.isHorizontalAxis) {
+                    reportIndicator = '<span class="badge bg-info">Eje horizontal</span>';
+                } else if (field.isCompareField) {
+                    reportIndicator = '<span class="badge bg-success">Campo a comparar</span>';
+                } else {
+                    reportIndicator = '<span class="badge bg-secondary">Sí</span>';
+                }
+            }
+            
+            let tableIndicator = '';
+            if (field.useForRecordsTable) {
+                if (field.isColumn3) {
+                    tableIndicator = '<span class="badge bg-info">Columna 3</span>';
+                } else if (field.isColumn4) {
+                    tableIndicator = '<span class="badge bg-success">Columna 4</span>';
+                } else if (field.isColumn5) {
+                    tableIndicator = '<span class="badge bg-warning text-dark">Columna 5</span>';
+                } else {
+                    tableIndicator = '<span class="badge bg-secondary">Sí</span>';
+                }
+            }
+            
             row.innerHTML = `
                 <td>${field.name}</td>
                 <td>${fieldType}</td>
                 <td>${field.required ? 'Sí' : 'No'}</td>
-                <td>${options}</td>
+                <td class="small">${options}</td>
+                <td class="text-center">${reportIndicator}</td>
+                <td class="text-center">${tableIndicator}</td>
                 <td class="action-buttons">
                     <button class="btn btn-sm btn-outline-primary edit-field" data-field-id="${field.id}">
                         Editar
@@ -521,6 +552,15 @@ const AdminView = {
         const optionsContainer = document.getElementById('options-container');
         const optionsList = document.getElementById('options-list');
         
+        // Nuevos elementos
+        const useForRecordsTableCheck = document.getElementById('field-use-for-records-table');
+        const isColumn3Check = document.getElementById('field-is-column-3');
+        const isColumn4Check = document.getElementById('field-is-column-4');
+        const isColumn5Check = document.getElementById('field-is-column-5');
+        const useForComparativeReportsCheck = document.getElementById('field-use-for-comparative-reports');
+        const isHorizontalAxisCheck = document.getElementById('field-is-horizontal-axis');
+        const isCompareFieldCheck = document.getElementById('field-is-compare-field');
+        
         // Limpiar formulario
         document.getElementById('fieldForm').reset();
         optionsList.innerHTML = `
@@ -532,6 +572,47 @@ const AdminView = {
         
         // Configurar listener para remover opción
         this.setupOptionRemovalListeners();
+        
+        // Configurar listeners para los nuevos checkboxes
+        if (useForRecordsTableCheck) {
+            useForRecordsTableCheck.addEventListener('change', () => {
+                this.updateTableColumnChecks();
+            });
+        }
+        
+        if (useForComparativeReportsCheck) {
+            useForComparativeReportsCheck.addEventListener('change', () => {
+                this.updateReportChecks();
+            });
+        }
+        
+        // Listeners para exclusividad de columnas
+        [isColumn3Check, isColumn4Check, isColumn5Check].forEach(check => {
+            if (check) {
+                check.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        // Deshabilitar otros checks de columna si se selecciona este
+                        [isColumn3Check, isColumn4Check, isColumn5Check].forEach(otherCheck => {
+                            if (otherCheck !== e.target) otherCheck.checked = false;
+                        });
+                    }
+                });
+            }
+        });
+        
+        // Listeners para exclusividad de reportes
+        [isHorizontalAxisCheck, isCompareFieldCheck].forEach(check => {
+            if (check) {
+                check.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        // Deshabilitar otros checks de reporte si se selecciona este
+                        [isHorizontalAxisCheck, isCompareFieldCheck].forEach(otherCheck => {
+                            if (otherCheck !== e.target) otherCheck.checked = false;
+                        });
+                    }
+                });
+            }
+        });
         
         if (fieldId) {
             // Modo edición
@@ -554,6 +635,22 @@ const AdminView = {
                     this.addOptionInput(option);
                 });
             }
+            
+            // Cargar nuevas propiedades
+            if (useForRecordsTableCheck) {
+                useForRecordsTableCheck.checked = field.useForRecordsTable || false;
+                isColumn3Check.checked = field.isColumn3 || false;
+                isColumn4Check.checked = field.isColumn4 || false;
+                isColumn5Check.checked = field.isColumn5 || false;
+                this.updateTableColumnChecks();
+            }
+            
+            if (useForComparativeReportsCheck) {
+                useForComparativeReportsCheck.checked = field.useForComparativeReports || false;
+                isHorizontalAxisCheck.checked = field.isHorizontalAxis || false;
+                isCompareFieldCheck.checked = field.isCompareField || false;
+                this.updateReportChecks();
+            }
         } else {
             // Modo creación
             modalTitle.textContent = 'Nuevo Campo Personalizado';
@@ -563,6 +660,54 @@ const AdminView = {
         
         modal.show();
     },
+
+    // Agregar estas nuevas funciones
+    updateTableColumnChecks() {
+        const useForRecordsTableCheck = document.getElementById('field-use-for-records-table');
+        const isColumn3Check = document.getElementById('field-is-column-3');
+        const isColumn4Check = document.getElementById('field-is-column-4');
+        const isColumn5Check = document.getElementById('field-is-column-5');
+        
+        // Habilitar/deshabilitar checks de columna según el estado del check principal
+        const enabled = useForRecordsTableCheck.checked;
+        isColumn3Check.disabled = !enabled;
+        isColumn4Check.disabled = !enabled;
+        isColumn5Check.disabled = !enabled;
+        
+        // Si se deshabilita el check principal, desmarcar los checks de columna
+        if (!enabled) {
+            isColumn3Check.checked = false;
+            isColumn4Check.checked = false;
+            isColumn5Check.checked = false;
+        }
+    },
+    
+    updateReportChecks() {
+        const useForComparativeReportsCheck = document.getElementById('field-use-for-comparative-reports');
+        const isHorizontalAxisCheck = document.getElementById('field-is-horizontal-axis');
+        const isCompareFieldCheck = document.getElementById('field-is-compare-field');
+        
+        // Habilitar/deshabilitar checks de reporte según el estado del check principal
+        const enabled = useForComparativeReportsCheck.checked;
+        isHorizontalAxisCheck.disabled = !enabled;
+        isCompareFieldCheck.disabled = !enabled;
+        
+        // Si se deshabilita el check principal, desmarcar los checks de reporte
+        if (!enabled) {
+            isHorizontalAxisCheck.checked = false;
+            isCompareFieldCheck.checked = false;
+        }
+    },
+
+
+
+
+
+
+
+
+
+
     
     /**
      * Agrega un input para una opción en el modal de campo
@@ -615,6 +760,15 @@ const AdminView = {
         const fieldType = document.getElementById('field-type').value;
         const fieldRequired = document.getElementById('field-required').checked;
         
+        // Obtener valores de los nuevos checkboxes
+        const useForRecordsTable = document.getElementById('field-use-for-records-table').checked;
+        const isColumn3 = document.getElementById('field-is-column-3').checked;
+        const isColumn4 = document.getElementById('field-is-column-4').checked;
+        const isColumn5 = document.getElementById('field-is-column-5').checked;
+        const useForComparativeReports = document.getElementById('field-use-for-comparative-reports').checked;
+        const isHorizontalAxis = document.getElementById('field-is-horizontal-axis').checked;
+        const isCompareField = document.getElementById('field-is-compare-field').checked;
+        
         // Recolectar opciones si es tipo selección
         let options = [];
         if (fieldType === 'select') {
@@ -631,11 +785,53 @@ const AdminView = {
             }
         }
         
+        // Validar exclusividad en otras entidades si se marca alguna columna o reporte
+        if (isColumn3 || isColumn4 || isColumn5 || isHorizontalAxis || isCompareField) {
+            const fields = FieldModel.getAll();
+            
+            // Para cada campo existente (excepto el actual)
+            fields.forEach(existingField => {
+                if (existingField.id !== fieldId) {
+                    // Para columnas
+                    if (isColumn3 && existingField.isColumn3) {
+                        existingField.isColumn3 = false;
+                        FieldModel.update(existingField.id, existingField);
+                    }
+                    if (isColumn4 && existingField.isColumn4) {
+                        existingField.isColumn4 = false;
+                        FieldModel.update(existingField.id, existingField);
+                    }
+                    if (isColumn5 && existingField.isColumn5) {
+                        existingField.isColumn5 = false;
+                        FieldModel.update(existingField.id, existingField);
+                    }
+                    
+                    // Para reportes
+                    if (isHorizontalAxis && existingField.isHorizontalAxis) {
+                        existingField.isHorizontalAxis = false;
+                        FieldModel.update(existingField.id, existingField);
+                    }
+                    if (isCompareField && existingField.isCompareField) {
+                        existingField.isCompareField = false;
+                        FieldModel.update(existingField.id, existingField);
+                    }
+                }
+            });
+        }
+        
         const fieldData = {
             name: fieldName,
             type: fieldType,
             required: fieldRequired,
-            options: options
+            options: options,
+            // Nuevas propiedades
+            useForRecordsTable: useForRecordsTable,
+            isColumn3: isColumn3,
+            isColumn4: isColumn4,
+            isColumn5: isColumn5,
+            useForComparativeReports: useForComparativeReports,
+            isHorizontalAxis: isHorizontalAxis,
+            isCompareField: isCompareField
         };
         
         let result;

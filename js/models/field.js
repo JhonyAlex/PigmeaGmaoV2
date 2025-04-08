@@ -42,7 +42,15 @@ const FieldModel = {
             name: fieldData.name,
             type: fieldData.type,
             required: !!fieldData.required,
-            options: fieldData.type === 'select' ? (fieldData.options || []) : []
+            options: fieldData.type === 'select' ? (fieldData.options || []) : [],
+            // Nuevas propiedades
+            useForRecordsTable: !!fieldData.useForRecordsTable,
+            isColumn3: !!fieldData.isColumn3,
+            isColumn4: !!fieldData.isColumn4,
+            isColumn5: !!fieldData.isColumn5,
+            useForComparativeReports: !!fieldData.useForComparativeReports,
+            isHorizontalAxis: !!fieldData.isHorizontalAxis,
+            isCompareField: !!fieldData.isCompareField
         };
         
         data.fields.push(newField);
@@ -68,7 +76,15 @@ const FieldModel = {
             name: fieldData.name,
             type: fieldData.type,
             required: !!fieldData.required,
-            options: fieldData.type === 'select' ? (fieldData.options || []) : []
+            options: fieldData.type === 'select' ? (fieldData.options || []) : [],
+            // Nuevas propiedades
+            useForRecordsTable: !!fieldData.useForRecordsTable,
+            isColumn3: !!fieldData.isColumn3,
+            isColumn4: !!fieldData.isColumn4,
+            isColumn5: !!fieldData.isColumn5,
+            useForComparativeReports: !!fieldData.useForComparativeReports,
+            isHorizontalAxis: !!fieldData.isHorizontalAxis,
+            isCompareField: !!fieldData.isCompareField
         };
         
         StorageService.saveData(data);
