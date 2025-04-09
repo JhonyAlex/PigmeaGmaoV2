@@ -156,7 +156,7 @@ const RegisterView = {
  * Carga los campos dinámicos basados en la entidad seleccionada
  * @param {string} entityId ID de la entidad seleccionada
  */
-loadDynamicFields(entityId) {
+ loadDynamicFields(entityId) {
     const dynamicFieldsContainer = document.getElementById('dynamic-fields-container');
     const submitContainer = document.getElementById('submit-container');
     
@@ -194,32 +194,40 @@ loadDynamicFields(entityId) {
     fields.forEach(field => {
         const fieldHTML = UIUtils.generateFieldInput(field);
         dynamicFieldsContainer.insertAdjacentHTML('beforeend', fieldHTML);
-        
-        // Si es un campo select, aplicarle un estilo de "invisible" hasta que se inicialice completamente
-        if (field.type === 'select') {
-            const selectElement = document.getElementById(field.id);
-            if (selectElement) {
-                selectElement.style.visibility = 'hidden'; // Ocultar el select nativo sin afectar el layout
-            }
-        }
     });
 
     // Mostrar el contenedor del botón y checkbox
     submitContainer.style.display = 'block';
     
-    // Inicializar los select2 después de insertar todos los campos en el DOM
-    // Esto garantiza que todos los elementos ya estén en el DOM antes de inicializar
+    // CORRECCIÓN: Guardar referencia a los limpiadores de eventos
+    const cleanupFunctions = [];
+    
+    // Inicializar los selectores de búsqueda después de insertar todos los campos en el DOM
     setTimeout(() => {
         fields.forEach(field => {
             if (field.type === 'select') {
-                UIUtils.setupSearchableSelect(`#${field.id}`);
-                // Hacer visible el select2 una vez inicializado
+                // CORRECCIÓN: Almacenar la función de limpieza devuelta por setupSearchableSelect
+                const cleanup = UIUtils.setupSearchableSelect(`#${field.id}`);
+                if (typeof cleanup === 'function') {
+                    cleanupFunctions.push(cleanup);
+                }
+                
+                // Hacer visible el select una vez inicializado
                 const selectElement = document.getElementById(field.id);
                 if (selectElement) {
                     selectElement.style.visibility = 'visible';
                 }
             }
         });
+        
+        // CORRECCIÓN: Agregar una función de limpieza al contenedor para eliminar listeners
+        if (cleanupFunctions.length > 0) {
+            dynamicFieldsContainer.addEventListener('DOMNodeRemoved', function handler() {
+                // Limpiar listeners cuando se elimine el contenedor
+                cleanupFunctions.forEach(cleanup => cleanup());
+                dynamicFieldsContainer.removeEventListener('DOMNodeRemoved', handler);
+            });
+        }
     }, 10); // Un pequeño delay para asegurar que el DOM se actualice primero
 },
     
@@ -229,74 +237,99 @@ loadDynamicFields(entityId) {
     /**
  * Guarda un nuevo registro
  */
-saveRecord() {
-    const form = document.getElementById('register-form');
-    const entityId = document.getElementById('selected-entity-id').value;
-    
-    if (!entityId) {
-        UIUtils.showAlert(`Debe seleccionar una ${this.entityName.toLowerCase()}`, 'warning', document.querySelector('.card-body'));
-        return;
-    }
-    
-    // Obtener entidad y sus campos
-    const entity = EntityModel.getById(entityId);
-    if (!entity) return;
-    
-    const fields = FieldModel.getByIds(entity.fields);
-    
-    // Validar el formulario
-    const validation = ValidationUtils.validateForm(form, fields);
-    
-    if (!validation.isValid) {
-        UIUtils.showAlert('Por favor complete correctamente todos los campos requeridos', 'warning', document.querySelector('.card-body'));
-        return;
-    }
-    
-    // Verificar si el checkbox "Ayer" está marcado
-    const yesterdayCheck = document.getElementById('yesterday-check');
-    const useYesterdayDate = yesterdayCheck && yesterdayCheck.checked;
-    
-    // Guardar registro
-    const newRecord = RecordModel.create(entityId, validation.data);
-    
-    if (newRecord) {
-        // Si el checkbox de ayer está marcado, actualizar la fecha
-        if (useYesterdayDate) {
-            // Obtener la fecha actual del registro
-            const currentDate = new Date(newRecord.timestamp);
-            
-            // Restar un día manteniendo la misma hora
-            currentDate.setDate(currentDate.getDate() - 1);
-            
-            // Actualizar la fecha del registro
-            RecordModel.updateDate(newRecord.id, currentDate.toISOString());
+    saveRecord() {
+        const form = document.getElementById('register-form');
+        const entityId = document.getElementById('selected-entity-id').value;
+        
+        if (!entityId) {
+            UIUtils.showAlert(`Debe seleccionar una ${this.entityName.toLowerCase()}`, 'warning', document.querySelector('.card-body'));
+            return;
         }
         
-        // Limpiar formulario
-        form.reset();
-        document.getElementById('dynamic-fields-container').innerHTML = '';
+        // Obtener entidad y sus campos
+        const entity = EntityModel.getById(entityId);
+        if (!entity) return;
         
-        // Ocultar el contenedor del botón y checkbox
-        document.getElementById('submit-container').style.display = 'none';
+        const fields = FieldModel.getByIds(entity.fields);
         
-        // Desactivar el botón de la entidad seleccionada
-        document.querySelectorAll('.entity-btn').forEach(btn => {
-            btn.classList.remove('btn-primary');
-            btn.classList.add('btn-outline-primary');
+        // Validar el formulario
+        const validation = ValidationUtils.validateForm(form, fields);
+        
+        if (!validation.isValid) {
+            UIUtils.showAlert('Por favor complete correctamente todos los campos requeridos', 'warning', document.querySelector('.card-body'));
+            return;
+        }
+        
+        // Verificar si el checkbox "Ayer" está marcado
+        const yesterdayCheck = document.getElementById('yesterday-check');
+        const useYesterdayDate = yesterdayCheck && yesterdayCheck.checked;
+        
+        // CORRECCIÓN: Almacenar los elementos que contienen listeners antes de limpiar el formulario
+        const fieldsWithSelects = [];
+        fields.forEach(field => {
+            if (field.type === 'select') {
+                const element = document.getElementById(field.id);
+                if (element) {
+                    fieldsWithSelects.push(element);
+                }
+            }
         });
         
-        // Limpiar el ID de entidad seleccionada
-        document.getElementById('selected-entity-id').value = '';
+        // Guardar registro
+        const newRecord = RecordModel.create(entityId, validation.data);
         
-        // Recargar registros recientes
-        this.loadRecentRecords();
-        
-        // Mostrar mensaje
-        UIUtils.showAlert('Registro guardado correctamente', 'success', document.querySelector('.card-body'));
-    } else {
-        UIUtils.showAlert('Error al guardar el registro', 'danger', document.querySelector('.card-body'));
-    }
-},
+        if (newRecord) {
+            // Si el checkbox de ayer está marcado, actualizar la fecha
+            if (useYesterdayDate) {
+                // Obtener la fecha actual del registro
+                const currentDate = new Date(newRecord.timestamp);
+                
+                // Restar un día manteniendo la misma hora
+                currentDate.setDate(currentDate.getDate() - 1);
+                
+                // Actualizar la fecha del registro
+                RecordModel.updateDate(newRecord.id, currentDate.toISOString());
+            }
+            
+            // CORRECCIÓN: Disparar un evento personalizado antes de limpiar el formulario
+            // para que los componentes puedan prepararse para la eliminación
+            const cleanupEvent = new CustomEvent('prepareFormReset', { 
+                bubbles: true, detail: { formId: form.id } 
+            });
+            form.dispatchEvent(cleanupEvent);
+            
+            // Limpiar formulario
+            form.reset();
+            
+            // CORRECCIÓN: Limpiar el contenedor de campos correctamente
+            const dynamicFieldsContainer = document.getElementById('dynamic-fields-container');
+            if (dynamicFieldsContainer) {
+                // Antes de limpiar, disparar evento para que los listeners puedan limpiarse
+                dynamicFieldsContainer.dispatchEvent(new Event('DOMNodeRemoved', { bubbles: true }));
+                dynamicFieldsContainer.innerHTML = '';
+            }
+            
+            // Ocultar el contenedor del botón y checkbox
+            document.getElementById('submit-container').style.display = 'none';
+            
+            // Desactivar el botón de la entidad seleccionada
+            document.querySelectorAll('.entity-btn').forEach(btn => {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline-primary');
+            });
+            
+            // Limpiar el ID de entidad seleccionada
+            document.getElementById('selected-entity-id').value = '';
+            
+            // Recargar registros recientes
+            this.loadRecentRecords();
+            
+            // Mostrar mensaje
+            UIUtils.showAlert('Registro guardado correctamente', 'success', document.querySelector('.card-body'));
+        } else {
+            UIUtils.showAlert('Error al guardar el registro', 'danger', document.querySelector('.card-body'));
+        }
+    },
     
     /**
      * Carga y muestra los registros recientes

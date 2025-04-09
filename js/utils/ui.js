@@ -124,54 +124,57 @@ const UIUtils = {
         if (!select || !select.classList.contains('searchable-select')) return;
         
         const selectContainer = select.closest('.select-with-search');
+        if (!selectContainer) return;
+        
         const searchBox = selectContainer.querySelector('.select-search-box');
         const searchInput = selectContainer.querySelector('.select-search-input');
         const optionsContainer = selectContainer.querySelector('.select-search-options');
         
-        // Estilos dinámicos para el cuadro de búsqueda
-        const styles = document.createElement('style');
-        styles.textContent = `
-            .select-with-search {
-                position: relative;
-            }
-            .select-search-box {
-                position: absolute;
-                top: 100%;
-                left: 0;
-                right: 0;
-                z-index: 1000;
-                background: white;
-                border: 1px solid #ced4da;
-                border-radius: 0.25rem;
-                margin-top: 2px;
-                box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-                max-height: 300px;
-                overflow-y: auto;
-            }
-            .select-search-options {
-                max-height: 250px;
-                overflow-y: auto;
-            }
-            .select-search-option {
-                padding: 0.5rem 1rem;
-                cursor: pointer;
-            }
-            .select-search-option:hover {
-                background-color: #f8f9fa;
-            }
-            .select-search-option.active {
-                background-color: #e9ecef;
-            }
-        `;
+        if (!searchBox || !searchInput || !optionsContainer) return;
         
-        // Añadir estilos si no existen
+        // Estilos dinámicos para el cuadro de búsqueda
         if (!document.querySelector('style#searchable-select-styles')) {
+            const styles = document.createElement('style');
             styles.id = 'searchable-select-styles';
+            styles.textContent = `
+                .select-with-search {
+                    position: relative;
+                }
+                .select-search-box {
+                    position: absolute;
+                    top: 100%;
+                    left: 0;
+                    right: 0;
+                    z-index: 1000;
+                    background: white;
+                    border: 1px solid #ced4da;
+                    border-radius: 0.25rem;
+                    margin-top: 2px;
+                    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+                    max-height: 300px;
+                    overflow-y: auto;
+                }
+                .select-search-options {
+                    max-height: 250px;
+                    overflow-y: auto;
+                }
+                .select-search-option {
+                    padding: 0.5rem 1rem;
+                    cursor: pointer;
+                }
+                .select-search-option:hover {
+                    background-color: #f8f9fa;
+                }
+                .select-search-option.active {
+                    background-color: #e9ecef;
+                }
+            `;
             document.head.appendChild(styles);
         }
         
-        // Al hacer clic en el select, mostrar el cuadro de búsqueda
-        select.addEventListener('click', function(e) {
+        // CORRECCIÓN DEL ERROR: Usamos un listener explícito en lugar de función anónima
+        // para poder removerlo si es necesario
+        const showSearchBox = function(e) {
             e.preventDefault();
             e.stopPropagation();
             
@@ -183,10 +186,17 @@ const UIUtils = {
             
             // Enfocar en el campo de búsqueda
             setTimeout(() => searchInput.focus(), 10);
-        });
+        };
+        
+        // Al hacer clic en el select, mostrar el cuadro de búsqueda
+        select.removeEventListener('click', showSearchBox); // Eliminar si existe
+        select.addEventListener('click', showSearchBox);
         
         // Función para actualizar las opciones mostradas
         function updateOptions(searchText) {
+            // CORRECCIÓN DEL ERROR: Validar que el select todavía existe en el DOM
+            if (!select || !document.body.contains(select)) return;
+            
             const options = Array.from(select.options).slice(1); // Ignorar el primer "Seleccione"
             const filtered = searchText ? 
                 options.filter(opt => opt.text.toLowerCase().includes(searchText.toLowerCase())) : 
@@ -199,6 +209,8 @@ const UIUtils = {
                 div.className = 'select-search-option';
                 div.dataset.value = option.value;
                 div.textContent = option.text;
+                
+                // CORRECCIÓN DEL ERROR: Manejar click sincrónico sin devolver promesa
                 div.addEventListener('click', () => {
                     select.value = option.value;
                     searchBox.classList.add('d-none');
@@ -206,6 +218,7 @@ const UIUtils = {
                     // Disparar evento change para que funcionen validaciones u otros listeners
                     select.dispatchEvent(new Event('change', { bubbles: true }));
                 });
+                
                 optionsContainer.appendChild(div);
             });
             
@@ -218,21 +231,37 @@ const UIUtils = {
         }
         
         // Búsqueda en tiempo real
-        searchInput.addEventListener('input', function() {
+        const handleInput = function() {
             updateOptions(this.value);
-        });
+        };
+        searchInput.removeEventListener('input', handleInput);
+        searchInput.addEventListener('input', handleInput);
         
-        // Cerrar al hacer clic fuera
-        document.addEventListener('click', function(e) {
+        // CORRECCIÓN DEL ERROR: Usar un listener con nombre para poder eliminarlo
+        const handleOutsideClick = function(e) {
             if (!selectContainer.contains(e.target)) {
                 searchBox.classList.add('d-none');
             }
-        });
+        };
+        
+        // Eliminar listeners antiguos para evitar duplicados
+        document.removeEventListener('click', handleOutsideClick);
+        document.addEventListener('click', handleOutsideClick);
         
         // Prevenir que el clic en el cuadro de búsqueda cierre el dropdown
-        searchBox.addEventListener('click', function(e) {
+        const stopPropagation = function(e) {
             e.stopPropagation();
-        });
+        };
+        searchBox.removeEventListener('click', stopPropagation);
+        searchBox.addEventListener('click', stopPropagation);
+        
+        // CORRECCIÓN DEL ERROR: Limpiar listeners si el componente se destruye
+        return () => {
+            select.removeEventListener('click', showSearchBox);
+            searchInput.removeEventListener('input', handleInput);
+            document.removeEventListener('click', handleOutsideClick);
+            searchBox.removeEventListener('click', stopPropagation);
+        };
     },
     
     getEntityName(lowercase = false, plural = false) {
