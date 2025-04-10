@@ -13,6 +13,7 @@ const Router = {
     routes: {
         'register': RegisterView,
         'reports': ReportsView,
+        'kpis': KPIsView,
         'admin': AdminView
     },
     
