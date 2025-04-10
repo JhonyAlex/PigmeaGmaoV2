@@ -131,3 +131,29 @@ body {
     font-weight: bold;
     background-color: rgba(0, 123, 255, 0.1);
 }
+
+/* Estilos para los contenedores de gráficos - Agregar al CSS */
+.chart-container {
+    position: relative;
+    height: 0;
+    padding-bottom: 60%; /* Proporción de aspecto 5:3 */
+    width: 100%;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.chart-container canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Para pantallas más grandes podemos limitar la altura */
+@media (min-width: 992px) {
+    .chart-container {
+        height: 400px;
+        padding-bottom: 0;
+    }
+}
