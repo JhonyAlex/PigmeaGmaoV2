@@ -1,6 +1,3 @@
-/**
- * Utilidades para validación de formularios
- */
 const ValidationUtils = {
     /**
      * Valida un formulario personalizado
@@ -63,55 +60,26 @@ const ValidationUtils = {
         return { isValid, data };
     },
     
-    /**
-     * Valida datos de importación
-     * @param {Object} data Datos importados
-     * @returns {boolean} Validez de los datos
-     */
-    validateImportData(data) {
-        // Verificar estructura básica
-        if (!data || typeof data !== 'object') return false;
-        if (!data.config || !data.entities || !data.fields || !data.records) return false;
-        
-        // Verificar que config tiene los campos correctos
-        if (typeof data.config.title !== 'string' || typeof data.config.description !== 'string') {
-            return false;
-        }
-        
-        // Verificar que entities, fields y records son arrays
-        if (!Array.isArray(data.entities) || !Array.isArray(data.fields) || !Array.isArray(data.records)) {
-            return false;
-        }
-        
-        // Validar estructura de cada entidad
-        for (const entity of data.entities) {
-            if (!entity.id || !entity.name || !Array.isArray(entity.fields)) {
-                return false;
+    async validateImportData(data) {
+        try {
+            if (!data || typeof data !== 'object' || !Array.isArray(data.entities) || !Array.isArray(data.fields)) {
+                return { isValid: false, message: 'Invalid data format' };
+            }
+            for (const entity of data.entities) {
+                if (!entity || typeof entity !== 'object' || !entity.name || !Array.isArray(entity.fields)) {
+                    return { isValid: false, message: 'Invalid entity format' };
+                }
+            }
+            for (const field of data.fields) {
+                if (!field || typeof field !== 'object' || !field.name || !field.type || !field.entityId) {
+                    return { isValid: false, message: 'Invalid field format' };
+                }
+            }
+            return { isValid: true, message: 'Data is valid' };
+        } catch (error) {
+            console.error('Error during validation:', error);
+            return { isValid: false, message: 'Error during validation' };
             }
         }
-        
-        // Validar estructura de cada campo
-        for (const field of data.fields) {
-            if (!field.id || !field.name || !field.type) {
-                return false;
-            }
-            
-            if (field.type === 'select' && !Array.isArray(field.options)) {
-                return false;
-            }
-        }
-        
-        // Validar estructura de cada registro
-        for (const record of data.records) {
-            if (!record.id || !record.entityId || !record.timestamp || !record.data) {
-                return false;
-            }
-            
-            if (typeof record.data !== 'object') {
-                return false;
-            }
-        }
-        
-        return true;
     }
 };

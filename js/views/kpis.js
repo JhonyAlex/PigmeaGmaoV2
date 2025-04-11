@@ -2,6 +2,8 @@
  * Vista de KPIs para mostrar métricas clave
  */
 const KPIsView = {
+    configCollection: 'config/kpisConfig',
+    
     /**
      * Campos seleccionados para los KPIs
      */
@@ -27,16 +29,27 @@ const KPIsView = {
     /**
      * Carga los campos seleccionados para KPIs desde la configuración
      */
-    loadSelectedFields() {
-        const config = StorageService.getConfig();
-        this.selectedFields = config.kpiFields || [];
+    async loadSelectedFields() {
+        try {
+            const config = await this.loadKpisConfig();
+            this.selectedFields = config.kpiFields || [];
+        } catch (error) {
+            console.error('Error loading selected fields:', error);
+            this.selectedFields = [];
+        }
     },
     
     /**
      * Guarda los campos seleccionados para KPIs en la configuración
      */
-    saveSelectedFields() {
-        const config = StorageService.getConfig();
+    async saveSelectedFields() {
+        try {
+            var config = await this.loadKpisConfig();
+        } catch (error) {
+            console.error('Error loading config:', error);
+            config = {};
+        }
+        
         config.kpiFields = this.selectedFields;
         StorageService.updateConfig(config);
     },
@@ -59,7 +72,12 @@ const KPIsView = {
         const lastMonthStr = lastMonth.toISOString().split('T')[0];
         
         // Obtener nombre personalizado de la entidad
-        const config = StorageService.getConfig();
+        try {
+            var config = await this.loadKpisConfig();
+        } catch (error) {
+            console.error('Error loading config:', error);
+            config = {};
+        }
         const entityName = config.entityName || 'Entidad';
         
         const template = `
@@ -441,7 +459,7 @@ const KPIsView = {
         
         // Listener para guardado de configuración de KPIs
         document.getElementById('save-kpi-config-btn').addEventListener('click', () => {
-            this.saveKPIConfiguration();
+            this.saveKPIConfiguration().then();
         });
         
         // Listener para seleccionar todos los campos KPI
@@ -619,13 +637,25 @@ const KPIsView = {
     /**
      * Guarda la configuración de KPIs
      */
-    saveKPIConfiguration() {
+    async saveKPIConfiguration() {
         // Actualizar campos seleccionados
         this.updateSelectedFields();
         
         // Obtener la configuración actual
-        const config = StorageService.getConfig();
+        try {
+            var config = await this.loadKpisConfig();
+        } catch (error) {
+            console.error('Error loading config:', error);
+            config = {};
+        }
         
+        if(!config.kpiMetrics){
+            config.kpiMetrics = {}
+        }
+        if(!config.kpiVisualization){
+            config.kpiVisualization = {}
+        }
+
         // Guardar campos seleccionados
         config.kpiFields = this.selectedFields;
         
@@ -645,23 +675,45 @@ const KPIsView = {
         config.kpiMetrics = {
             showCount: document.getElementById('show-count')?.checked || false,
             showDailyAvg: document.getElementById('show-daily-avg')?.checked || false,
-            showEntitiesCount: document.getElementById('show-entities-count')?.checked || false,
-            showGrowthRate: document.getElementById('show-growth-rate')?.checked || false,
-            showPredictions: document.getElementById('show-predictions')?.checked || false,
-            showPercentChange: document.getElementById('show-percent-change')?.checked || false
+            showEntitiesCount: document.getElementById('show-entities-count')
+                ?.checked || false,
+            showGrowthRate: document.getElementById('show-growth-rate')
+                ?.checked || false,
+            showPredictions: document.getElementById('show-predictions')
+                ?.checked || false,
+            showPercentChange: document.getElementById('show-percent-change')
+                ?.checked || false
         };
         
         // Guardar configuración de visualización
         config.kpiVisualization = {
-            defaultChartType: document.getElementById('chart-type')?.value || 'bar',
-            defaultPeriod: document.getElementById('trend-period')?.value || 'month',
-            defaultComparison: document.getElementById('comparison-mode')?.value || 'period'
+            defaultChartType: document.getElementById('chart-type')
+                ?.value || 'bar',
+            defaultPeriod: document.getElementById('trend-period')
+                ?.value || 'month',
+            defaultComparison: document.getElementById('comparison-mode')
+                ?.value || 'period'
         };
         
-        // Guardar en el almacenamiento
-        StorageService.updateConfig(config);
+        // Guardar en el almacenamiento usando StorageService
+        await this.saveKpisConfig(config);
         
         UIUtils.showAlert('Configuración de KPIs guardada correctamente', 'success');
+    },
+
+    async saveKpisConfig(config) {
+        try {
+            await StorageService.setItem(this.configCollection, config);
+            console.log('Configuración de KPIs guardada:', config);
+            return true;
+        } catch (error) {
+            console.error('Error saving KPIs config:', error);
+            return false;
+        }
+    },
+
+    async loadKpisConfig() {
+        return await StorageService.getItem(this.configCollection) || {};
     },
     
     /**
@@ -775,7 +827,13 @@ const KPIsView = {
         const filteredRecords = RecordModel.filterMultiple(filters);
         
         // Obtener configuraciones
-        const config = StorageService.getConfig();
+        try {
+            var config = await this.loadKpisConfig();
+        } catch (error) {
+            console.error('Error loading config:', error);
+            config = {};
+        }
+        
         const kpiStyle = config.kpiStyle || 'modern';
         const kpiDecimalPlaces = config.kpiDecimalPlaces || 2;
         const kpiDefaultAggregation = config.kpiDefaultAggregation || 'sum';
