@@ -1,117 +1,14 @@
 /**
  * Modelo para la gestión de registros
  */
-import StorageService from './storage.js';
-import EntityModel from './entity.js'
-import FieldModel from './field.js';
-
-const storageService = new StorageService();
-
-class Record {
-  constructor(entityId, data, id = null, timestamp = null) {
-    this.id = id || this.generateId();
-    this.entityId = entityId;
-    this.data = data;
-    this.timestamp = timestamp || new Date().toISOString();
-  }
-
-  generateId() {
-    return 'record_' + Date.now() + Math.random().toString(36).substr(2, 9);
-  }
-
-  static async get(id) {
-    try {
-      const recordData = await storageService.getItem(`records/${id}`);
-      if (recordData) {
-        return new Record(recordData.entityId, recordData.data, id, recordData.timestamp);
-      }
-      return null;
-    } catch (error) {
-      console.error('Error fetching record:', error);
-      return null;
-    }
-  }
-
-  static async getAll() {
-    try {
-      //Simulando que busca todos los registros
-      const initialData = await storageService.getItem('data/initialData');
-      if(initialData){
-        const allRecords = [];
-        for (const recordData of initialData.records){
-          allRecords.push(new Record(recordData.entityId, recordData.data, recordData.id, recordData.timestamp));
-        }
-        return allRecords
-      }else{
-        return [];
-      }
-    } catch (error) {
-      console.error('Error fetching all records:', error);
-      return [];
-    }
-  }
-
-  async save() {
-    try {
-      const recordData = { entityId: this.entityId, data: this.data, timestamp: this.timestamp };
-      await storageService.setItem(`records/${this.id}`, recordData);
-      return true;
-    } catch (error) {
-      console.error('Error saving record:', error);
-      return false;
-    }
-  }
-
-  async update(updates) {
-    try {
-      await storageService.updateItem(`records/${this.id}`, updates);
-      Object.assign(this, updates);
-      return true;
-    } catch (error) {
-      console.error('Error updating record:', error);
-      return false;
-    }
-  }
-
-  async delete() {
-    try {
-      await storageService.removeItem(`records/${this.id}`);
-      return true;
-    } catch (error) {
-      console.error('Error deleting record:', error);
-      return false;
-    }
-  }
-
-  static async deleteById(id) {
-    try {
-      await storageService.removeItem(`records/${id}`);
-      return true;
-    } catch (error) {
-      console.error('Error deleting record:', error);
-      return false;
-    }
-  }
-  static async updateById(id, newData, newDate){
-    try{
-      await storageService.updateItem(`records/${id}`, {
-        data: newData,
-        timestamp: newDate
-      })
-      return true
-    }catch (error) {
-      console.error('Error updating record:', error);
-      return false;
-    }
-  }
-
-  static async create(entityId, formData) {
-    const newRecord = new Record(entityId, formData);
-    await newRecord.save();
-    return newRecord;
-  }
-
-  static RecordModel = {
+const RecordModel = {
+    /**
+     * Obtiene todos los registros
+     * @returns {Array} Lista de registros
+     */
+    getAll() {
+        return StorageService.getData().records;
+    },
     
     /**
      * Obtiene un registro por su ID
@@ -119,10 +16,30 @@ class Record {
      * @returns {Object|null} Registro encontrado o null
      */
     getById(id) {
-      return Record.get(id);
+        const records = this.getAll();
+        return records.find(record => record.id === id) || null;
     },
     
-
+    /**
+     * Crea un nuevo registro
+     * @param {string} entityId ID de la entidad
+     * @param {Object} formData Datos del formulario
+     * @returns {Object} Registro creado
+     */
+    create(entityId, formData) {
+        const data = StorageService.getData();
+        const newRecord = {
+            id: 'record_' + Date.now(),
+            entityId: entityId,
+            timestamp: new Date().toISOString(),
+            data: { ...formData }
+        };
+        
+        data.records.push(newRecord);
+        StorageService.saveData(data);
+        
+        return newRecord;
+    },
     
     /**
      * Filtra registros según criterios (una sola entidad)
@@ -130,7 +47,7 @@ class Record {
      * @returns {Array} Registros filtrados
      */
     filter(filters = {}) {
-        let records = Record.getAll();
+        let records = this.getAll();
         
         // Filtrar por entidad
         if (filters.entityId) {
@@ -158,7 +75,7 @@ class Record {
      * @returns {Array} Registros filtrados
      */
     filterMultiple(filters = {}) {
-        let records = Record.getAll();
+        let records = this.getAll();
         
         // Filtrar por entidades (múltiples)
         if (filters.entityIds && filters.entityIds.length > 0) {
@@ -186,7 +103,7 @@ class Record {
      * @returns {Array} Últimos registros
      */
     getRecent(limit = 10) {
-        const records = Record.getAll();
+        const records = this.getAll();
         // Ordenar por fecha (más reciente primero)
         return [...records]
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
@@ -201,7 +118,7 @@ class Record {
      * @param {string} horizontalFieldId ID del campo para el eje horizontal (opcional)
      * @returns {Object} Datos para el reporte
      */
-    async generateReportMultiple(fieldId, aggregation = 'sum', filters = {}, horizontalFieldId = '') {
+    generateReportMultiple(fieldId, aggregation = 'sum', filters = {}, horizontalFieldId = '') {
         // Obtenemos el campo para asegurarnos que es numérico
         const field = FieldModel.getById(fieldId);
         if (!field || field.type !== 'number') {
@@ -209,7 +126,7 @@ class Record {
         }
         
         // Obtenemos las entidades que usan este campo
-        let entities = (await EntityModel.getAll()).filter(entity => 
+        let entities = EntityModel.getAll().filter(entity => 
             entity.fields.includes(fieldId)
         );
         
@@ -299,7 +216,7 @@ class Record {
         };
         
         // Para cada entidad (ya filtradas si hay filtro de entidad), calculamos los valores
-        entities.forEach(async entity => {
+        entities.forEach(entity => {
             // Filtrar registros para esta entidad
             const entityRecords = filteredRecords.filter(record => 
                 record.entityId === entity.id && 
@@ -346,10 +263,11 @@ class Record {
      * @param {string} newDate Nueva fecha (en formato ISO)
      * @returns {Object|null} Registro actualizado o null si no se encuentra
      */
-    async updateDate(id, newDate) {
-        const record = await Record.get(id);
-
-        if (!record) {
+    updateDate(id, newDate) {
+        const data = StorageService.getData();
+        const recordIndex = data.records.findIndex(record => record.id === id);
+        
+        if (recordIndex === -1) {
             return null;
         }
         
@@ -357,7 +275,7 @@ class Record {
         StorageService.saveData(data);
         
         return data.records[recordIndex];
-    }, 
+    },
 
     /**
      * Elimina un registro por su ID
@@ -365,13 +283,18 @@ class Record {
      * @returns {boolean} true si se eliminó correctamente, false si no
      */
     delete(id) {
-      return Record.deleteById(id)
+        const data = StorageService.getData();
+        const initialLength = data.records.length;
+        
+        data.records = data.records.filter(record => record.id !== id);
+        
+        if (data.records.length !== initialLength) {
+            StorageService.saveData(data);
+            return true;
+        }
+        
+        return false;
     },
-    create(entityId, formData){
-      return Record.create(entityId,formData)
-    },
-    getAll(){ return Record.getAll() }
-    ,
 
     /**
      * Actualiza un registro completo
@@ -380,12 +303,25 @@ class Record {
      * @param {string} newDate Nueva fecha (en formato ISO)
      * @returns {boolean} true si se actualizó correctamente, false si no
      */
-    update(id, newData, newDate) { 
-      return Record.updateById(id, newData, newDate);
-     }
+    update(id, newData, newDate) {
+        const data = StorageService.getData();
+        const recordIndex = data.records.findIndex(record => record.id === id);
+        
+        if (recordIndex === -1) {
+            return false;
+        }
+        
+        // Actualizar los datos del registro
+        data.records[recordIndex].data = { ...data.records[recordIndex].data, ...newData };
+        
+        // Actualizar la fecha si se proporciona
+        if (newDate) {
+            data.records[recordIndex].timestamp = newDate;
+        }
+        
+        // Guardar los cambios
+        StorageService.saveData(data);
+        
+        return true;
+    }
 };
-
-  
-  export default Record;
-
-}

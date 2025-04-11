@@ -1,85 +1,96 @@
-import StorageService from '../models/storage.js';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../app.js';
-
-const storageService = new StorageService();
-
-class Entity {
-    constructor(name, fields = [], id = null) {
-        this.id = id || this.generateId();
-        this.name = name;
-        this.fields = fields;
+/**
+ * Modelo para la gestión de entidades principales
+ */
+const EntityModel = {
+    /**
+     * Obtiene todas las entidades
+     * @returns {Array} Lista de entidades
+     */
+    getAll() {
+        return StorageService.getData().entities;
+    },
+    
+    /**
+     * Obtiene una entidad por su ID
+     * @param {string} id ID de la entidad
+     * @returns {Object|null} Entidad encontrada o null
+     */
+    getById(id) {
+        const entities = this.getAll();
+        return entities.find(entity => entity.id === id) || null;
+    },
+    
+    /**
+     * Crea una nueva entidad
+     * @param {string} name Nombre de la entidad
+     * @returns {Object} Entidad creada
+     */
+    create(name) {
+        const data = StorageService.getData();
+        const newEntity = {
+            id: 'entity_' + Date.now(),
+            name: name,
+            fields: [] // IDs de campos asignados
+        };
+        
+        data.entities.push(newEntity);
+        StorageService.saveData(data);
+        
+        return newEntity;
+    },
+    
+    /**
+     * Actualiza una entidad existente
+     * @param {string} id ID de la entidad
+     * @param {string} name Nuevo nombre
+     * @returns {Object|null} Entidad actualizada o null
+     */
+    update(id, name) {
+        const data = StorageService.getData();
+        const entityIndex = data.entities.findIndex(entity => entity.id === id);
+        
+        if (entityIndex === -1) return null;
+        
+        data.entities[entityIndex].name = name;
+        StorageService.saveData(data);
+        
+        return data.entities[entityIndex];
+    },
+    
+    /**
+     * Elimina una entidad
+     * @param {string} id ID de la entidad
+     * @returns {boolean} Éxito de la eliminación
+     */
+    delete(id) {
+        const data = StorageService.getData();
+        const initialLength = data.entities.length;
+        
+        data.entities = data.entities.filter(entity => entity.id !== id);
+        
+        // También eliminamos los registros asociados
+        data.records = data.records.filter(record => record.entityId !== id);
+        
+        StorageService.saveData(data);
+        
+        return data.entities.length < initialLength;
+    },
+    
+    /**
+     * Asigna campos a una entidad
+     * @param {string} entityId ID de la entidad
+     * @param {Array} fieldIds IDs de los campos a asignar
+     * @returns {Object|null} Entidad actualizada o null
+     */
+    assignFields(entityId, fieldIds) {
+        const data = StorageService.getData();
+        const entityIndex = data.entities.findIndex(entity => entity.id === entityId);
+        
+        if (entityIndex === -1) return null;
+        
+        data.entities[entityIndex].fields = fieldIds;
+        StorageService.saveData(data);
+        
+        return data.entities[entityIndex];
     }
-
-    generateId() {
-        return 'entity_' + Date.now() + Math.random().toString(36).substr(2, 9);
-    }
-
-    static async get(id) {
-        try {
-            const entityData = await storageService.getItem(`entities/${id}`);
-            if (entityData) {
-                return new Entity(entityData.name, entityData.fields, id);
-            }
-            return null;
-        } catch (error) {
-            console.error('Error fetching entity:', error);
-            return null;
-        }
-    }
-
-    static async getAll() {
-      try {
-        const querySnapshot = await getDocs(collection(db, "entities"));
-        const allEntities = querySnapshot.docs.map(doc => {
-          return new Entity(doc.data().name, doc.data().fields, doc.id);
-        });
-        return allEntities;
-      } catch (error) {
-        console.error('Error fetching all entities:', error);
-        return [];
-      }
-    }
-
-    async save() {
-        try {
-            const entityData = { name: this.name, fields: this.fields };
-            await storageService.setItem(`entities/${this.id}`, entityData);
-            return true;
-        } catch (error) {
-            console.error('Error saving entity:', error);
-            return false;
-        }
-    }
-
-    async update(updates) {
-        try {
-            await storageService.updateItem(`entities/${this.id}`, updates);
-            Object.assign(this, updates);
-            return true;
-        } catch (error) {
-            console.error('Error updating entity:', error);
-            return false;
-        }
-    }
-
-    async delete() {
-        try {
-            //delete all records associated to the entity
-            const allRecords = await storageService.getItem(`data/initialData`);
-            if(allRecords){
-              const recordsToDelete = allRecords.records.filter(record => record.entityId === this.id);
-              recordsToDelete.forEach(async record => {
-                await storageService.removeItem(`records/${record.id}`);
-              });
-            }
-            await storageService.removeItem(`entities/${this.id}`);
-            return true;
-        } catch (error) {
-            console.error('Error deleting entity:', error);
-            return false;
-        }
-    }
-}
-
-export default Entity;
+};

@@ -1,145 +1,138 @@
-import StorageService from '../models/storage.js';
-
-const storageService = new StorageService();
-
-class Field {
-    constructor(name, type, entityId, id = null, options = [], required = false, useForRecordsTable = false, isColumn3 = false, isColumn4 = false, isColumn5 = false, useForComparativeReports = false, isHorizontalAxis = false, isCompareField = false) {
-        this.id = id || this.generateId();
-        this.name = name;
-        this.type = type;
-        this.entityId = entityId;
-        this.options = options;
-        this.required = required;
-        this.useForRecordsTable = useForRecordsTable;
-        this.isColumn3 = isColumn3;
-        this.isColumn4 = isColumn4;
-        this.isColumn5 = isColumn5;
-        this.useForComparativeReports = useForComparativeReports;
-        this.isHorizontalAxis = isHorizontalAxis;
-        this.isCompareField = isCompareField;
-    }
-
-    generateId() {
-        return 'field_' + Date.now() + Math.random().toString(36).substr(2, 9);
-    }
-
-    static async get(id) {
-        try {
-            const fieldData = await storageService.getItem(`fields/${id}`);
-            if (fieldData) {
-                return new Field(
-                    fieldData.name,
-                    fieldData.type,
-                    fieldData.entityId,
-                    id,
-                    fieldData.options,
-                    fieldData.required,
-                    fieldData.useForRecordsTable,
-                    fieldData.isColumn3,
-                    fieldData.isColumn4,
-                    fieldData.isColumn5,
-                    fieldData.useForComparativeReports,
-                    fieldData.isHorizontalAxis,
-                    fieldData.isCompareField
-                );
-            }
-            return null;
-        } catch (error) {
-            console.error('Error fetching field:', error);
-            return null;
-        }
-    }
-
-    static async getAll() {
-        try {
-            const initialData = await storageService.getItem(`data/initialData`);
-            if(!initialData || !initialData.fields){
-                return [];
-            }
-            const allFields = [];
-            for (const fieldId of initialData.fields) {
-                const fieldData = await storageService.getItem(`fields/${fieldId}`);
-                if (fieldData) {
-                    allFields.push(new Field(
-                        fieldData.name,
-                        fieldData.type,
-                        fieldData.entityId,
-                        fieldId,
-                        fieldData.options,
-                        fieldData.required,
-                        fieldData.useForRecordsTable,
-                        fieldData.isColumn3,
-                        fieldData.isColumn4,
-                        fieldData.isColumn5,
-                        fieldData.useForComparativeReports,
-                        fieldData.isHorizontalAxis,
-                        fieldData.isCompareField
-                    ));
+/**
+ * Modelo para la gestión de campos personalizados
+ */
+const FieldModel = {
+    /**
+     * Obtiene todos los campos
+     * @returns {Array} Lista de campos
+     */
+    getAll() {
+        return StorageService.getData().fields;
+    },
+    
+    /**
+     * Obtiene un campo por su ID
+     * @param {string} id ID del campo
+     * @returns {Object|null} Campo encontrado o null
+     */
+    getById(id) {
+        const fields = this.getAll();
+        return fields.find(field => field.id === id) || null;
+    },
+    
+    /**
+     * Obtiene campos por IDs
+     * @param {Array} ids Lista de IDs de campos
+     * @returns {Array} Lista de campos encontrados
+     */
+    getByIds(ids) {
+        const fields = this.getAll();
+        return fields.filter(field => ids.includes(field.id));
+    },
+    
+    /**
+     * Crea un nuevo campo
+     * @param {Object} fieldData Datos del campo
+     * @returns {Object} Campo creado
+     */
+    create(fieldData) {
+        const data = StorageService.getData();
+        const newField = {
+            id: 'field_' + Date.now(),
+            name: fieldData.name,
+            type: fieldData.type,
+            required: !!fieldData.required,
+            options: fieldData.type === 'select' ? (fieldData.options || []) : [],
+            // Nuevas propiedades
+            useForRecordsTable: !!fieldData.useForRecordsTable,
+            isColumn3: !!fieldData.isColumn3,
+            isColumn4: !!fieldData.isColumn4,
+            isColumn5: !!fieldData.isColumn5,
+            useForComparativeReports: !!fieldData.useForComparativeReports,
+            isHorizontalAxis: !!fieldData.isHorizontalAxis,
+            isCompareField: !!fieldData.isCompareField
+        };
+        
+        data.fields.push(newField);
+        StorageService.saveData(data);
+        
+        return newField;
+    },
+    
+    /**
+     * Actualiza un campo existente
+     * @param {string} id ID del campo
+     * @param {Object} fieldData Nuevos datos del campo
+     * @returns {Object|null} Campo actualizado o null
+     */
+    update(id, fieldData) {
+        const data = StorageService.getData();
+        const fieldIndex = data.fields.findIndex(field => field.id === id);
+        
+        if (fieldIndex === -1) return null;
+        
+        data.fields[fieldIndex] = {
+            ...data.fields[fieldIndex],
+            name: fieldData.name,
+            type: fieldData.type,
+            required: !!fieldData.required,
+            options: fieldData.type === 'select' ? (fieldData.options || []) : [],
+            // Nuevas propiedades
+            useForRecordsTable: !!fieldData.useForRecordsTable,
+            isColumn3: !!fieldData.isColumn3,
+            isColumn4: !!fieldData.isColumn4,
+            isColumn5: !!fieldData.isColumn5,
+            useForComparativeReports: !!fieldData.useForComparativeReports,
+            isHorizontalAxis: !!fieldData.isHorizontalAxis,
+            isCompareField: !!fieldData.isCompareField
+        };
+        
+        StorageService.saveData(data);
+        
+        return data.fields[fieldIndex];
+    },
+    
+    /**
+     * Elimina un campo
+     * @param {string} id ID del campo
+     * @returns {boolean} Éxito de la eliminación
+     */
+    delete(id) {
+        const data = StorageService.getData();
+        const initialLength = data.fields.length;
+        
+        data.fields = data.fields.filter(field => field.id !== id);
+        
+        // Eliminamos el campo de todas las entidades que lo tengan asignado
+        data.entities.forEach(entity => {
+            entity.fields = entity.fields.filter(fieldId => fieldId !== id);
+        });
+        
+        StorageService.saveData(data);
+        
+        return data.fields.length < initialLength;
+    },
+    
+    /**
+     * Obtiene los campos numéricos compartidos entre entidades
+     * @returns {Array} Lista de campos numéricos compartidos
+     */
+    getSharedNumericFields() {
+        const data = StorageService.getData();
+        const numericFields = data.fields.filter(field => field.type === 'number');
+        const fieldUsage = {};
+        
+        // Contar las entidades que usan cada campo
+        data.entities.forEach(entity => {
+            entity.fields.forEach(fieldId => {
+                if (!fieldUsage[fieldId]) {
+                    fieldUsage[fieldId] = 0;
                 }
-            }
-            return allFields;
-        } catch (error) {
-            console.error('Error fetching all fields:', error);
-            return [];
-        }
+                fieldUsage[fieldId]++;
+            });
+        });
+        
+        // Filtrar campos numéricos que están en más de una entidad
+        return numericFields.filter(field => (fieldUsage[field.id] || 0) > 1);
     }
-
-    async save() {
-        try {
-            const fieldData = { 
-                name: this.name, 
-                type: this.type, 
-                entityId: this.entityId,
-                options: this.options,
-                required: this.required,
-                useForRecordsTable: this.useForRecordsTable,
-                isColumn3: this.isColumn3,
-                isColumn4: this.isColumn4,
-                isColumn5: this.isColumn5,
-                useForComparativeReports: this.useForComparativeReports,
-                isHorizontalAxis: this.isHorizontalAxis,
-                isCompareField: this.isCompareField
-            };
-            await storageService.setItem(`fields/${this.id}`, fieldData);
-
-            let data = await storageService.getItem(`data/initialData`);
-            if (!data.fields.includes(this.id)){
-                data.fields.push(this.id);
-            }
-            await storageService.setItem(`data/initialData`, data);
-
-            return true;
-        } catch (error) {
-            console.error('Error saving field:', error);
-            return false;
-        }
-    }
-
-    async update(updates) {
-        try {
-            await storageService.updateItem(`fields/${this.id}`, updates);
-            Object.assign(this, updates);
-            return true;
-        } catch (error) {
-            console.error('Error updating field:', error);
-            return false;
-        }
-    }
-
-    async delete() {
-        try {
-            await storageService.removeItem(`fields/${this.id}`);
-
-            let data = await storageService.getItem(`data/initialData`);
-            data.fields = data.fields.filter(fieldId => fieldId !== this.id);
-            await storageService.setItem(`data/initialData`, data);
-
-            return true;
-        } catch (error) {
-            console.error('Error deleting field:', error);
-            return false;
-        }
-    }
-}
-
-export default Field;
+};

@@ -1,10 +1,3 @@
-import StorageService from '../../js/models/storage.js';
-import EntityModel from '../models/entity.js';
-import FieldModel from '../models/field.js';
-import RecordModel from '../models/record.js';
-import * as UIUtils from '../utils/ui.js';
-import * as ChartUtils from '../utils/charts.js';
-import * as ExportUtils from '../utils/export.js';
 /**
  * Vista de reportes para visualizar datos
  */
@@ -38,19 +31,6 @@ const ReportsView = {
      * Inicializa la vista de reportes
      */
     init() {
-        this.loadReportConfig();
-    },
-    
-    async loadReportConfig(){
-        const { getReportConfig } = await import('./reports.js');
-        this.reportConfig = await getReportConfig()
-        this.render();
-        this.setupEventListeners();
-        
-        // Generar automáticamente el reporte al cargar la página
-        this.autoGenerateReport();
-    },
-    renderContent(){
         this.render();
         this.setupEventListeners();
         
@@ -101,7 +81,7 @@ const ReportsView = {
         lastMonth.setMonth(lastMonth.getMonth() - 1);
         const lastMonthStr = lastMonth.toISOString().split('T')[0];
         // Obtener nombre personalizado de la entidad
-        const config = this.reportConfig;
+        const config = StorageService.getConfig();
         const entityName = config.entityName || 'Entidad';
     
         // Obtener campos marcados para columnas
@@ -585,7 +565,7 @@ const ReportsView = {
         const entityFilterSelect = document.getElementById('filter-entity');
         const selectedEntities = Array.from(entityFilterSelect.selectedOptions).map(option => option.value);
         // Obtener nombre personalizado de la entidad
-        const config = this.reportConfig;
+        const config = StorageService.getConfig();
         const entityName = config.entityName || 'Entidad';
         // Si se selecciona "Todas las entidades" o no se selecciona ninguna, no aplicamos filtro de entidad
         const entityFilter = selectedEntities.includes('') || selectedEntities.length === 0
@@ -974,7 +954,7 @@ const ReportsView = {
         const entity = EntityModel.getById(record.entityId) || { name: 'Desconocido' };
         const fields = FieldModel.getByIds(Object.keys(record.data));
         // Obtener nombre personalizado de la entidad
-        const config = this.reportConfig;
+        const config = StorageService.getConfig();
         const entityName = config.entityName || 'Entidad';
         const modal = UIUtils.initModal('viewRecordModal');
         const recordDetails = document.getElementById('record-details');
@@ -1372,22 +1352,3 @@ const ReportsView = {
         return `${year}-${month}-${day}`;
     }
 };
-
-
-
-const storageService = new StorageService();
-
-async function getReportConfig() {
-    try {
-        const config = await storageService.getItem('config/reportConfig') || {
-            chartColors: ['#36A2EB', '#FFCE56', '#FF6384', '#36A2EB', '#FFCE56'],
-        };
-        console.log('Configuración de Reportes cargada:', config);
-        return config;
-    } catch (error) {
-        console.error('Error loading report config:', error);
-        return { chartColors: ['#CCCCCC'] };
-    }
-}
-export { getReportConfig };
-export default ReportsView;

@@ -1,9 +1,6 @@
-import StorageService from '../../js/models/storage.js';
-import Entity from '../../js/models/entity.js';
 /**
  * Vista de registro para capturar datos
  */
-const storageService = new StorageService();
 const RegisterView = {
     /**
      * Nombre personalizado para "Entidad"
@@ -12,20 +9,18 @@ const RegisterView = {
     
     /**
      * Inicializa la vista de registro
-     * @async
      */
-    async init() {
-        const {appConfig, entities} = await loadInitialData();
-        this.entityName = appConfig.entityName || 'Entidad';
+    init() {
+        // Obtener el nombre personalizado de la configuración
+        const config = StorageService.getConfig();
+        this.entityName = config.entityName || 'Entidad';
         
-        await this.render(appConfig, entities);
+        this.render();
         this.setupEventListeners();
     },
     
     /**
      * Renderiza el contenido de la vista
-     * @async
-     * @param config
      */
     render() {
         const mainContent = document.getElementById('main-content');
@@ -576,18 +571,3 @@ const RegisterView = {
         });
     }
 };
-
-async function loadInitialData() {
-    try {
-      const appConfig = await storageService.getItem('config/appConfig') || { appName: 'Default App', version: '1.0' };
-      const entities = await Entity.getAll() || [];
-      console.log('Configuración cargada en Register:', appConfig);
-      console.log('Entidades cargadas en Register:', entities);
-      return { appConfig, entities };
-    } catch (error) {
-      console.error('Error loading initial data in Register:', error);
-      return { appConfig: { appName: 'Error App', version: 'Error' }, entities: [] };
-    }
-  }
-  
-export default RegisterView;

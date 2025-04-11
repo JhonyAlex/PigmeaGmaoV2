@@ -1,8 +1,6 @@
 /**
  * Vista de administración para gestionar entidades y campos
  */
-import { saveConfig, loadConfig } from './admin-config.js';
-import StorageService from '../../js/models/storage.js';
 const AdminView = {
 
     importData: null,
@@ -18,12 +16,10 @@ const AdminView = {
      * Renderiza el contenido de la vista
      */
     render() {
-        loadConfig().then((config) => {
-            const mainContent = document.getElementById('main-content');
-            const entityName = config.entityName || 'Entidad';
-            const entities = EntityModel.getAll();
-
-
+        const mainContent = document.getElementById('main-content');
+        const config = StorageService.getConfig();
+        const entityName = config.entityName || 'Entidad';
+        const entities = EntityModel.getAll();
         
         const template = `
             <div class="container mt-4">
@@ -259,8 +255,7 @@ const AdminView = {
         
         // Cargar datos iniciales
         this.loadEntities();
-            this.loadFields();
-        });
+        this.loadFields();
     },
     
     /**
@@ -280,7 +275,6 @@ const AdminView = {
         const downloadTemplateBtn = document.getElementById('download-template-btn');
         const importFileInput = document.getElementById('import-file');
         const processImportBtn = document.getElementById('process-import-btn');
-
         const confirmImportBtn = document.getElementById('confirmImportBtn');
         
         if (downloadTemplateBtn) {
@@ -320,7 +314,7 @@ const AdminView = {
                 e.preventDefault();
                 console.log("Formulario de configuración enviado");
                 this.saveConfig();
-            })
+            });
         } else {
             console.error("Formulario de configuración no encontrado");
         }
@@ -383,8 +377,8 @@ const AdminView = {
     loadEntities() {
         const entities = EntityModel.getAll();
         const entitiesContainer = document.getElementById('entities-container');
-        const entitiesTableContainer = document.getElementById('entities-table-container');
         const noEntitiesMessage = document.getElementById('no-entities-message');
+        const entitiesTableContainer = document.getElementById('entities-table-container');
         const entitiesList = document.getElementById('entities-list');
         
         // Mostrar mensaje si no hay entidades
@@ -404,7 +398,7 @@ const AdminView = {
         // Renderizar cada entidad
         entities.forEach(entity => {
             // Obtener campos asignados
-            const fields = FieldModel.getByIds(entity.fields) || [];
+            const fields = FieldModel.getByIds(entity.fields);
             const fieldNames = fields.map(field => field.name).join(', ') || 'Ninguno';
             
             const row = document.createElement('tr');
@@ -559,34 +553,32 @@ const AdminView = {
     /**
      * Guarda la configuración general
      */
-    async saveConfig() {
-        try {
-            console.log("Guardando configuración...");
-            const title = document.getElementById('app-title').value;
-            const description = document.getElementById('app-description').value;
-            const entityName = document.getElementById('entity-name-config').value;
-            const navbarTitle = document.getElementById('navbar-title').value;
-
-            const config = {
-                title: title,
-                description: description,
-                entityName: entityName,
-                navbarTitle: navbarTitle
-            };
-
-            await saveConfig(config);
-            UIUtils.showAlert('Configuración guardada correctamente', 'success', document.querySelector('.container'));
-
-            // Actualizar navbar-brand inmediatamente
-            document.querySelector('.navbar-brand').textContent = navbarTitle;
-
-            // Actualizar menciones de "Entidad" visibles en la página actual
-            this.updateEntityNameReferences(entityName);
-        } catch (error) {
-            console.error("Error al guardar la configuración:", error);
-            UIUtils.showAlert('Error al guardar la configuración', 'danger', document.querySelector('.container'));
-        }
+    saveConfig() {
+        console.log("Guardando configuración...");
+        const title = document.getElementById('app-title').value;
+        const description = document.getElementById('app-description').value;
+        const entityName = document.getElementById('entity-name-config').value;
+        const navbarTitle = document.getElementById('navbar-title').value;
+        
+        const config = {
+            title: title,
+            description: description,
+            entityName: entityName,
+            navbarTitle: navbarTitle
+        };
+        
+        StorageService.updateConfig(config);
+        UIUtils.showAlert('Configuración guardada correctamente', 'success', document.querySelector('.container'));
+        
+        // Actualizar navbar-brand inmediatamente
+        document.querySelector('.navbar-brand').textContent = navbarTitle;
+        
+        // Actualizar menciones de "Entidad" visibles en la página actual
+        this.updateEntityNameReferences(entityName);
+        
+        console.log("Configuración guardada:", config);
     },
+    
     /**
      * Muestra el modal para crear/editar una entidad
      * @param {string} entityId ID de la entidad (vacío para crear nueva)
@@ -597,8 +589,8 @@ const AdminView = {
         const entityIdInput = document.getElementById('entity-id');
         const entityNameInput = document.getElementById('entity-name');
         
-        // Obtener nombre personalizado  
-        let config = await loadConfig();
+        // Obtener nombre personalizado
+        const config = StorageService.getConfig();
         const entityName = config.entityName || 'Entidad';
         
         // Limpiar formulario
