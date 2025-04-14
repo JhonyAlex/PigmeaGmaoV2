@@ -136,17 +136,31 @@ const ReportsView = {
         <div class="card mb-4">
         <div class="card-header bg-primary text-white">
             <h5 class="mb-0">Atajos de fecha</h5>
+        <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Atajos de fecha</h5>
+    </div>
+    <div class="card-body text-center">
+        <div class="btn-group mb-3" role="group" aria-label="Atajos de fecha">
+            <button type="button" class="btn btn-outline-primary date-shortcut" data-range="yesterday">Ayer</button>
+            <button type="button" class="btn btn-outline-primary date-shortcut" data-range="thisWeek">Esta semana</button>
+            <button type="button" class="btn btn-outline-primary date-shortcut" data-range="lastWeek">Semana pasada</button>
+            <button type="button" class="btn btn-outline-primary date-shortcut" data-range="thisMonth">Mes actual</button>
+            <button type="button" class="btn btn-outline-primary date-shortcut" data-range="lastMonth">Mes pasado</button>
         </div>
-        <div class="card-body text-center">
-            <div class="btn-group" role="group" aria-label="Atajos de fecha">
-                <button type="button" class="btn btn-outline-primary date-shortcut" data-range="yesterday">Ayer</button>
-                <button type="button" class="btn btn-outline-primary date-shortcut" data-range="thisWeek">Esta semana</button>
-                <button type="button" class="btn btn-outline-primary date-shortcut" data-range="lastWeek">Semana pasada</button>
-                <button type="button" class="btn btn-outline-primary date-shortcut" data-range="thisMonth">Mes actual</button>
-                <button type="button" class="btn btn-outline-primary date-shortcut" data-range="lastMonth">Mes pasado</button>
-            </div>
+        
+        <h6 class="mt-3 mb-2">Última semana</h6>
+        <div class="btn-group flex-wrap" role="group" aria-label="Días última semana">
+            <button type="button" class="btn btn-sm btn-outline-secondary date-shortcut" data-range="lastMonday">Lunes</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary date-shortcut" data-range="lastTuesday">Martes</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary date-shortcut" data-range="lastWednesday">Miércoles</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary date-shortcut" data-range="lastThursday">Jueves</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary date-shortcut" data-range="lastFriday">Viernes</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary date-shortcut" data-range="lastSaturday">Sábado</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary date-shortcut" data-range="lastSunday">Domingo</button>
         </div>
     </div>
+</div>
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0">Reportes Comparativos</h5>
@@ -1281,12 +1295,12 @@ const ReportsView = {
     setDateRange(range) {
         const fromDateInput = document.getElementById('filter-from-date');
         const toDateInput = document.getElementById('filter-to-date');
-
+    
         // Fecha actual
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         let fromDate, toDate;
-
+    
         // Calcular rango según selección
         switch (range) {
             case 'yesterday':
@@ -1295,46 +1309,68 @@ const ReportsView = {
                 fromDate.setDate(today.getDate() - 1);
                 toDate = new Date(fromDate);
                 break;
-
+    
             case 'thisWeek':
                 // Esta semana (desde domingo o lunes hasta hoy)
                 fromDate = new Date(today);
-                // Obtener el primer día de la semana (0 = domingo, 1 = lunes)
                 const firstDayOfWeek = 1; // Usando lunes como primer día
                 const day = today.getDay();
                 const diff = (day >= firstDayOfWeek) ? day - firstDayOfWeek : 6 - firstDayOfWeek + day;
                 fromDate.setDate(today.getDate() - diff);
                 toDate = new Date(today);
                 break;
-
+    
             case 'lastWeek':
                 // Semana pasada
                 fromDate = new Date(today);
                 const firstDayLastWeek = 1; // Lunes
                 const dayLastWeek = today.getDay();
-                // Retroceder al lunes de la semana pasada
                 fromDate.setDate(today.getDate() - dayLastWeek - 6);
-                // Fin de semana pasada (domingo)
                 toDate = new Date(fromDate);
                 toDate.setDate(fromDate.getDate() + 6);
                 break;
-
+    
             case 'thisMonth':
                 // Mes actual
                 fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
                 toDate = new Date(today);
                 break;
-
+    
             case 'lastMonth':
                 // Mes pasado
                 fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
                 toDate = new Date(today.getFullYear(), today.getMonth(), 0);
                 break;
-
+    
+            case 'lastMonday':
+            case 'lastTuesday':
+            case 'lastWednesday':
+            case 'lastThursday':
+            case 'lastFriday':
+            case 'lastSaturday':
+            case 'lastSunday':
+                // Obtener el día específico de la semana pasada
+                fromDate = new Date(today);
+                const dayMap = {
+                    'lastMonday': 1,
+                    'lastTuesday': 2,
+                    'lastWednesday': 3,
+                    'lastThursday': 4,
+                    'lastFriday': 5,
+                    'lastSaturday': 6,
+                    'lastSunday': 0
+                };
+                const targetDay = dayMap[range];
+                let daysToSubtract = today.getDay() - targetDay;
+                if (daysToSubtract <= 0) daysToSubtract += 7; // Si es negativo o cero, ir a la semana anterior
+                fromDate.setDate(today.getDate() - daysToSubtract);
+                toDate = new Date(fromDate); // El mismo día
+                break;
+    
             default:
                 return; // No hacer nada si no coincide
         }
-
+    
         // Formatear fechas para los inputs
         fromDateInput.value = this.formatDateForInput(fromDate);
         toDateInput.value = this.formatDateForInput(toDate);
