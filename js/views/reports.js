@@ -2,13 +2,36 @@
  * Vista de reportes para visualizar datos
  */
 const ReportsView = {
-    // ... (otras propiedades como pagination, sorting, selectedColumns) ...
+    // --- Propiedades Inicializadas ---
+    pagination: {
+        currentPage: 1,
+        itemsPerPage: 20, // O el valor por defecto que prefieras
+    },
+    sorting: {
+        column: 'timestamp', // Columna inicial para ordenar (o null)
+        direction: 'desc',   // Dirección inicial ('asc' o 'desc')
+    },
+    selectedColumns: {
+        field1: null, // O '', dependiendo de cómo manejes la ausencia de selección
+        field2: null,
+        field3: null,
+    },
+    filteredRecords: [], // Inicializar como array vacío
+    searchedRecords: [], // Inicializar como array vacío
+    // ---------------------------------
 
     /**
      * Inicializa la vista de reportes
      */
     init() {
-        this.render();
+        // Reiniciar estado al inicializar (opcional pero recomendado)
+        this.pagination = { currentPage: 1, itemsPerPage: 20 }; // Simplificado
+        this.sorting = { column: 'timestamp', direction: 'desc' };
+        this.selectedColumns = { field1: null, field2: null, field3: null };
+        this.filteredRecords = [];
+        this.searchedRecords = [];
+
+        this.render(); // Ahora 'this.selectedColumns' existe
         this.setupEventListeners();
 
         // Generar automáticamente el reporte al cargar la página
@@ -43,39 +66,45 @@ const ReportsView = {
         }, 100);
     },
 
-    /**
+        /**
      * Renderiza el contenido de la vista
      */
-    render() {
-        const mainContent = document.getElementById('main-content');
-        const entities = EntityModel.getAll();
-        const sharedNumericFields = FieldModel.getSharedNumericFields();
-        const sharedFields = FieldModel.getAll(); // Todos los campos para el eje horizontal
-
-        // Formatear fecha actual para los inputs de fecha
-        const today = new Date().toISOString().split('T')[0];
-        const lastMonth = new Date();
-        lastMonth.setMonth(lastMonth.getMonth() - 1);
-        const lastMonthStr = lastMonth.toISOString().split('T')[0];
-        // Obtener nombre personalizado de la entidad
-        const config = StorageService.getConfig();
-        const entityName = config.entityName || 'Entidad';
-
-        // Obtener campos marcados para columnas
-        const column3Field = FieldModel.getAll().find(field => field.isColumn3);
-        const column4Field = FieldModel.getAll().find(field => field.isColumn4);
-        const column5Field = FieldModel.getAll().find(field => field.isColumn5);
-
-        // Actualiza SelectedColumns al cargar si hay campos marcados
-        if (column3Field) this.selectedColumns.field1 = column3Field.id;
-        if (column4Field) this.selectedColumns.field2 = column4Field.id;
-        if (column5Field) this.selectedColumns.field3 = column5Field.id;
-
-        // Obtener campos marcados para reportes comparativos
-        const horizontalAxisField = FieldModel.getAll().find(field => field.isHorizontalAxis);
-        const compareField = FieldModel.getAll().find(field => field.isCompareField);
-
-        // --- HTML Template Reorganizado ---
+        render() {
+            const mainContent = document.getElementById('main-content');
+            // --- Añadir verificación para mainContent ---
+            if (!mainContent) {
+                console.error("Error: Elemento con id 'main-content' no encontrado en el DOM.");
+                return; // Detener la renderización si el contenedor principal no existe
+            }
+            // -------------------------------------------
+    
+            const entities = EntityModel.getAll();
+            const sharedNumericFields = FieldModel.getSharedNumericFields();
+            const sharedFields = FieldModel.getAll();
+    
+            // Formatear fechas
+            const lastMonth = new Date();
+            lastMonth.setMonth(lastMonth.getMonth() - 1);
+            const lastMonthStr = this.formatDateForInput(lastMonth); // Usar función propia
+            const today = this.formatDateForInput(new Date());      // Usar función propia
+    
+            const config = StorageService.getConfig();
+            const entityName = config.entityName || 'Entidad';
+    
+            const column3Field = FieldModel.getAll().find(field => field.isColumn3);
+            const column4Field = FieldModel.getAll().find(field => field.isColumn4);
+            const column5Field = FieldModel.getAll().find(field => field.isColumn5);
+    
+            // Actualiza SelectedColumns al cargar si hay campos marcados
+            // Ahora 'this.selectedColumns' está definido
+            this.selectedColumns.field1 = column3Field ? column3Field.id : null; // Línea 70 (modificada para seguridad)
+            this.selectedColumns.field2 = column4Field ? column4Field.id : null;
+            this.selectedColumns.field3 = column5Field ? column5Field.id : null;
+    
+            const horizontalAxisField = FieldModel.getAll().find(field => field.isHorizontalAxis);
+            const compareField = FieldModel.getAll().find(field => field.isCompareField);
+    
+            // --- HTML Template Reorganizado ---
         const template = `
             <div class="container mt-4">
                 <h2>Reportes y Análisis</h2>
@@ -300,11 +329,15 @@ const ReportsView = {
 
         mainContent.innerHTML = template;
 
-        // Actualizar los nombres de las columnas en la tabla según los campos marcados
-        this.updateColumnHeaders();
-
-        // Cargar datos iniciales con los filtros predeterminados
-        this.applyFilters();
+        // --- Añadir verificación antes de llamar a funciones dependientes del DOM ---
+        try {
+            this.updateColumnHeaders();
+            this.applyFilters();
+        } catch (error) {
+            console.error("Error al actualizar cabeceras o aplicar filtros iniciales:", error);
+            mainContent.innerHTML = `<div class="alert alert-danger">Error al inicializar la vista de reportes. Revise la consola para más detalles.</div>`;
+        }
+        // -------------------------------------------------------------------------
     },
 
     // ... (resto de métodos: updateColumnHeaders, setupEventListeners, applyFilters, etc.) ...
