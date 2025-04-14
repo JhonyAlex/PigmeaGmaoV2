@@ -2,56 +2,52 @@
  * Vista de reportes para visualizar datos
  */
 const ReportsView = {
-    // --- Propiedades Inicializadas ---
-    pagination: {
-        currentPage: 1,
-        itemsPerPage: 20, // O el valor por defecto que prefieras
-    },
-    sorting: {
-        column: 'timestamp', // Columna inicial para ordenar (o null)
-        direction: 'desc',   // Dirección inicial ('asc' o 'desc')
-    },
-    selectedColumns: {
-        field1: null, // O '', dependiendo de cómo manejes la ausencia de selección
-        field2: null,
-        field3: null,
-    },
-    filteredRecords: [], // Inicializar como array vacío
-    searchedRecords: [], // Inicializar como array vacío
-    // ---------------------------------
+    // ... (otras propiedades como pagination, sorting, selectedColumns) ...
 
     /**
      * Inicializa la vista de reportes
      */
     init() {
-        // Reiniciar estado al inicializar (opcional pero recomendado)
-        this.pagination = { currentPage: 1, itemsPerPage: parseInt(document.getElementById('items-per-page')?.value) || 20 };
-        this.sorting = { column: 'timestamp', direction: 'desc' };
-        this.selectedColumns = { field1: null, field2: null, field3: null };
-        this.filteredRecords = [];
-        this.searchedRecords = [];
-
-        this.render(); // Ahora 'this.selectedColumns' existe
+        this.render();
         this.setupEventListeners();
 
         // Generar automáticamente el reporte al cargar la página
         this.autoGenerateReport();
     },
 
-    // ... (resto del código sin cambios en la definición inicial) ...
+    /**
+     * Genera automáticamente un informe al cargar la página si hay datos disponibles
+     */
+    autoGenerateReport() {
+        // Verificar si hay campos disponibles para generar un reporte
+        const sharedNumericFields = FieldModel.getSharedNumericFields();
+        if (sharedNumericFields.length === 0) {
+            return; // No hay campos para generar reporte
+        }
+
+        // Esperar a que el DOM esté completamente cargado (por si acaso)
+        setTimeout(() => {
+            // Obtener campos marcados para reportes comparativos
+            const compareField = FieldModel.getAll().find(field => field.isCompareField);
+
+            if (compareField) {
+                // Si hay un campo marcado para comparar, usarlo
+                document.getElementById('report-field').value = compareField.id;
+            } else {
+                // Si no hay campo marcado, usar el primer campo numérico disponible
+                document.getElementById('report-field').value = sharedNumericFields[0].id;
+            }
+
+            // Generar el reporte usando los valores predeterminados o los que están en el formulario
+            this.generateReport();
+        }, 100);
+    },
 
     /**
      * Renderiza el contenido de la vista
      */
     render() {
         const mainContent = document.getElementById('main-content');
-        // --- Añadir verificación para mainContent ---
-        if (!mainContent) {
-            console.error("Error: Elemento con id 'main-content' no encontrado en el DOM.");
-            return; // Detener la renderización si el contenedor principal no existe
-        }
-        // -------------------------------------------
-
         const entities = EntityModel.getAll();
         const sharedNumericFields = FieldModel.getSharedNumericFields();
         const sharedFields = FieldModel.getAll(); // Todos los campos para el eje horizontal
@@ -60,11 +56,7 @@ const ReportsView = {
         const today = new Date().toISOString().split('T')[0];
         const lastMonth = new Date();
         lastMonth.setMonth(lastMonth.getMonth() - 1);
-        // --- Corrección: Usar formatDateForInput para consistencia ---
-        // const lastMonthStr = lastMonth.toISOString().split('T')[0];
-        const lastMonthStr = this.formatDateForInput(lastMonth);
-        // ----------------------------------------------------------
-
+        const lastMonthStr = lastMonth.toISOString().split('T')[0];
         // Obtener nombre personalizado de la entidad
         const config = StorageService.getConfig();
         const entityName = config.entityName || 'Entidad';
@@ -75,11 +67,9 @@ const ReportsView = {
         const column5Field = FieldModel.getAll().find(field => field.isColumn5);
 
         // Actualiza SelectedColumns al cargar si hay campos marcados
-        // Ahora 'this.selectedColumns' está definido gracias a la inicialización
-        this.selectedColumns.field1 = column3Field ? column3Field.id : null; // Línea 70 (modificada para seguridad)
-        this.selectedColumns.field2 = column4Field ? column4Field.id : null; // Línea 71 (modificada para seguridad)
-        this.selectedColumns.field3 = column5Field ? column5Field.id : null; // Línea 72 (modificada para seguridad)
-
+        if (column3Field) this.selectedColumns.field1 = column3Field.id;
+        if (column4Field) this.selectedColumns.field2 = column4Field.id;
+        if (column5Field) this.selectedColumns.field3 = column5Field.id;
 
         // Obtener campos marcados para reportes comparativos
         const horizontalAxisField = FieldModel.getAll().find(field => field.isHorizontalAxis);
@@ -137,7 +127,7 @@ const ReportsView = {
                         </div>
 
                         <h6 class="mt-3 mb-2">Última semana</h6>
-                        <div class="btn-group mb-3" role="group" aria-label="Días última semana">
+                        <div class="btn-group flex-wrap" role="group" aria-label="Días última semana">
                             <button type="button" class="btn btn-sm btn-outline-secondary date-shortcut" data-range="lastMonday">Lunes</button>
                             <button type="button" class="btn btn-sm btn-outline-secondary date-shortcut" data-range="lastTuesday">Martes</button>
                             <button type="button" class="btn btn-sm btn-outline-secondary date-shortcut" data-range="lastWednesday">Miércoles</button>
@@ -310,19 +300,11 @@ const ReportsView = {
 
         mainContent.innerHTML = template;
 
-        // --- Añadir verificación antes de llamar a funciones dependientes del DOM ---
-        try {
-            // Actualizar los nombres de las columnas en la tabla según los campos marcados
-            this.updateColumnHeaders();
+        // Actualizar los nombres de las columnas en la tabla según los campos marcados
+        this.updateColumnHeaders();
 
-            // Cargar datos iniciales con los filtros predeterminados
-            this.applyFilters();
-        } catch (error) {
-            console.error("Error al actualizar cabeceras o aplicar filtros iniciales:", error);
-            // Opcionalmente mostrar un mensaje al usuario
-            mainContent.innerHTML = `<div class="alert alert-danger">Error al inicializar la vista de reportes. Revise la consola para más detalles.</div>`;
-        }
-        // -------------------------------------------------------------------------
+        // Cargar datos iniciales con los filtros predeterminados
+        this.applyFilters();
     },
 
     // ... (resto de métodos: updateColumnHeaders, setupEventListeners, applyFilters, etc.) ...
