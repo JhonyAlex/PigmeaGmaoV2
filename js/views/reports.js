@@ -137,7 +137,7 @@ const ReportsView = {
                         </div>
 
                         <h6 class="mt-3 mb-2">Última semana</h6>
-                        <div class="btn-group flex-wrap" role="group" aria-label="Días última semana">
+                        <div class="btn-group mb-3" role="group" aria-label="Días última semana">
                             <button type="button" class="btn btn-sm btn-outline-secondary date-shortcut" data-range="lastMonday">Lunes</button>
                             <button type="button" class="btn btn-sm btn-outline-secondary date-shortcut" data-range="lastTuesday">Martes</button>
                             <button type="button" class="btn btn-sm btn-outline-secondary date-shortcut" data-range="lastWednesday">Miércoles</button>
