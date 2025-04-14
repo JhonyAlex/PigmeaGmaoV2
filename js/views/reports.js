@@ -2,7 +2,7 @@
  * Vista de reportes para visualizar datos
  */
 const ReportsView = {
-    // --- Propiedades Inicializadas ---
+    // ... (otras propiedades y métodos) ...
     pagination: {
         currentPage: 1,
         itemsPerPage: 20, // O el valor por defecto que prefieras
@@ -1123,7 +1123,15 @@ const ReportsView = {
      * Cambia entre el modo de visualización y edición en el modal.
      */
     toggleEditMode(recordId, modalInstance, record) {
+        // --- Obtener el botón Editar/Guardar ---
         const editSaveBtn = document.getElementById('editRecordBtn');
+        // --- Añadir verificación por si no se encuentra ---
+        if (!editSaveBtn) {
+            console.error("toggleEditMode: Botón 'editRecordBtn' no encontrado.");
+            return;
+        }
+        // -------------------------------------------------
+
         const isEditing = editSaveBtn.classList.contains('btn-success'); // Si ya está en modo guardar
 
         if (isEditing) {
@@ -1135,6 +1143,15 @@ const ReportsView = {
             editSaveBtn.classList.add('btn-success');
             editSaveBtn.innerHTML = '<i class="bi bi-save"></i> Guardar';
 
+            // --- DEFINIR footerDiv AQUÍ ---
+            const footerDiv = editSaveBtn.closest('.modal-footer'); // Buscar el ancestro más cercano
+            // --- Añadir verificación ---
+            if (!footerDiv) {
+                console.error("toggleEditMode: No se pudo encontrar el footer del modal.");
+                return; // Salir si no se encuentra el footer
+            }
+            // ---------------------------
+
             // Añadir botón Cancelar
             const cancelBtn = document.createElement('button');
             cancelBtn.type = 'button';
@@ -1142,96 +1159,109 @@ const ReportsView = {
             cancelBtn.id = 'cancelEditBtn';
             cancelBtn.textContent = 'Cancelar';
             cancelBtn.addEventListener('click', () => this.resetEditMode(modalInstance, recordId));
+
             // Insertar antes del botón de cerrar
             const closeBtn = footerDiv.querySelector('[data-bs-dismiss="modal"]');
-            footerDiv.insertBefore(cancelBtn, closeBtn);
-
+            // --- Ahora footerDiv está definido ---
+            if (closeBtn) {
+                footerDiv.insertBefore(cancelBtn, closeBtn);
+            } else {
+                footerDiv.appendChild(cancelBtn);
+            }
+            // -----------------------------------
 
             // Ocultar display, mostrar edit
-            document.getElementById('record-timestamp-display').style.display = 'none';
-            document.getElementById('record-timestamp-edit').style.display = 'block';
+            const modalElement = modalInstance._element;
+            const timestampDisplay = modalElement.querySelector('#record-timestamp-display');
+            const timestampEdit = modalElement.querySelector('#record-timestamp-edit');
+            if (timestampDisplay) timestampDisplay.style.display = 'none';
+            if (timestampEdit) timestampEdit.style.display = 'block';
 
-            const allFields = FieldModel.getAll(); // Necesario para las opciones de select
+            const allFields = FieldModel.getAll();
 
-            modalInstance._element.querySelectorAll('#record-fields-container tbody tr').forEach(row => {
+            modalElement.querySelectorAll('#record-fields-container tbody tr').forEach(row => {
                 const displayCell = row.querySelector('.field-value-display');
                 const editCell = row.querySelector('.field-value-edit');
                 const fieldId = row.dataset.fieldId;
                 const fieldType = row.dataset.fieldType;
-                const currentValue = record.data[fieldId];
+                const currentValue = record.data[fieldId] ?? '';
                 const fieldDefinition = allFields.find(f => f.id === fieldId);
 
-                displayCell.style.display = 'none';
-                editCell.style.display = 'table-cell'; // Mostrar celda de edición
-
-                // Crear input adecuado
-                let inputHTML = '';
-                switch (fieldType) {
-                    case 'number':
-                        inputHTML = `<input type="number" class="form-control form-control-sm edit-field" data-field-id="${fieldId}" value="${currentValue}">`;
-                        break;
-                    case 'select':
-                        if (fieldDefinition && fieldDefinition.options && fieldDefinition.options.length > 0) {
-                            inputHTML = `
-                                <select class="form-select form-select-sm edit-field" data-field-id="${fieldId}">
-                                    ${fieldDefinition.options.map(option =>
-                                        `<option value="${option}" ${currentValue === option ? 'selected' : ''}>${option}</option>`
-                                    ).join('')}
-                                </select>`;
-                        } else {
-                            // Fallback a texto si no hay opciones
-                            inputHTML = `<input type="text" class="form-control form-control-sm edit-field" data-field-id="${fieldId}" value="${currentValue}">`;
-                        }
-                        break;
-                    case 'text':
-                    default:
-                        inputHTML = `<input type="text" class="form-control form-control-sm edit-field" data-field-id="${fieldId}" value="${currentValue}">`;
+                if (displayCell) displayCell.style.display = 'none';
+                if (editCell) {
+                    editCell.style.display = 'table-cell';
+                    // --- CORRECCIÓN: Generar HTML una sola vez ---
+                    // Usamos this.generateInputHTMLFallback directamente aquí
+                    editCell.innerHTML = this.generateInputHTMLFallback(fieldId, fieldType, currentValue, fieldDefinition);
+                    // --- FIN CORRECCIÓN ---
                 }
-                editCell.innerHTML = inputHTML;
+                // --- CORRECCIÓN: El bloque duplicado que estaba aquí fue eliminado ---
             });
         }
-    },
+    }, // Fin de toggleEditMode
+
+ // --- CORRECCIÓN: Mover esta función fuera de toggleEditMode ---
+    /**
+     * Genera el HTML para un input de edición.
+     */
+    generateInputHTMLFallback(fieldId, fieldType, currentValue, fieldDefinition) {
+        switch (fieldType) {
+            case 'number':
+                // Usar step="any" para permitir decimales si es necesario
+                return `<input type="number" step="any" class="form-control form-control-sm edit-field" data-field-id="${fieldId}" value="${currentValue}">`;
+            case 'select':
+                if (fieldDefinition?.options?.length > 0) {
+                    const optionsHTML = fieldDefinition.options.map(option =>
+                        // Comparar como strings por seguridad
+                        `<option value="${option}" ${String(currentValue) === String(option) ? 'selected' : ''}>${option}</option>`
+                    ).join('');
+                    return `<select class="form-select form-select-sm edit-field" data-field-id="${fieldId}">${optionsHTML}</select>`;
+                }
+                // Fallback a texto si no hay opciones
+                return `<input type="text" class="form-control form-control-sm edit-field" data-field-id="${fieldId}" value="${currentValue}">`;
+            case 'text':
+            default:
+                return `<input type="text" class="form-control form-control-sm edit-field" data-field-id="${fieldId}" value="${currentValue}">`;
+        }
+    }, // Fin de generateInputHTMLFallback
+    // --- FIN CORRECCIÓN ---
 
     /**
      * Restaura el modal al modo de visualización.
      */
     resetEditMode(modalInstance, recordId = null) {
-        const editSaveBtn = document.getElementById('editRecordBtn');
-        if (editSaveBtn) {
-            editSaveBtn.classList.remove('btn-success');
-            editSaveBtn.classList.add('btn-warning');
-            editSaveBtn.innerHTML = '<i class="bi bi-pencil"></i> Editar';
-        }
+        // ... (código de resetEditMode sin cambios) ...
+         const modalElement = modalInstance._element; // Asegurarse de tener modalElement
+         const editSaveBtn = modalElement.querySelector('#editRecordBtn'); // Buscar dentro del modal
+         if (editSaveBtn) {
+             editSaveBtn.classList.remove('btn-success');
+             editSaveBtn.classList.add('btn-warning');
+             editSaveBtn.innerHTML = '<i class="bi bi-pencil"></i> Editar';
+         }
 
-        const cancelBtn = document.getElementById('cancelEditBtn');
-        if (cancelBtn) {
-            cancelBtn.remove();
-        }
+         modalElement.querySelector('#cancelEditBtn')?.remove(); // Buscar dentro del modal
 
-        // Si se proporcionó un recordId, significa que se canceló la edición,
-        // así que recargamos los detalles originales.
-        if (recordId) {
-             this.showRecordDetails(recordId); // Recarga los datos originales
-        } else {
-             // Si no hay recordId, simplemente revertimos los elementos visuales (al cerrar modal)
-             const timestampDisplay = document.getElementById('record-timestamp-display');
-             const timestampEdit = document.getElementById('record-timestamp-edit');
-             if(timestampDisplay) timestampDisplay.style.display = 'inline';
-             if(timestampEdit) timestampEdit.style.display = 'none';
+         if (recordId) {
+              this.showRecordDetails(recordId);
+         } else {
+              const timestampDisplay = modalElement.querySelector('#record-timestamp-display');
+              const timestampEdit = modalElement.querySelector('#record-timestamp-edit');
+              if(timestampDisplay) timestampDisplay.style.display = 'inline';
+              if(timestampEdit) timestampEdit.style.display = 'none';
 
-
-             modalInstance._element.querySelectorAll('#record-fields-container tbody tr').forEach(row => {
-                 const displayCell = row.querySelector('.field-value-display');
-                 const editCell = row.querySelector('.field-value-edit');
-                 if(displayCell) displayCell.style.display = 'table-cell';
-                 if(editCell) {
-                    editCell.style.display = 'none';
-                    editCell.innerHTML = ''; // Limpiar input
-                 }
-             });
-        }
+              modalElement.querySelectorAll('#record-fields-container tbody tr').forEach(row => {
+                  const displayCell = row.querySelector('.field-value-display');
+                  const editCell = row.querySelector('.field-value-edit');
+                  if(displayCell) displayCell.style.display = 'table-cell';
+                  if(editCell) {
+                     editCell.style.display = 'none';
+                     editCell.innerHTML = '';
+                  }
+              });
+         }
     },
 
+    // ... (resto de métodos: confirmDeleteRecord, saveRecordChanges, etc.) ...
     /**
      * Muestra confirmación antes de eliminar un registro.
      */
@@ -1412,56 +1442,45 @@ const ReportsView = {
         reportContainer.scrollIntoView({ behavior: 'smooth' });
     },
     setDateRange(range) {
+        // ... (código de setDateRange sin cambios, ya estaba correcto) ...
         const fromDateInput = document.getElementById('filter-from-date');
         const toDateInput = document.getElementById('filter-to-date');
 
-        if (!fromDateInput || !toDateInput) return; // Salir si los inputs no existen
+        if (!fromDateInput || !toDateInput) return;
 
-        // Fecha actual (medianoche)
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         let fromDate, toDate;
 
-        // Calcular rango según selección
         switch (range) {
             case 'yesterday':
                 fromDate = new Date(today);
                 fromDate.setDate(today.getDate() - 1);
-                toDate = new Date(fromDate); // Ayer fue solo un día
+                toDate = new Date(fromDate);
                 break;
-
             case 'thisWeek':
                 fromDate = new Date(today);
-                const firstDayOfWeek = 1; // 1 para Lunes, 0 para Domingo
-                const dayOfWeek = today.getDay(); // 0=Domingo, 1=Lunes, ...
-                // Calcular cuántos días retroceder para llegar al primer día de la semana
-                const diff = (dayOfWeek >= firstDayOfWeek) ? (dayOfWeek - firstDayOfWeek) : (6); // Si hoy es Domingo (0) y la semana empieza Lunes (1), retroceder 6 días
-                fromDate.setDate(today.getDate() - diff);
-                toDate = new Date(today); // Hasta hoy
+                const firstDayOfWeek = 1; // Lunes
+                const dayOfWeek = today.getDay() || 7; // 1=Lunes..7=Domingo
+                fromDate.setDate(today.getDate() - (dayOfWeek - firstDayOfWeek));
+                toDate = new Date(today);
                 break;
-
             case 'lastWeek':
                  fromDate = new Date(today);
-                 const firstDayOfLastWeek = 1; // Lunes
-                 const currentDayOfWeek = today.getDay();
-                 // Retroceder hasta el lunes de la semana pasada
-                 // Días a retroceder = día actual + (7 - primer día de semana)
-                 const daysToLastMonday = currentDayOfWeek + (7 - firstDayOfLastWeek);
-                 fromDate.setDate(today.getDate() - daysToLastMonday);
+                 const firstDayOfPrevWeek = 1; // Lunes
+                 const currentDayOfWeekForLast = today.getDay() || 7; // 1=Lunes..7=Domingo
+                 fromDate.setDate(today.getDate() - (currentDayOfWeekForLast - firstDayOfPrevWeek) - 7);
                  toDate = new Date(fromDate);
-                 toDate.setDate(fromDate.getDate() + 6); // La semana pasada termina el domingo
+                 toDate.setDate(fromDate.getDate() + 6); // Domingo de la semana pasada
                 break;
-
             case 'thisMonth':
                 fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
-                toDate = new Date(today); // Hasta hoy
+                toDate = new Date(today);
                 break;
-
             case 'lastMonth':
-                fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1); // Primer día del mes anterior
-                toDate = new Date(today.getFullYear(), today.getMonth(), 0); // Último día del mes anterior (día 0 del mes actual)
+                fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                toDate = new Date(today.getFullYear(), today.getMonth(), 0);
                 break;
-
             case 'lastMonday':
             case 'lastTuesday':
             case 'lastWednesday':
@@ -1470,40 +1489,36 @@ const ReportsView = {
             case 'lastSaturday':
             case 'lastSunday':
                 fromDate = new Date(today);
-                const dayMap = { // 0=Domingo, 1=Lunes,...
+                const dayMap = {
                     'lastSunday': 0, 'lastMonday': 1, 'lastTuesday': 2, 'lastWednesday': 3,
                     'lastThursday': 4, 'lastFriday': 5, 'lastSaturday': 6
                 };
                 const targetDay = dayMap[range];
-                const currentDay = today.getDay();
+                const currentDay = today.getDay(); // 0=Domingo, 1=Lunes,...
                 let daysToSubtract = currentDay - targetDay;
-                // Si el día objetivo ya pasó esta semana (o es hoy), ir a la semana anterior (sumar 7)
-                if (daysToSubtract <= 0) {
+                if (daysToSubtract <= 0) { // Si el día ya pasó esta semana (o es hoy), ir a la semana anterior
                     daysToSubtract += 7;
                 }
                 fromDate.setDate(today.getDate() - daysToSubtract);
-                toDate = new Date(fromDate); // Solo ese día
+                toDate = new Date(fromDate);
                 break;
-
             default:
                 console.warn(`Rango de fecha desconocido: ${range}`);
-                return; // No hacer nada si no coincide
+                return;
         }
 
-        // Formatear fechas para los inputs (YYYY-MM-DD)
         fromDateInput.value = this.formatDateForInput(fromDate);
         toDateInput.value = this.formatDateForInput(toDate);
     },
+
     formatDateForInput(date) {
+        // ... (código de formatDateForInput sin cambios) ...
         if (!(date instanceof Date) || isNaN(date)) {
-            return ''; // Devolver vacío si no es una fecha válida
+            return '';
         }
-        // Intl.DateTimeFormat es más robusto para formateo, pero toISOString es simple para YYYY-MM-DD
-        // return date.toISOString().split('T')[0];
-        // O usando padStart para asegurar dos dígitos:
         const year = date.getFullYear();
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const day = date.getDate().toString().padStart(2, '0');
         return `${year}-${month}-${day}`;
     }
-};
+}; // Fin del objeto ReportsView
