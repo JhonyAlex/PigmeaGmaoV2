@@ -8,6 +8,11 @@ const RegisterView = {
     entityName: 'Entidad',
     
     /**
+     * Almacena los últimos datos ingresados por entidad durante la sesión
+     */
+    lastEntityRecords: {},
+    
+    /**
      * Inicializa la vista de registro
      */
     init() {
@@ -152,91 +157,114 @@ const RegisterView = {
         });
     },
     
- /**
- * Carga los campos dinámicos basados en la entidad seleccionada
- * @param {string} entityId ID de la entidad seleccionada
- */
- loadDynamicFields(entityId) {
-    const dynamicFieldsContainer = document.getElementById('dynamic-fields-container');
-    const submitContainer = document.getElementById('submit-container');
-    
-    // Limpiar contenedor
-    dynamicFieldsContainer.innerHTML = '';
-    
-    // Si no hay entityId, ocultar el contenedor del botón y limpiar
-    if (!entityId) {
-        submitContainer.style.display = 'none';
-        return;
-    }
-    
-    // Obtener entidad y sus campos
-    const entity = EntityModel.getById(entityId);
-    if (!entity) {
-        submitContainer.style.display = 'none';
-        return;
-    }
-    
-    const fields = FieldModel.getByIds(entity.fields);
-    
-    // No hay campos asignados
-    if (fields.length === 0) {
-        dynamicFieldsContainer.innerHTML = `
-            <div class="alert alert-warning">
-                Esta ${this.entityName.toLowerCase()} no tiene campos asignados. 
-                Configure los campos en la sección de Administración.
-            </div>
-        `;
-        submitContainer.style.display = 'none';
-        return;
-    }
-    
-    // Generar campos dinámicos
-    fields.forEach(field => {
-        const fieldHTML = UIUtils.generateFieldInput(field);
-        dynamicFieldsContainer.insertAdjacentHTML('beforeend', fieldHTML);
-    });
-
-    // Mostrar el contenedor del botón y checkbox
-    submitContainer.style.display = 'block';
-    
-    // CORRECCIÓN: Guardar referencia a los limpiadores de eventos
-    const cleanupFunctions = [];
-    
-    // Inicializar los selectores de búsqueda después de insertar todos los campos en el DOM
-    setTimeout(() => {
-        fields.forEach(field => {
-            if (field.type === 'select') {
-                // CORRECCIÓN: Almacenar la función de limpieza devuelta por setupSearchableSelect
-                const cleanup = UIUtils.setupSearchableSelect(`#${field.id}`);
-                if (typeof cleanup === 'function') {
-                    cleanupFunctions.push(cleanup);
-                }
-                
-                // Hacer visible el select una vez inicializado
-                const selectElement = document.getElementById(field.id);
-                if (selectElement) {
-                    selectElement.style.visibility = 'visible';
-                }
-            }
-        });
+    /**
+     * Carga los campos dinámicos basados en la entidad seleccionada
+     * @param {string} entityId ID de la entidad seleccionada
+     */
+    loadDynamicFields(entityId) {
+        const dynamicFieldsContainer = document.getElementById('dynamic-fields-container');
+        const submitContainer = document.getElementById('submit-container');
         
-        // CORRECCIÓN: Agregar una función de limpieza al contenedor para eliminar listeners
-        if (cleanupFunctions.length > 0) {
-            dynamicFieldsContainer.addEventListener('DOMNodeRemoved', function handler() {
-                // Limpiar listeners cuando se elimine el contenedor
-                cleanupFunctions.forEach(cleanup => cleanup());
-                dynamicFieldsContainer.removeEventListener('DOMNodeRemoved', handler);
-            });
+        // Limpiar contenedor
+        dynamicFieldsContainer.innerHTML = '';
+        
+        // Si no hay entityId, ocultar el contenedor del botón y limpiar
+        if (!entityId) {
+            submitContainer.style.display = 'none';
+            return;
         }
-    }, 10); // Un pequeño delay para asegurar que el DOM se actualice primero
-},
+        
+        // Obtener entidad y sus campos
+        const entity = EntityModel.getById(entityId);
+        if (!entity) {
+            submitContainer.style.display = 'none';
+            return;
+        }
+        
+        const fields = FieldModel.getByIds(entity.fields);
+        
+        // No hay campos asignados
+        if (fields.length === 0) {
+            dynamicFieldsContainer.innerHTML = `
+                <div class="alert alert-warning">
+                    Esta ${this.entityName.toLowerCase()} no tiene campos asignados. 
+                    Configure los campos en la sección de Administración.
+                </div>
+            `;
+            submitContainer.style.display = 'none';
+            return;
+        }
+        
+        // Generar campos dinámicos
+        fields.forEach(field => {
+            const fieldHTML = UIUtils.generateFieldInput(field);
+            dynamicFieldsContainer.insertAdjacentHTML('beforeend', fieldHTML);
+        });
+
+        // Mostrar el contenedor del botón y checkbox
+        submitContainer.style.display = 'block';
+        
+        // CORRECCIÓN: Guardar referencia a los limpiadores de eventos
+        const cleanupFunctions = [];
+        
+        // Inicializar los selectores de búsqueda después de insertar todos los campos en el DOM
+        setTimeout(() => {
+            fields.forEach(field => {
+                if (field.type === 'select') {
+                    // CORRECCIÓN: Almacenar la función de limpieza devuelta por setupSearchableSelect
+                    const cleanup = UIUtils.setupSearchableSelect(`#${field.id}`);
+                    if (typeof cleanup === 'function') {
+                        cleanupFunctions.push(cleanup);
+                    }
+                    
+                    // Hacer visible el select una vez inicializado
+                    const selectElement = document.getElementById(field.id);
+                    if (selectElement) {
+                        selectElement.style.visibility = 'visible';
+                    }
+                }
+            });
+            
+            // CORRECCIÓN: Agregar una función de limpieza al contenedor para eliminar listeners
+            if (cleanupFunctions.length > 0) {
+                dynamicFieldsContainer.addEventListener('DOMNodeRemoved', function handler() {
+                    // Limpiar listeners cuando se elimine el contenedor
+                    cleanupFunctions.forEach(cleanup => cleanup());
+                    dynamicFieldsContainer.removeEventListener('DOMNodeRemoved', handler);
+                });
+            }
+
+            // Cargar últimos datos si existen para esta entidad
+            if (this.lastEntityRecords[entityId]) {
+                const lastData = this.lastEntityRecords[entityId];
+                
+                // Rellenar los campos con los últimos datos
+                fields.forEach(field => {
+                    const fieldElement = document.getElementById(field.id);
+                    if (fieldElement && lastData[field.id] !== undefined) {
+                        if (field.type === 'checkbox') {
+                            fieldElement.checked = lastData[field.id] === true || lastData[field.id] === 'true';
+                        } else {
+                            fieldElement.value = lastData[field.id];
+                            
+                            // Si es un select y tiene la biblioteca select2 inicializada
+                            if (field.type === 'select' && fieldElement.classList.contains('select2-hidden-accessible')) {
+                                try {
+                                    $(fieldElement).val(lastData[field.id]).trigger('change');
+                                } catch (e) {
+                                    console.warn('Error al establecer valor en select2:', e);
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }, 10); // Un pequeño delay para asegurar que el DOM se actualice primero
+    },
     
     /**
      * Guarda un nuevo registro
      */
-    /**
- * Guarda un nuevo registro
- */
     saveRecord() {
         const form = document.getElementById('register-form');
         const entityId = document.getElementById('selected-entity-id').value;
@@ -274,6 +302,9 @@ const RegisterView = {
                 }
             }
         });
+        
+        // Guardar los valores del formulario en lastEntityRecords
+        this.lastEntityRecords[entityId] = { ...validation.data };
         
         // Guardar registro
         const newRecord = RecordModel.create(entityId, validation.data);
